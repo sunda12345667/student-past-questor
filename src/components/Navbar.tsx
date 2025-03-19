@@ -1,13 +1,24 @@
 
 import { useState, useEffect } from 'react';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, User, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from './ThemeToggle';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { currentUser, logout, isAdmin } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -19,6 +30,15 @@ export function Navbar() {
       window.removeEventListener('scroll', handleScroll);
     };
   }, []);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
 
   return (
     <header
@@ -41,25 +61,58 @@ export function Navbar() {
           <Link to="/" className="text-sm font-medium hover:text-primary transition-colors">
             Home
           </Link>
-          <Link to="#features" className="text-sm font-medium hover:text-primary transition-colors">
+          <Link to="/#features" className="text-sm font-medium hover:text-primary transition-colors">
             Features
           </Link>
-          <Link to="#questions" className="text-sm font-medium hover:text-primary transition-colors">
+          <Link to="/#questions" className="text-sm font-medium hover:text-primary transition-colors">
             Questions
           </Link>
-          <Link to="#pricing" className="text-sm font-medium hover:text-primary transition-colors">
+          <Link to="/#pricing" className="text-sm font-medium hover:text-primary transition-colors">
             Pricing
           </Link>
         </nav>
 
         <div className="hidden md:flex items-center space-x-4">
           <ThemeToggle />
-          <Button variant="ghost" className="text-sm font-medium">
-            Log in
-          </Button>
-          <Button className="text-sm font-medium">
-            Sign up
-          </Button>
+          
+          {currentUser ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative">
+                  <User className="h-5 w-5 mr-2" />
+                  <span className="font-medium truncate max-w-[100px]">
+                    {currentUser.name}
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                  Dashboard
+                </DropdownMenuItem>
+                {isAdmin() && (
+                  <DropdownMenuItem onClick={() => navigate('/admin')}>
+                    Admin Panel
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Log out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <>
+              <Button variant="ghost" className="text-sm font-medium" onClick={() => navigate('/login')}>
+                Log in
+              </Button>
+              <Button className="text-sm font-medium" onClick={() => navigate('/signup')}>
+                Sign up
+              </Button>
+            </>
+          )}
         </div>
 
         {/* Mobile Menu Button */}
@@ -89,33 +142,51 @@ export function Navbar() {
               Home
             </Link>
             <Link
-              to="#features"
+              to="/#features"
               className="text-xl font-medium hover:text-primary transition-colors w-full py-2"
               onClick={() => setIsMenuOpen(false)}
             >
               Features
             </Link>
             <Link
-              to="#questions"
+              to="/#questions"
               className="text-xl font-medium hover:text-primary transition-colors w-full py-2"
               onClick={() => setIsMenuOpen(false)}
             >
               Questions
             </Link>
             <Link
-              to="#pricing"
+              to="/#pricing"
               className="text-xl font-medium hover:text-primary transition-colors w-full py-2"
               onClick={() => setIsMenuOpen(false)}
             >
               Pricing
             </Link>
             <div className="pt-6 flex flex-col w-full space-y-4">
-              <Button variant="outline" className="w-full">
-                Log in
-              </Button>
-              <Button className="w-full">
-                Sign up
-              </Button>
+              {currentUser ? (
+                <>
+                  <Button variant="outline" className="w-full" onClick={() => { navigate('/dashboard'); setIsMenuOpen(false); }}>
+                    Dashboard
+                  </Button>
+                  {isAdmin() && (
+                    <Button variant="outline" className="w-full" onClick={() => { navigate('/admin'); setIsMenuOpen(false); }}>
+                      Admin Panel
+                    </Button>
+                  )}
+                  <Button className="w-full" onClick={() => { handleLogout(); setIsMenuOpen(false); }}>
+                    Log out
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="outline" className="w-full" onClick={() => { navigate('/login'); setIsMenuOpen(false); }}>
+                    Log in
+                  </Button>
+                  <Button className="w-full" onClick={() => { navigate('/signup'); setIsMenuOpen(false); }}>
+                    Sign up
+                  </Button>
+                </>
+              )}
             </div>
           </nav>
         </div>
