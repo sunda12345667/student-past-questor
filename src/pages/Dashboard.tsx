@@ -12,6 +12,7 @@ import {
   Share2,
   Wallet,
   Search,
+  MessageCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -21,6 +22,7 @@ import PaymentMethods from '@/components/dashboard/PaymentMethods';
 import ChatbotSupport from '@/components/dashboard/ChatbotSupport';
 import BillPayments from '@/components/dashboard/BillPayments';
 import ReferralSystem from '@/components/dashboard/ReferralSystem';
+import { Link } from 'react-router-dom';
 
 const Dashboard = () => {
   const { currentUser } = useAuth();
@@ -174,6 +176,16 @@ const Dashboard = () => {
                 >
                   <Bell className="mr-2 h-4 w-4" />
                   Notifications
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start"
+                  asChild
+                >
+                  <Link to="/student-chat">
+                    <MessageCircle className="mr-2 h-4 w-4" />
+                    Student Chat
+                  </Link>
                 </Button>
               </div>
             </div>
