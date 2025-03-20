@@ -1,8 +1,23 @@
 
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 export function Hero() {
+  const navigate = useNavigate();
+
+  const handleGetStarted = () => {
+    navigate('/signup');
+    toast.success('Starting your journey with StudyQuest!');
+  };
+
+  const handleExploreQuestions = () => {
+    // Smooth scroll to the questions section
+    document.getElementById('questions')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
     <section className="relative pt-32 pb-20 md:pt-44 md:pb-28 overflow-hidden">
       <div className="absolute inset-0 pointer-events-none">
@@ -25,11 +40,20 @@ export function Hero() {
           </p>
           
           <div className="flex flex-col sm:flex-row justify-center items-center gap-4 animate-slide-in-bottom [animation-delay:0.3s]">
-            <Button size="lg" className="w-full sm:w-auto group">
+            <Button 
+              size="lg" 
+              className="w-full sm:w-auto group"
+              onClick={handleGetStarted}
+            >
               Get started
               <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Button>
-            <Button size="lg" variant="outline" className="w-full sm:w-auto">
+            <Button 
+              size="lg" 
+              variant="outline" 
+              className="w-full sm:w-auto"
+              onClick={handleExploreQuestions}
+            >
               Explore questions
             </Button>
           </div>
@@ -39,11 +63,19 @@ export function Hero() {
           </div>
           
           <div className="flex flex-wrap justify-center items-center gap-x-12 gap-y-6 animate-slide-in-bottom [animation-delay:0.4s]">
-            <div className="text-lg font-semibold text-foreground/50 dark:text-foreground/40 transition-opacity hover:text-foreground/80">WAEC</div>
-            <div className="text-lg font-semibold text-foreground/50 dark:text-foreground/40 transition-opacity hover:text-foreground/80">JAMB</div>
-            <div className="text-lg font-semibold text-foreground/50 dark:text-foreground/40 transition-opacity hover:text-foreground/80">NECO</div>
-            <div className="text-lg font-semibold text-foreground/50 dark:text-foreground/40 transition-opacity hover:text-foreground/80">Cambridge</div>
-            <div className="text-lg font-semibold text-foreground/50 dark:text-foreground/40 transition-opacity hover:text-foreground/80">University</div>
+            {['WAEC', 'JAMB', 'NECO', 'Cambridge', 'University'].map((org, index) => (
+              <Link
+                key={index}
+                to={`/exams/${org.toLowerCase()}`}
+                className="text-lg font-semibold text-foreground/50 dark:text-foreground/40 transition-opacity hover:text-foreground/80"
+                onClick={(e) => {
+                  e.preventDefault();
+                  toast.info(`${org} exams coming soon!`);
+                }}
+              >
+                {org}
+              </Link>
+            ))}
           </div>
         </div>
       </div>

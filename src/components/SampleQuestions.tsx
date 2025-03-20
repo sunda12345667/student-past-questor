@@ -3,6 +3,7 @@ import { SearchBar } from './SearchBar';
 import { Eye, Download, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 const sampleQuestions = [
   {
@@ -68,6 +69,22 @@ export function SampleQuestions() {
     ? sampleQuestions 
     : sampleQuestions.filter(q => q.subject === activeTab);
 
+  const handlePreviewQuestion = (questionId: number) => {
+    toast.info(`Previewing question set #${questionId}`);
+  };
+
+  const handleSaveQuestion = (questionId: number) => {
+    toast.success(`Question set #${questionId} saved to your library`);
+  };
+
+  const handleViewFullSet = (subject: string, examType: string) => {
+    toast.info(`Loading full ${subject} ${examType} question set...`);
+  };
+
+  const handleViewAllQuestions = () => {
+    toast.info('Loading complete question database...');
+  };
+
   return (
     <section id="questions" className="py-20">
       <div className="container mx-auto px-4">
@@ -119,17 +136,31 @@ export function SampleQuestions() {
                 
                 <div className="flex items-center justify-between">
                   <div className="flex space-x-2">
-                    <Button size="sm" variant="ghost" className="h-8 px-2">
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      className="h-8 px-2"
+                      onClick={() => handlePreviewQuestion(question.id)}
+                    >
                       <Eye className="h-4 w-4 mr-1" />
                       Preview
                     </Button>
-                    <Button size="sm" variant="ghost" className="h-8 px-2">
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      className="h-8 px-2"
+                      onClick={() => handleSaveQuestion(question.id)}
+                    >
                       <Download className="h-4 w-4 mr-1" />
                       Save
                     </Button>
                   </div>
                   
-                  <Button size="sm" className="h-8">
+                  <Button 
+                    size="sm" 
+                    className="h-8"
+                    onClick={() => handleViewFullSet(question.subject, question.examType)}
+                  >
                     <BookOpen className="h-4 w-4 mr-1" />
                     View Full Set
                   </Button>
@@ -140,7 +171,11 @@ export function SampleQuestions() {
         </div>
         
         <div className="text-center mt-12">
-          <Button size="lg" variant="outline">
+          <Button 
+            size="lg" 
+            variant="outline"
+            onClick={handleViewAllQuestions}
+          >
             View all questions
           </Button>
         </div>

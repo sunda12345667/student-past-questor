@@ -7,9 +7,12 @@ import { PricingPlans } from '@/components/PricingPlans';
 import { Button } from '@/components/ui/button';
 import { ArrowUp } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 const Index = () => {
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -25,6 +28,23 @@ const Index = () => {
       top: 0,
       behavior: 'smooth'
     });
+  };
+
+  const handleSignUpFree = () => {
+    navigate('/signup');
+    toast.success('Starting your free journey with StudyQuest!');
+  };
+
+  const handleExploreQuestions = () => {
+    document.getElementById('questions')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleLearnMore = (service: string) => {
+    toast.info(`${service} service information coming soon!`);
+  };
+
+  const handleContactUs = () => {
+    toast.info('Contact form will be available soon!');
   };
 
   return (
@@ -61,7 +81,12 @@ const Index = () => {
                 <p className="text-muted-foreground mb-4">
                   Fast, secure, and convenient {service.toLowerCase()} services at your fingertips.
                 </p>
-                <Button variant="outline">Learn More</Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => handleLearnMore(service)}
+                >
+                  Learn More
+                </Button>
               </div>
             ))}
           </div>
@@ -77,10 +102,19 @@ const Index = () => {
               Join thousands of students who are already preparing smarter with StudyQuest's comprehensive past question platform.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <Button size="lg" className="w-full sm:w-auto">
+              <Button 
+                size="lg" 
+                className="w-full sm:w-auto"
+                onClick={handleSignUpFree}
+              >
                 Sign up for free
               </Button>
-              <Button size="lg" variant="outline" className="w-full sm:w-auto">
+              <Button 
+                size="lg" 
+                variant="outline" 
+                className="w-full sm:w-auto"
+                onClick={handleExploreQuestions}
+              >
                 Explore questions
               </Button>
             </div>

@@ -2,6 +2,8 @@
 import { Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 const plans = [
   {
@@ -63,6 +65,7 @@ const plans = [
 
 export function PricingPlans() {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const navigate = useNavigate();
   
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-NG', {
@@ -71,6 +74,15 @@ export function PricingPlans() {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(price / 100);
+  };
+
+  const handlePlanSelection = (planName: string) => {
+    toast.success(`You've selected the ${planName} plan (${billingCycle} billing)`);
+    navigate('/signup', { state: { plan: planName, billingCycle } });
+  };
+
+  const handleContactUs = () => {
+    toast.info('Our sales team will contact you shortly!');
   };
 
   return (
@@ -135,6 +147,7 @@ export function PricingPlans() {
                 
                 <Button 
                   className={`w-full mb-8 ${plan.popular ? 'bg-primary' : ''}`}
+                  onClick={() => handlePlanSelection(plan.name)}
                 >
                   {plan.cta}
                 </Button>
@@ -155,7 +168,13 @@ export function PricingPlans() {
         <div className="mt-16 max-w-3xl mx-auto text-center">
           <p className="text-muted-foreground">
             Need a custom plan for your school or organization? 
-            <Button variant="link" className="underline">Contact us</Button>
+            <Button 
+              variant="link" 
+              className="underline"
+              onClick={handleContactUs}
+            >
+              Contact us
+            </Button>
           </p>
         </div>
       </div>
