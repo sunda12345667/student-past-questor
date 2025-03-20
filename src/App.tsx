@@ -11,6 +11,8 @@ import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import AdminPanel from "./pages/AdminPanel";
 import StudentChat from "./pages/StudentChat";
+import ExamListing from "./pages/ExamListing";
+import QuestionView from "./pages/QuestionView";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -35,6 +37,16 @@ const App = () => (
             <Route path="/student-chat" element={
               <ProtectedRoute>
                 <StudentChat />
+              </ProtectedRoute>
+            } />
+            <Route path="/exams" element={
+              <ProtectedRoute>
+                <ExamListing />
+              </ProtectedRoute>
+            } />
+            <Route path="/questions/:packId" element={
+              <ProtectedRoute>
+                <QuestionView />
               </ProtectedRoute>
             } />
             <Route path="/admin" element={

@@ -5,86 +5,74 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { ChatRoomList } from '@/components/student-chat/ChatRoomList';
 import { ChatContainer } from '@/components/student-chat/ChatContainer';
-
-interface Message {
-  id: string;
-  senderId: string;
-  senderName: string;
-  content: string;
-  timestamp: Date;
-}
-
-interface ChatRoom {
-  id: string;
-  name: string;
-  participants: number;
-}
+import { getChatRooms, getMessagesForRoom, sendMessage, joinChatRoom, ChatMessage, ChatRoom } from '@/services/chatService';
 
 const StudentChat = () => {
   const { currentUser } = useAuth();
   const [activeRoom, setActiveRoom] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
-  const [chatRooms, setChatRooms] = useState<ChatRoom[]>([
-    { id: 'waec', name: 'WAEC Preparation', participants: 24 },
-    { id: 'jamb', name: 'JAMB Study Group', participants: 38 },
-    { id: 'neco', name: 'NECO Discussion', participants: 17 },
-    { id: 'general', name: 'General Chat', participants: 56 }
-  ]);
+  const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock messages data for demonstration
+  // Load chat rooms on component mount
+  useEffect(() => {
+    const loadChatRooms = async () => {
+      try {
+        setLoading(true);
+        const rooms = await getChatRooms();
+        setChatRooms(rooms);
+      } catch (error) {
+        toast.error('Failed to load chat rooms');
+        console.error('Error loading chat rooms:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadChatRooms();
+  }, []);
+
+  // Load messages when active room changes
   useEffect(() => {
     if (activeRoom) {
-      const mockMessages: Message[] = [
-        {
-          id: '1',
-          senderId: 'user1',
-          senderName: 'Chioma A.',
-          content: 'Has anyone started the mathematics revision yet?',
-          timestamp: new Date(Date.now() - 3600000 * 3)
-        },
-        {
-          id: '2',
-          senderId: 'user2',
-          senderName: 'David O.',
-          content: "Yes, I'm focusing on calculus this week. It's challenging!",
-          timestamp: new Date(Date.now() - 3600000 * 2)
-        },
-        {
-          id: '3',
-          senderId: 'user3',
-          senderName: 'Fatima M.',
-          content: 'I found some great practice questions for Physics if anyone needs them.',
-          timestamp: new Date(Date.now() - 3600000)
+      const loadMessages = async () => {
+        try {
+          const roomMessages = await getMessagesForRoom(activeRoom);
+          setMessages(roomMessages);
+        } catch (error) {
+          toast.error('Failed to load messages');
+          console.error('Error loading messages:', error);
         }
-      ];
-      setMessages(mockMessages);
+      };
+      
+      loadMessages();
     } else {
       setMessages([]);
     }
   }, [activeRoom]);
 
-  const sendMessage = (content: string) => {
-    if (!content.trim() || !activeRoom) return;
+  const handleSendMessage = async (content: string) => {
+    if (!content.trim() || !activeRoom || !currentUser) return;
     
-    // In a real app, this would send to a backend
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      senderId: currentUser?.id || 'unknown',
-      senderName: currentUser?.name || 'Anonymous',
-      content: content,
-      timestamp: new Date()
-    };
-    
-    setMessages(prev => [...prev, newMessage]);
-    
-    // Clear user from typing list when message is sent
-    if (currentUser?.name) {
-      setTypingUsers(prev => prev.filter(name => name !== currentUser.name));
+    try {
+      const newMessage = await sendMessage(
+        activeRoom,
+        currentUser.id,
+        currentUser.name,
+        content
+      );
+      
+      setMessages(prev => [...prev, newMessage]);
+      
+      // Clear user from typing list when message is sent
+      if (currentUser.name) {
+        setTypingUsers(prev => prev.filter(name => name !== currentUser.name));
+      }
+    } catch (error) {
+      toast.error('Failed to send message');
+      console.error('Error sending message:', error);
     }
-    
-    // Simulate saving to backend
-    toast.success('Message sent');
   };
 
   const handleTyping = () => {
@@ -94,14 +82,19 @@ const StudentChat = () => {
       
       // Simulate real-time typing timeout
       setTimeout(() => {
-        setTypingUsers(prev => prev.filter(name => name !== currentUser.name));
+        setTypingUsers(prev => prev.filter(name => name !== currentUser?.name));
       }, 3000);
     }
   };
 
-  const joinRoom = (roomId: string) => {
-    setActiveRoom(roomId);
-    toast.success(`Joined ${chatRooms.find(room => room.id === roomId)?.name}`);
+  const handleJoinRoom = async (roomId: string) => {
+    try {
+      await joinChatRoom(roomId);
+      setActiveRoom(roomId);
+    } catch (error) {
+      toast.error('Failed to join chat room');
+      console.error('Error joining chat room:', error);
+    }
   };
 
   const formatTime = (date: Date) => {
@@ -123,7 +116,8 @@ const StudentChat = () => {
             <ChatRoomList 
               chatRooms={chatRooms}
               activeRoom={activeRoom}
-              onJoinRoom={joinRoom}
+              onJoinRoom={handleJoinRoom}
+              isLoading={loading}
             />
           </div>
           
@@ -134,7 +128,7 @@ const StudentChat = () => {
               roomName={activeRoomName}
               messages={messages}
               currentUserId={currentUser?.id}
-              onSendMessage={sendMessage}
+              onSendMessage={handleSendMessage}
               formatTime={formatTime}
               typingUsers={typingUsers}
               onTyping={handleTyping}

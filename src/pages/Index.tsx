@@ -36,15 +36,12 @@ const Index = () => {
   };
 
   const handleExploreQuestions = () => {
-    document.getElementById('questions')?.scrollIntoView({ behavior: 'smooth' });
+    navigate('/exams');
   };
 
   const handleLearnMore = (service: string) => {
-    toast.info(`${service} service information coming soon!`);
-  };
-
-  const handleContactUs = () => {
-    toast.info('Contact form will be available soon!');
+    // In a real app, we would navigate to the service page
+    toast.info(`${service} service will be available soon!`);
   };
 
   return (
@@ -83,7 +80,19 @@ const Index = () => {
                 </p>
                 <Button 
                   variant="outline"
-                  onClick={() => handleLearnMore(service)}
+                  onClick={() => {
+                    if (service === "Buy Phone Airtime" || 
+                        service === "Buy Internet Data" || 
+                        service === "Pay TV Subscription" || 
+                        service === "Pay Electricity Bill" || 
+                        service === "Education Payment" || 
+                        service === "Buy Event Ticket") {
+                      navigate('/login');
+                      toast.info(`Sign in to access ${service.toLowerCase()} services`);
+                    } else {
+                      handleLearnMore(service);
+                    }
+                  }}
                 >
                   Learn More
                 </Button>
