@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChatMessageList } from './ChatMessageList';
 import { MessageInput } from './MessageInput';
 import { ChatRoomPlaceholder } from './ChatRoomPlaceholder';
+import { TypingIndicator } from './TypingIndicator';
 
 interface Message {
   id: string;
@@ -20,6 +21,8 @@ interface ChatContainerProps {
   currentUserId?: string;
   onSendMessage: (content: string) => void;
   formatTime: (date: Date) => string;
+  typingUsers?: string[];
+  onTyping: () => void;
 }
 
 export const ChatContainer = ({
@@ -28,7 +31,9 @@ export const ChatContainer = ({
   messages,
   currentUserId,
   onSendMessage,
-  formatTime
+  formatTime,
+  typingUsers = [],
+  onTyping
 }: ChatContainerProps) => {
   return (
     <Card className="h-[700px] flex flex-col">
@@ -45,7 +50,11 @@ export const ChatContainer = ({
               currentUserId={currentUserId}
               formatTime={formatTime}
             />
-            <MessageInput onSendMessage={onSendMessage} />
+            {typingUsers.length > 0 && <TypingIndicator users={typingUsers} />}
+            <MessageInput 
+              onSendMessage={onSendMessage}
+              onTyping={onTyping}
+            />
           </>
         ) : (
           <ChatRoomPlaceholder />

@@ -24,6 +24,7 @@ const StudentChat = () => {
   const { currentUser } = useAuth();
   const [activeRoom, setActiveRoom] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [chatRooms, setChatRooms] = useState<ChatRoom[]>([
     { id: 'waec', name: 'WAEC Preparation', participants: 24 },
     { id: 'jamb', name: 'JAMB Study Group', participants: 38 },
@@ -77,8 +78,25 @@ const StudentChat = () => {
     
     setMessages(prev => [...prev, newMessage]);
     
+    // Clear user from typing list when message is sent
+    if (currentUser?.name) {
+      setTypingUsers(prev => prev.filter(name => name !== currentUser.name));
+    }
+    
     // Simulate saving to backend
     toast.success('Message sent');
+  };
+
+  const handleTyping = () => {
+    // Add current user to typing users if not already there
+    if (currentUser?.name && !typingUsers.includes(currentUser.name)) {
+      setTypingUsers(prev => [...prev, currentUser.name]);
+      
+      // Simulate real-time typing timeout
+      setTimeout(() => {
+        setTypingUsers(prev => prev.filter(name => name !== currentUser.name));
+      }, 3000);
+    }
   };
 
   const joinRoom = (roomId: string) => {
@@ -118,6 +136,8 @@ const StudentChat = () => {
               currentUserId={currentUser?.id}
               onSendMessage={sendMessage}
               formatTime={formatTime}
+              typingUsers={typingUsers}
+              onTyping={handleTyping}
             />
           </div>
         </div>
