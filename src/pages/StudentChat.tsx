@@ -34,7 +34,7 @@ const StudentChat = () => {
     { id: 'waec', name: 'WAEC Preparation', participants: 24 },
     { id: 'jamb', name: 'JAMB Study Group', participants: 38 },
     { id: 'neco', name: 'NECO Discussion', participants: 17 },
-    { id: 'general', name: 'General Chat', participants: 56 },
+    { id: 'general', name: 'General Chat', participants: 56 }
   ]);
 
   // Mock messages data for demonstration
