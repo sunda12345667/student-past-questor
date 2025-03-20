@@ -47,7 +47,7 @@ const StudentChat = () => {
           id: '2',
           senderId: 'user2',
           senderName: 'David O.',
-          content: 'Yes, I'm focusing on calculus this week. It's challenging!',
+          content: "Yes, I'm focusing on calculus this week. It's challenging!",
           timestamp: new Date(Date.now() - 3600000 * 2)
         },
         {
