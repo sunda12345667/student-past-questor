@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const paystack = require('../config/paystack');
-const { adminDB } = require('../config/firebase');
+const { adminDB, admin } = require('../config/firebase');
 
 // Initialize payment
 router.post('/initialize', async (req, res) => {

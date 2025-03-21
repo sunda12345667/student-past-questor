@@ -1,9 +1,10 @@
 
 import { SearchBar } from './SearchBar';
-import { Eye, Download, BookOpen } from 'lucide-react';
+import { Eye, Download, BookOpen, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { processQuestionPackPurchase } from '@/services/paystackService';
 
 const sampleQuestions = [
   {
@@ -13,7 +14,8 @@ const sampleQuestions = [
     year: '2023',
     title: 'Algebra and Equations',
     questions: 45,
-    preview: "Solve for x: If 2x + 5 = 11, then x = ?"
+    preview: "Solve for x: If 2x + 5 = 11, then x = ?",
+    price: 1500
   },
   {
     id: 2,
@@ -22,7 +24,8 @@ const sampleQuestions = [
     year: '2023',
     title: 'Mechanics and Motion',
     questions: 38,
-    preview: "A car moves with a constant acceleration of 2 m/s². If it starts from rest, what will be its velocity after 5 seconds?"
+    preview: "A car moves with a constant acceleration of 2 m/s². If it starts from rest, what will be its velocity after 5 seconds?",
+    price: 1500
   },
   {
     id: 3,
@@ -31,7 +34,8 @@ const sampleQuestions = [
     year: '2022',
     title: 'Comprehension and Grammar',
     questions: 60,
-    preview: "Read the passage and answer: The author's main argument is best described as..."
+    preview: "Read the passage and answer: The author's main argument is best described as...",
+    price: 1200
   },
   {
     id: 4,
@@ -40,7 +44,8 @@ const sampleQuestions = [
     year: '2022',
     title: 'Organic Chemistry',
     questions: 42,
-    preview: "What is the molecular formula of benzene?"
+    preview: "What is the molecular formula of benzene?",
+    price: 1800
   },
   {
     id: 5,
@@ -49,7 +54,8 @@ const sampleQuestions = [
     year: '2021',
     title: 'Cell Biology and Genetics',
     questions: 50,
-    preview: "Which of the following is NOT a function of the cell membrane?"
+    preview: "Which of the following is NOT a function of the cell membrane?",
+    price: 1500
   },
   {
     id: 6,
@@ -58,12 +64,14 @@ const sampleQuestions = [
     year: '2023',
     title: 'Microeconomics Principles',
     questions: 35,
-    preview: "Define price elasticity of demand and explain its determinants."
+    preview: "Define price elasticity of demand and explain its determinants.",
+    price: 1200
   }
 ];
 
 export function SampleQuestions() {
   const [activeTab, setActiveTab] = useState<string>('All');
+  const [processingPayment, setProcessingPayment] = useState<number | null>(null);
   
   const filteredQuestions = activeTab === 'All' 
     ? sampleQuestions 
@@ -83,6 +91,22 @@ export function SampleQuestions() {
 
   const handleViewAllQuestions = () => {
     toast.info('Loading complete question database...');
+  };
+
+  const handlePayNow = async (question: typeof sampleQuestions[0]) => {
+    try {
+      setProcessingPayment(question.id);
+      await processQuestionPackPurchase(
+        question.id.toString(),
+        `${question.subject}: ${question.title} (${question.examType} ${question.year})`,
+        question.price
+      );
+    } catch (error) {
+      console.error('Payment error:', error);
+      toast.error('Payment processing failed. Please try again.');
+    } finally {
+      setProcessingPayment(null);
+    }
   };
 
   return (
@@ -129,40 +153,54 @@ export function SampleQuestions() {
                 </div>
                 <h3 className="text-xl font-medium">{question.subject}</h3>
                 <p className="text-sm text-muted-foreground">{question.title}</p>
+                <div className="mt-2 text-md font-semibold text-primary">
+                  ₦{question.price.toLocaleString()}
+                </div>
               </div>
               
               <div className="p-5 border-t border-border/60">
                 <p className="text-sm mb-5">{question.preview}</p>
                 
-                <div className="flex items-center justify-between">
-                  <div className="flex space-x-2">
+                <div className="flex flex-col space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex space-x-2">
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className="h-8 px-2"
+                        onClick={() => handlePreviewQuestion(question.id)}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        Preview
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className="h-8 px-2"
+                        onClick={() => handleSaveQuestion(question.id)}
+                      >
+                        <Download className="h-4 w-4 mr-1" />
+                        Save
+                      </Button>
+                    </div>
+                    
                     <Button 
                       size="sm" 
-                      variant="ghost" 
-                      className="h-8 px-2"
-                      onClick={() => handlePreviewQuestion(question.id)}
+                      className="h-8"
+                      onClick={() => handleViewFullSet(question.subject, question.examType)}
                     >
-                      <Eye className="h-4 w-4 mr-1" />
-                      Preview
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="ghost" 
-                      className="h-8 px-2"
-                      onClick={() => handleSaveQuestion(question.id)}
-                    >
-                      <Download className="h-4 w-4 mr-1" />
-                      Save
+                      <BookOpen className="h-4 w-4 mr-1" />
+                      View Full Set
                     </Button>
                   </div>
                   
-                  <Button 
-                    size="sm" 
-                    className="h-8"
-                    onClick={() => handleViewFullSet(question.subject, question.examType)}
+                  <Button
+                    className="w-full"
+                    onClick={() => handlePayNow(question)}
+                    disabled={processingPayment === question.id}
                   >
-                    <BookOpen className="h-4 w-4 mr-1" />
-                    View Full Set
+                    <ShoppingCart className="h-4 w-4 mr-2" />
+                    {processingPayment === question.id ? 'Processing...' : 'Pay Now'}
                   </Button>
                 </div>
               </div>
