@@ -1,5 +1,32 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { initializeApp } from 'firebase/app';
+import { 
+  getAuth, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  signOut as firebaseSignOut,
+  onAuthStateChanged,
+  User as FirebaseUser
+} from 'firebase/auth';
+import { getFirestore, doc, getDoc } from 'firebase/firestore';
+import api from '@/services/api';
+import { toast } from 'sonner';
+
+// Firebase configuration
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
 export interface User {
   id: string;
@@ -23,36 +50,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check for saved user on mount
+  // Listen for auth state changes
   useEffect(() => {
-    const savedUser = localStorage.getItem('studyquest_user');
-    if (savedUser) {
-      setCurrentUser(JSON.parse(savedUser));
-    }
-    setIsLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setIsLoading(true);
+      if (firebaseUser) {
+        try {
+          // Get additional user data from Firestore
+          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+          
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            setCurrentUser({
+              id: firebaseUser.uid,
+              name: firebaseUser.displayName || userData.name || '',
+              email: firebaseUser.email || '',
+              role: userData.role || 'user',
+            });
+            
+            // Store auth token
+            const token = await firebaseUser.getIdToken();
+            localStorage.setItem('auth_token', token);
+          } else {
+            console.error('User document not found in Firestore');
+            setCurrentUser(null);
+          }
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+          setCurrentUser(null);
+        }
+      } else {
+        setCurrentUser(null);
+        localStorage.removeItem('auth_token');
+      }
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  // Mock authentication functions (to be replaced with real backend)
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // This is a mock implementation. In a real app, this would be an API call
-      const isAdmin = email.includes('admin');
-      const mockUser: User = {
-        id: Date.now().toString(),
-        name: email.split('@')[0],
-        email,
-        role: isAdmin ? 'admin' : 'user',
-      };
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      // Save user to localStorage
-      localStorage.setItem('studyquest_user', JSON.stringify(mockUser));
-      setCurrentUser(mockUser);
+      await signInWithEmailAndPassword(auth, email, password);
+      toast.success('Login successful! Welcome back.');
     } catch (error) {
       console.error('Login failed:', error);
+      toast.error('Login failed. Please check your credentials and try again.');
       throw error;
     } finally {
       setIsLoading(false);
@@ -62,22 +106,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signup = async (name: string, email: string, password: string) => {
     setIsLoading(true);
     try {
-      // This is a mock implementation. In a real app, this would be an API call
-      const mockUser: User = {
-        id: Date.now().toString(),
+      // Create user in Firebase Auth and our backend
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Call our backend to create the user in Firestore with additional data
+      await api.post('/auth/signup', {
         name,
         email,
-        role: 'user',
-      };
+        password,
+        uid: userCredential.user.uid
+      });
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      // Save user to localStorage
-      localStorage.setItem('studyquest_user', JSON.stringify(mockUser));
-      setCurrentUser(mockUser);
+      toast.success('Account created successfully! Welcome to StudyQuest.');
     } catch (error) {
       console.error('Signup failed:', error);
+      toast.error('Signup failed. Please try again.');
       throw error;
     } finally {
       setIsLoading(false);
@@ -87,9 +130,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     setIsLoading(true);
     try {
-      // Clear user from localStorage
-      localStorage.removeItem('studyquest_user');
-      setCurrentUser(null);
+      await firebaseSignOut(auth);
+      toast.success('You have been logged out');
     } catch (error) {
       console.error('Logout failed:', error);
       throw error;
