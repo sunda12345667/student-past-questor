@@ -1,81 +1,52 @@
 
-import api from './api';
-import { toast } from 'sonner';
+import api from '@/services/api';
 
-export interface PaymentResponse {
-  status: boolean;
-  message: string;
-  data: {
-    authorization_url: string;
-    access_code: string;
-    reference: string;
-  };
-}
-
-export interface VerifyResponse {
-  status: boolean;
-  message: string;
-  data: {
-    status: string;
-    reference: string;
-    amount: number;
-    metadata: any;
-  };
-}
-
-export const initializePayment = async (
-  email: string,
-  amount: number,
-  metadata: any
-): Promise<PaymentResponse> => {
-  try {
-    const response = await api.post('/payment/initialize', {
-      email,
-      amount,
-      metadata
-    });
-    
-    return response.data;
-  } catch (error) {
-    console.error('Payment initialization error:', error);
-    toast.error('Failed to initialize payment. Please try again.');
-    throw error;
-  }
-};
-
-export const verifyPayment = async (reference: string): Promise<VerifyResponse> => {
-  try {
-    const response = await api.get(`/payment/verify/${reference}`);
-    
-    return response.data;
-  } catch (error) {
-    console.error('Payment verification error:', error);
-    toast.error('Failed to verify payment. Please contact support.');
-    throw error;
-  }
-};
-
+/**
+ * Initiates the Paystack payment process for purchasing a question pack
+ * 
+ * @param packId - The ID of the question pack being purchased
+ * @param packDescription - Description of the question pack
+ * @param amount - The amount to charge in Naira
+ * @returns A Promise that resolves when the payment process is initiated
+ */
 export const processQuestionPackPurchase = async (
   packId: string,
-  packTitle: string,
+  packDescription: string,
   amount: number
-) => {
+): Promise<void> => {
   try {
-    const user = JSON.parse(localStorage.getItem('auth_user') || '{}');
-    
-    const paymentResponse = await initializePayment(user.email, amount, {
-      service: 'question_pack',
+    // The backend will handle redirecting to Paystack checkout
+    const response = await api.post('/payment/initialize', {
       packId,
-      packTitle
+      packDescription,
+      amount, // This is in Naira, server will convert to kobo if needed
     });
-    
-    // Redirect to Paystack payment page
-    window.location.href = paymentResponse.data.authorization_url;
-    
-    return paymentResponse;
+
+    if (response.data && response.data.authorization_url) {
+      // Redirect to Paystack checkout page
+      window.location.href = response.data.authorization_url;
+    } else {
+      console.error('Invalid response from payment initialization:', response);
+      throw new Error('Failed to initialize payment. Please try again.');
+    }
   } catch (error) {
-    console.error('Error processing question pack purchase:', error);
-    toast.error('Failed to process payment. Please try again.');
+    console.error('Payment initialization error:', error);
+    throw error;
+  }
+};
+
+/**
+ * Verify a Paystack payment transaction
+ * 
+ * @param reference - The transaction reference returned by Paystack
+ * @returns A Promise that resolves with the transaction verification result
+ */
+export const verifyPaystackTransaction = async (reference: string): Promise<any> => {
+  try {
+    const response = await api.get(`/payment/verify/${reference}`);
+    return response.data;
+  } catch (error) {
+    console.error('Transaction verification error:', error);
     throw error;
   }
 };
