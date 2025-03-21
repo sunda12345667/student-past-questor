@@ -1,7 +1,7 @@
 
 import axios from 'axios';
 
-// Replace this with your production API URL when deploying
+// REPLACE: When deploying to production, set this to your actual API URL in your environment variables
 // For development, this points to your local server
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 

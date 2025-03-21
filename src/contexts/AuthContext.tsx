@@ -13,15 +13,17 @@ import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import api from '@/services/api';
 import { toast } from 'sonner';
 
-// Firebase configuration - Replace these with your own Firebase project details
+// Firebase configuration 
+// REPLACE: You MUST replace these values with your own Firebase project details
+// REPLACE: Create a .env file in the root of your project with these values
 // You can find all these values in your Firebase console > Project settings > General > Your apps
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,           // Add your Firebase API key to .env file
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,   // Format: your-project-id.firebaseapp.com
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,     // Your Firebase project ID
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET, // Format: your-project-id.appspot.com
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID, // Messaging sender ID from Firebase
-  appId: import.meta.env.VITE_FIREBASE_APP_ID              // Firebase app ID
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,           // REPLACE: Add your Firebase API key to .env file
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,   // REPLACE: Format: your-project-id.firebaseapp.com
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,     // REPLACE: Your Firebase project ID
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET, // REPLACE: Format: your-project-id.appspot.com
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID, // REPLACE: Messaging sender ID from Firebase
+  appId: import.meta.env.VITE_FIREBASE_APP_ID              // REPLACE: Firebase app ID
 };
 
 // Initialize Firebase
