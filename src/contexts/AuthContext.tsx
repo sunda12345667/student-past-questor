@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
 import { 
@@ -28,6 +29,7 @@ let auth;
 let db;
 
 try {
+  // Fix initialization by ensuring Firebase modules are properly loaded
   app = initializeApp(firebaseConfig);
   auth = getAuth(app);
   db = getFirestore(app);
@@ -121,16 +123,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      if (auth && typeof auth.signInWithEmailAndPassword === 'function') {
-        await signInWithEmailAndPassword(auth, email, password);
+      if (typeof auth.signInWithEmailAndPassword === 'function') {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const token = await userCredential.user.getIdToken();
+        localStorage.setItem('auth_token', token);
         toast.success('Login successful! Welcome back.');
       } else {
         console.warn("Firebase auth not initialized. Cannot log in.");
         toast.error('Authentication service unavailable. Please try again later.');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login failed:', error);
-      toast.error('Login failed. Please check your credentials and try again.');
+      const errorMessage = error.code === 'auth/invalid-credential' 
+        ? 'Invalid email or password' 
+        : 'Login failed. Please try again.';
+      toast.error(errorMessage);
       throw error;
     } finally {
       setIsLoading(false);
@@ -140,8 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signup = async (name: string, email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Create user in Firebase Auth and our backend
-      if (auth && typeof auth.createUserWithEmailAndPassword === 'function') {
+      if (typeof auth.createUserWithEmailAndPassword === 'function') {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         
         // Call our backend to create the user in Firestore with additional data
@@ -152,14 +158,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           uid: userCredential.user.uid
         });
         
+        const token = await userCredential.user.getIdToken();
+        localStorage.setItem('auth_token', token);
+        
         toast.success('Account created successfully! Welcome to StudyQuest.');
       } else {
         console.warn("Firebase auth not initialized. Cannot sign up.");
         toast.error('Authentication service unavailable. Please try again later.');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Signup failed:', error);
-      toast.error('Signup failed. Please try again.');
+      let errorMessage = 'Signup failed. Please try again.';
+      
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'Email is already in use. Please use a different email or try logging in.';
+      }
+      
+      toast.error(errorMessage);
       throw error;
     } finally {
       setIsLoading(false);
@@ -169,8 +184,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     setIsLoading(true);
     try {
-      if (auth && typeof auth.signOut === 'function') {
+      if (typeof auth.signOut === 'function') {
         await firebaseSignOut(auth);
+        localStorage.removeItem('auth_token');
         toast.success('You have been logged out');
       } else {
         console.warn("Firebase auth not initialized. Cannot log out.");
