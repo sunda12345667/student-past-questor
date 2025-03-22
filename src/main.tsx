@@ -1,10 +1,11 @@
 
 import { createRoot } from 'react-dom/client'
-import { StrictMode, Suspense, ErrorBoundary } from 'react'
+import { StrictMode, Suspense } from 'react'
+import React from 'react'  // Add explicit React import
 import App from './App.tsx'
 import './index.css'
 
-// Simple error boundary fallback component
+// Simple error fallback component
 const ErrorFallback = ({ error }: { error: Error }) => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
@@ -26,32 +27,6 @@ const ErrorFallback = ({ error }: { error: Error }) => {
     </div>
   );
 };
-
-// Error boundary component
-class AppErrorBoundary extends React.Component<
-  { children: React.ReactNode },
-  { hasError: boolean; error: Error | null }
-> {
-  constructor(props: { children: React.ReactNode }) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-
-  static getDerivedStateFromError(error: Error) {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error("Uncaught error:", error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return <ErrorFallback error={this.state.error!} />;
-    }
-    return this.props.children;
-  }
-}
 
 // Import ErrorBoundary from react-error-boundary package
 import { ErrorBoundary as ReactErrorBoundary } from 'react-error-boundary';

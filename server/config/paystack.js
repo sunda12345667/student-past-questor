@@ -4,10 +4,9 @@ const Paystack = require('paystack');
 
 dotenv.config();
 
-// Initialize Paystack with your secret key from .env file
-// REPLACE: You MUST get your secret key from your Paystack dashboard > Settings > API Keys & Webhooks
-// IMPORTANT: Never commit your actual secret key to version control
-// Copy your key to the .env file (not .env.example)
-const paystack = Paystack(process.env.PAYSTACK_SECRET_KEY);
+// Initialize Paystack with the provided live secret key
+// Note: In production, it's better to use environment variables for security
+const paystackSecretKey = process.env.PAYSTACK_SECRET_KEY || "sk_live_27e692300ed3d698eabd2087ce84dc0977ff0edb";
+const paystack = Paystack(paystackSecretKey);
 
 module.exports = paystack;

@@ -5,28 +5,26 @@ const { getAuth } = require('firebase/auth');
 const { getFirestore } = require('firebase/firestore');
 
 // Initialize Firebase Admin (for server-side operations)
-// REPLACE: You need to create a service account in Firebase console > Project settings > Service accounts
-// Download the JSON file and extract the information below
 if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,        // REPLACE: Your Firebase project ID
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,    // REPLACE: Service account email from downloaded JSON
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'), // REPLACE: Service account private key
+      projectId: process.env.FIREBASE_PROJECT_ID || "student-babb5",
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL, // You still need to add this to your .env file
+      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'), // You still need to add this to your .env file
     }),
-    databaseURL: process.env.FIREBASE_DATABASE_URL,     // REPLACE: Only needed if using Realtime Database
+    databaseURL: process.env.FIREBASE_DATABASE_URL || "https://student-babb5.firebaseio.com",
   });
 }
 
-// Initialize Firebase Client (for client-side operations)
-// REPLACE: These should match the values in your frontend Firebase config (AuthContext.tsx)
+// Initialize Firebase Client with provided credentials
 const firebaseConfig = {
-  apiKey: process.env.FIREBASE_API_KEY,           // REPLACE: Your Firebase API key
-  authDomain: process.env.FIREBASE_AUTH_DOMAIN,   // REPLACE: Format: your-project-id.firebaseapp.com
-  projectId: process.env.FIREBASE_PROJECT_ID,     // REPLACE: Your Firebase project ID
-  storageBucket: process.env.FIREBASE_STORAGE_BUCKET, // REPLACE: Format: your-project-id.appspot.com
-  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID, // REPLACE: Messaging sender ID
-  appId: process.env.FIREBASE_APP_ID,            // REPLACE: Firebase app ID
+  apiKey: "AIzaSyDVXNzlAFZO6gFllb2qv48vfNoEG4tFATY",
+  authDomain: "student-babb5.firebaseapp.com",
+  projectId: "student-babb5",
+  storageBucket: "student-babb5.firebasestorage.app",
+  messagingSenderId: "992139414648",
+  appId: "1:992139414648:web:31465cdcb39ac55210f18d",
+  measurementId: "G-3WEM53ZL06"
 };
 
 if (!firebase.apps.length) {
