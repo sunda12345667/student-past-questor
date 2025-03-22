@@ -28,6 +28,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Fetch user profile data from the profiles table
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, name, email, role')
+        .eq('id', userId)
+        .single();
+      
+      if (error) {
+        console.error('Error fetching user profile:', error);
+        throw error;
+      }
+      
+      return data as User;
+    } catch (error) {
+      console.error('Error in fetchUserProfile:', error);
+      return null;
+    }
+  };
+
   // Set up the auth state listener for Supabase
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -37,16 +58,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(newSession);
         
         if (newSession) {
-          // Get user data from database or session
           try {
-            // Get user profile data from users table if you have one
-            // For now, we'll just use basic session data
-            setCurrentUser({
-              id: newSession.user.id,
-              email: newSession.user.email || '',
-              name: newSession.user.user_metadata?.name || newSession.user.email?.split('@')[0] || '',
-              role: newSession.user.user_metadata?.role || 'user',
-            });
+            const profileData = await fetchUserProfile(newSession.user.id);
+            
+            if (profileData) {
+              setCurrentUser(profileData);
+            } else {
+              // Fallback to session data if profile not found
+              setCurrentUser({
+                id: newSession.user.id,
+                email: newSession.user.email || '',
+                name: newSession.user.user_metadata?.name || newSession.user.email?.split('@')[0] || '',
+                role: newSession.user.user_metadata?.role || 'user',
+              });
+            }
           } catch (error) {
             console.error('Error fetching user data:', error);
             setCurrentUser(null);
@@ -60,19 +85,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+    supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
       setSession(currentSession);
       
       if (currentSession) {
-        setCurrentUser({
-          id: currentSession.user.id,
-          email: currentSession.user.email || '',
-          name: currentSession.user.user_metadata?.name || currentSession.user.email?.split('@')[0] || '',
-          role: currentSession.user.user_metadata?.role || 'user',
-        });
+        try {
+          const profileData = await fetchUserProfile(currentSession.user.id);
+          
+          if (profileData) {
+            setCurrentUser(profileData);
+          } else {
+            // Fallback to session data if profile not found
+            setCurrentUser({
+              id: currentSession.user.id,
+              email: currentSession.user.email || '',
+              name: currentSession.user.user_metadata?.name || currentSession.user.email?.split('@')[0] || '',
+              role: currentSession.user.user_metadata?.role || 'user',
+            });
+          }
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+          setCurrentUser(null);
+        }
+        
+        setIsLoading(false);
+      } else {
+        setCurrentUser(null);
+        setIsLoading(false);
       }
-      
-      setIsLoading(false);
     });
 
     return () => {
