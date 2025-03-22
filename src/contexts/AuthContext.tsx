@@ -1,45 +1,8 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { initializeApp } from 'firebase/app';
-import { 
-  getAuth, 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword,
-  signOut as firebaseSignOut,
-  onAuthStateChanged,
-} from 'firebase/auth';
-import { getFirestore, doc, getDoc } from 'firebase/firestore';
-import api from '@/services/api';
+import { supabase } from '@/integrations/supabase/client';
+import { Session, User as SupabaseUser } from '@supabase/supabase-js';
 import { toast } from 'sonner';
-
-// Firebase configuration with provided credentials
-const firebaseConfig = {
-  apiKey: "AIzaSyDVXNzlAFZO6gFllb2qv48vfNoEG4tFATY",
-  authDomain: "student-babb5.firebaseapp.com",
-  projectId: "student-babb5",
-  storageBucket: "student-babb5.firebasestorage.app",
-  messagingSenderId: "992139414648",
-  appId: "1:992139414648:web:31465cdcb39ac55210f18d",
-  measurementId: "G-3WEM53ZL06"
-};
-
-// Initialize Firebase with error handling
-let app;
-let auth;
-let db;
-
-try {
-  // Fix initialization by ensuring Firebase modules are properly loaded
-  app = initializeApp(firebaseConfig);
-  auth = getAuth(app);
-  db = getFirestore(app);
-  console.log("Firebase initialized successfully");
-} catch (error) {
-  console.error("Error initializing Firebase:", error);
-  // Create fallback objects to prevent app crashes
-  auth = {} as any;
-  db = {} as any;
-}
 
 export interface User {
   id: string;
@@ -55,88 +18,84 @@ interface AuthContextType {
   signup: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   isAdmin: () => boolean;
+  session: Session | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Listen for auth state changes
+  // Set up the auth state listener for Supabase
   useEffect(() => {
-    let unsubscribe = () => {};
-    
-    try {
-      if (auth && typeof auth.onAuthStateChanged === 'function') {
-        unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-          setIsLoading(true);
-          if (firebaseUser) {
-            try {
-              // Get additional user data from Firestore
-              if (db && typeof doc === 'function') {
-                const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-                
-                if (userDoc.exists()) {
-                  const userData = userDoc.data();
-                  setCurrentUser({
-                    id: firebaseUser.uid,
-                    name: firebaseUser.displayName || userData.name || '',
-                    email: firebaseUser.email || '',
-                    role: userData.role || 'user',
-                  });
-                  
-                  // Store auth token
-                  const token = await firebaseUser.getIdToken();
-                  localStorage.setItem('auth_token', token);
-                } else {
-                  console.error('User document not found in Firestore');
-                  setCurrentUser(null);
-                }
-              }
-            } catch (error) {
-              console.error('Error fetching user data:', error);
-              setCurrentUser(null);
-            }
-          } else {
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, newSession) => {
+        console.log('Auth state changed:', event);
+        setSession(newSession);
+        
+        if (newSession) {
+          // Get user data from database or session
+          try {
+            // Get user profile data from users table if you have one
+            // For now, we'll just use basic session data
+            setCurrentUser({
+              id: newSession.user.id,
+              email: newSession.user.email || '',
+              name: newSession.user.user_metadata?.name || newSession.user.email?.split('@')[0] || '',
+              role: newSession.user.user_metadata?.role || 'user',
+            });
+          } catch (error) {
+            console.error('Error fetching user data:', error);
             setCurrentUser(null);
-            localStorage.removeItem('auth_token');
           }
-          setIsLoading(false);
-        });
-      } else {
-        console.warn("Firebase auth not properly initialized. Running in demo mode.");
+        } else {
+          setCurrentUser(null);
+        }
+        
         setIsLoading(false);
       }
-    } catch (error) {
-      console.error("Error in auth state change listener:", error);
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession);
+      
+      if (currentSession) {
+        setCurrentUser({
+          id: currentSession.user.id,
+          email: currentSession.user.email || '',
+          name: currentSession.user.user_metadata?.name || currentSession.user.email?.split('@')[0] || '',
+          role: currentSession.user.user_metadata?.role || 'user',
+        });
+      }
+      
       setIsLoading(false);
-    }
+    });
 
     return () => {
-      if (typeof unsubscribe === 'function') {
-        unsubscribe();
-      }
+      subscription.unsubscribe();
     };
   }, []);
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      if (typeof auth.signInWithEmailAndPassword === 'function') {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const token = await userCredential.user.getIdToken();
-        localStorage.setItem('auth_token', token);
-        toast.success('Login successful! Welcome back.');
-      } else {
-        console.warn("Firebase auth not initialized. Cannot log in.");
-        toast.error('Authentication service unavailable. Please try again later.');
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        throw error;
       }
+      
+      toast.success('Login successful! Welcome back.');
     } catch (error: any) {
       console.error('Login failed:', error);
-      const errorMessage = error.code === 'auth/invalid-credential' 
-        ? 'Invalid email or password' 
-        : 'Login failed. Please try again.';
+      const errorMessage = error.message || 'Login failed. Please try again.';
       toast.error(errorMessage);
       throw error;
     } finally {
@@ -147,30 +106,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signup = async (name: string, email: string, password: string) => {
     setIsLoading(true);
     try {
-      if (typeof auth.createUserWithEmailAndPassword === 'function') {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        
-        // Call our backend to create the user in Firestore with additional data
-        await api.post('/auth/signup', {
-          name,
-          email,
-          password,
-          uid: userCredential.user.uid
-        });
-        
-        const token = await userCredential.user.getIdToken();
-        localStorage.setItem('auth_token', token);
-        
-        toast.success('Account created successfully! Welcome to StudyQuest.');
-      } else {
-        console.warn("Firebase auth not initialized. Cannot sign up.");
-        toast.error('Authentication service unavailable. Please try again later.');
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+            role: 'user',
+          },
+        },
+      });
+
+      if (error) {
+        throw error;
       }
+      
+      toast.success('Account created successfully! Please check your email to confirm your registration.');
     } catch (error: any) {
       console.error('Signup failed:', error);
       let errorMessage = 'Signup failed. Please try again.';
       
-      if (error.code === 'auth/email-already-in-use') {
+      if (error.message.includes('already registered')) {
         errorMessage = 'Email is already in use. Please use a different email or try logging in.';
       }
       
@@ -184,16 +140,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     setIsLoading(true);
     try {
-      if (typeof auth.signOut === 'function') {
-        await firebaseSignOut(auth);
-        localStorage.removeItem('auth_token');
-        toast.success('You have been logged out');
-      } else {
-        console.warn("Firebase auth not initialized. Cannot log out.");
-        localStorage.removeItem('auth_token');
-        setCurrentUser(null);
-        toast.success('You have been logged out');
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        throw error;
       }
+      
+      toast.success('You have been logged out');
     } catch (error) {
       console.error('Logout failed:', error);
       throw error;
@@ -213,6 +166,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signup,
     logout,
     isAdmin,
+    session,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
