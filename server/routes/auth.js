@@ -1,29 +1,29 @@
 
 const express = require('express');
 const router = express.Router();
-const { admin, adminAuth, adminDB } = require('../config/firebase');
+const { createClient } = require('@supabase/supabase-js');
+
+// Initialize Supabase client
+const supabaseUrl = process.env.SUPABASE_URL || "https://mincssuyfzyrtuwooeyo.supabase.co";
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ""; // This should be set in your server environment
+
+// Service role key is used only on the server side for admin operations
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // Create a new user
 router.post('/signup', async (req, res) => {
   try {
     const { name, email, password } = req.body;
     
-    // Create user in Firebase Auth
-    const userRecord = await adminAuth.createUser({
+    // Create user in Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
       password,
-      displayName: name,
+      user_metadata: { name, role: 'user' },
+      email_confirm: true
     });
     
-    // Create user document in Firestore
-    await adminDB.collection('users').doc(userRecord.uid).set({
-      uid: userRecord.uid,
-      name,
-      email,
-      role: 'user',
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      purchasedPacks: [],
-    });
+    if (authError) throw authError;
     
     res.status(201).json({ message: 'User created successfully' });
   } catch (error) {
@@ -32,28 +32,21 @@ router.post('/signup', async (req, res) => {
   }
 });
 
-// Login
+// Login - This is handled directly by the client with Supabase
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email } = req.body;
     
-    // We'll handle actual authentication in the client
-    // This is just to fetch user data if needed
-    const userRecord = await adminAuth.getUserByEmail(email);
+    // Get user by email (for compatibility with old code)
+    const { data: user, error: userError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('email', email)
+      .single();
     
-    // Get additional user data from Firestore
-    const userDoc = await adminDB.collection('users').doc(userRecord.uid).get();
+    if (userError) throw userError;
     
-    if (userDoc.exists) {
-      res.status(200).json({ 
-        uid: userRecord.uid,
-        email: userRecord.email,
-        name: userRecord.displayName,
-        ...userDoc.data() 
-      });
-    } else {
-      res.status(404).json({ error: 'User data not found' });
-    }
+    res.status(200).json(user);
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: error.message });
