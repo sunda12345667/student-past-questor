@@ -2,7 +2,12 @@
 const express = require('express');
 const router = express.Router();
 const paystack = require('../config/paystack');
-const { adminDB, admin } = require('../config/firebase');
+const { createClient } = require('@supabase/supabase-js');
+
+// Initialize Supabase client
+const supabaseUrl = process.env.SUPABASE_URL || "https://mincssuyfzyrtuwooeyo.supabase.co";
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // Initialize payment
 router.post('/initialize', async (req, res) => {
@@ -39,29 +44,24 @@ router.get('/verify/:reference', async (req, res) => {
     const response = await paystack.transaction.verify(reference);
     
     if (response.data.status === 'success') {
-      // Save transaction to Firebase
-      await adminDB.collection('transactions').add({
-        reference: response.data.reference,
-        amount: response.data.amount / 100, // Convert back to naira
-        email: response.data.customer.email,
-        metadata: response.data.metadata,
-        status: response.data.status,
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-      });
+      // Save transaction to Supabase
+      const { data: transactionData, error: transactionError } = await supabase
+        .from('purchases')
+        .insert({
+          user_id: response.data.metadata.userId,
+          material_id: response.data.metadata.materialId || response.data.metadata.packId,
+          amount: response.data.amount / 100, // Convert back to naira
+          transaction_ref: response.data.reference
+        });
       
-      // If it's a question pack purchase, update user's purchases
-      if (response.data.metadata.service === 'question_pack') {
-        await adminDB.collection('users')
-          .where('email', '==', response.data.customer.email)
-          .get()
-          .then(async (snapshot) => {
-            if (!snapshot.empty) {
-              const userId = snapshot.docs[0].id;
-              await adminDB.collection('users').doc(userId).update({
-                purchasedPacks: admin.firestore.FieldValue.arrayUnion(response.data.metadata.packId)
-              });
-            }
-          });
+      if (transactionError) {
+        console.error('Error saving transaction:', transactionError);
+      }
+      
+      // If it's a question pack purchase, update user's purchases if needed
+      if (response.data.metadata.service === 'question_pack' || response.data.metadata.packId) {
+        // In a more complex implementation, we might need additional logic here
+        // to grant access to the purchased content
       }
     }
     
