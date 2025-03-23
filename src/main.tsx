@@ -2,6 +2,7 @@
 import { createRoot } from 'react-dom/client'
 import { StrictMode, Suspense } from 'react'
 import React from 'react'  // Add explicit React import
+import { BrowserRouter } from 'react-router-dom' // Import BrowserRouter
 import App from './App.tsx'
 import './index.css'
 
@@ -43,7 +44,9 @@ try {
   root.render(
     <ReactErrorBoundary FallbackComponent={ErrorFallback}>
       <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
-        <App />
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
       </Suspense>
     </ReactErrorBoundary>
   );
