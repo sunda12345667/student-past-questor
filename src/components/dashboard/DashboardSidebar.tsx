@@ -16,7 +16,8 @@ import {
   Download,
   ShoppingCart,
   Search,
-  LogOut
+  LogOut,
+  Smartphone
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -69,6 +70,7 @@ export const DashboardSidebar = ({ currentUser, activeTab, setActiveTab }: Dashb
     { id: 'search', label: 'Search Materials', icon: <Search className="w-4 h-4" /> },
     { id: 'questions', label: 'Past Questions', icon: <BookOpen className="w-4 h-4" /> },
     { id: 'marketplace', label: 'Marketplace', icon: <ShoppingCart className="w-4 h-4" /> },
+    { id: 'bills', label: 'Utility Payments', icon: <Smartphone className="w-4 h-4" /> },
     { id: 'downloads', label: 'My Downloads', icon: <Download className="w-4 h-4" /> },
     { id: 'profile', label: 'Profile', icon: <User className="w-4 h-4" /> },
     { id: 'groups', label: 'Study Groups', icon: <Users className="w-4 h-4" /> },

@@ -1,8 +1,9 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SearchIcon, BookOpen, FileText, Download, ShoppingCart } from "lucide-react";
+import { SearchIcon, BookOpen, FileText, Download, ShoppingCart, Smartphone, Tv, Lightbulb, GraduationCap } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { initializePayment, verifyPayment, checkPurchaseStatus } from "@/services/paystackService";
@@ -129,9 +130,58 @@ export default function Marketplace() {
     }, 2000);
   };
 
+  const handleUtilityPaymentNavigation = () => {
+    navigate('/dashboard');
+    // Wait for navigation to complete, then set the active tab
+    setTimeout(() => {
+      const tabSetter = window.localStorage.getItem('setActiveTab');
+      if (tabSetter) {
+        const setActiveTab = JSON.parse(tabSetter);
+        setActiveTab('bills');
+      }
+    }, 100);
+  };
+
   return (
     <div className="container mx-auto p-4">
       <h2 className="text-2xl font-bold mb-6">Study Materials Marketplace</h2>
+      
+      {/* Utility Payments Banner */}
+      <Card className="mb-8 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
+        <CardContent className="p-6">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between">
+            <div>
+              <h3 className="text-xl font-bold text-primary mb-2">
+                Sell Airtime, Data & Utility Payments 📲
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-4">
+                <div className="flex items-center gap-2">
+                  <Smartphone className="h-4 w-4 text-green-600" />
+                  <span className="text-sm">Buy Airtime & Data (MTN, Glo, Airtel, 9mobile)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Lightbulb className="h-4 w-4 text-amber-600" />
+                  <span className="text-sm">Pay Electricity Bills (PHCN, Eko, Ikeja, Abuja, etc.)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Tv className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm">Pay TV Subscriptions (DStv, GOtv, StarTimes)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <GraduationCap className="h-4 w-4 text-purple-600" />
+                  <span className="text-sm">Education Payments (WAEC, NECO, JAMB, School Fees)</span>
+                </div>
+              </div>
+            </div>
+            <Button 
+              className="mt-3 lg:mt-0" 
+              onClick={handleUtilityPaymentNavigation}
+            >
+              Pay Bills Now
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
       
       <div className="mb-6">
         <div className="relative">
