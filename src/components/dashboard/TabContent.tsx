@@ -14,12 +14,15 @@ import SearchMaterials from './SearchMaterials';
 import StudyGroups from './StudyGroups';
 import StudySessions from './StudySessions';
 import UserProfile from './UserProfile';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface TabContentProps {
   activeTab: string;
 }
 
 export const TabContent = ({ activeTab }: TabContentProps): ReactNode => {
+  const { currentUser } = useAuth();
+  
   switch (activeTab) {
     case 'questions':
       return <QuestionsTab />;
@@ -28,7 +31,8 @@ export const TabContent = ({ activeTab }: TabContentProps): ReactNode => {
     case 'downloads':
       return <Downloads />;
     case 'profile':
-      return <UserProfile />;
+      // Pass the user object to UserProfile
+      return <UserProfile user={currentUser} />;
     case 'bills':
       return <BillPayments />;
     case 'marketplace':

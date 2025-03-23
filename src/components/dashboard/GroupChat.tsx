@@ -90,7 +90,7 @@ const GroupChat = () => {
       sender: {
         id: currentUser?.id || 'current-user',
         name: currentUser?.name || 'You',
-        avatar: currentUser?.avatar_url || ''
+        avatar: currentUser?.avatar || '' // Fixed: changed from avatar_url to avatar
       },
       content: messageInput,
       timestamp: new Date()

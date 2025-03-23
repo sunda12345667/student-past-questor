@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,7 +44,7 @@ export default function Marketplace() {
 
         if (error) {
           console.error('Error fetching materials:', error);
-          toast.error('Failed to load study materials');
+          toast('Failed to load study materials');
           return;
         }
 
@@ -59,14 +58,23 @@ export default function Marketplace() {
         const materialWithPurchaseStatus = await Promise.all(
           data.map(async (material) => {
             const purchased = await checkPurchaseStatus(currentUser.id, material.id);
-            return { ...material, purchased };
+            // Ensure the type is either 'ebook' or 'past-question'
+            const validType = material.type === 'ebook' || material.type === 'past-question' 
+              ? material.type 
+              : 'ebook'; // Default to ebook if the type is invalid
+            
+            return { 
+              ...material, 
+              purchased,
+              type: validType
+            } as Material;
           })
         );
 
         setMaterials(materialWithPurchaseStatus);
       } catch (error) {
         console.error('Error in fetchMaterials:', error);
-        toast.error('An error occurred while loading study materials');
+        toast('An error occurred while loading study materials');
       } finally {
         setLoading(false);
       }
@@ -89,7 +97,7 @@ export default function Marketplace() {
 
   const handleBuyNow = async (material: Material) => {
     if (!currentUser) {
-      toast.error('Please log in to make a purchase');
+      toast('Please log in to make a purchase');
       navigate('/login');
       return;
     }
@@ -427,8 +435,7 @@ export default function Marketplace() {
                 <p className="text-sm text-muted-foreground mt-2">
                   You haven't purchased any study materials yet
                 </p>
-                <Button variant="outline" className="mt-4" onClick={() => document.querySelector('[data-value="all"]')?.click()}>
-                  Browse Materials
+                <Button variant="outline" className="mt-4" onClick={() => document.querySelector('[data-value="all"]')?.dispatchEvent(new Event('click', { bubbles: true }))}>
                 </Button>
               </div>
             )}

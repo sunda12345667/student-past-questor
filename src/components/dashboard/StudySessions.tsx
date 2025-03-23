@@ -1,4 +1,7 @@
+
 import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { 
   Card, 
@@ -26,6 +29,7 @@ import {
   Users, 
   Video, 
   Plus, 
+  BellRing as Bell,
   CalendarDays,
   ClipboardCheck,
   User,
@@ -47,6 +51,7 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 
 const upcomingSessions = [
@@ -256,7 +261,7 @@ const StudySessions = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Date</Label>
-                  <CalendarDatePicker
+                  <CalendarComponent
                     mode="single"
                     selected={selectedDate}
                     onSelect={setSelectedDate}
@@ -385,7 +390,7 @@ const StudySessions = () => {
                   </CardHeader>
                   <CardContent className="space-y-2">
                     <div className="flex items-center text-sm">
-                      <CalendarIcon className="h-4 w-4 mr-1 text-muted-foreground" />
+                      <Calendar className="h-4 w-4 mr-1 text-muted-foreground" />
                       <span>{format(session.date, 'EEEE, MMMM d, yyyy')}</span>
                     </div>
                     <div className="flex items-center text-sm">
@@ -428,7 +433,7 @@ const StudySessions = () => {
                           Join
                         </Button>
                         <Button variant="outline" onClick={() => handleSetReminder(session.id)}>
-                          <BellRing className="h-4 w-4 mr-2" />
+                          <Bell className="h-4 w-4 mr-2" />
                           Remind Me
                         </Button>
                       </>
@@ -448,7 +453,7 @@ const StudySessions = () => {
               <p className="text-muted-foreground mb-4">
                 You haven't participated in any study sessions yet.
               </p>
-              <Button onClick={() => document.querySelector('[data-state="inactive"]')?.click()}>
+              <Button onClick={() => document.querySelector('[data-state="inactive"]')?.dispatchEvent(new Event('click', { bubbles: true }))}>
                 View Upcoming Sessions
               </Button>
             </div>
@@ -466,7 +471,7 @@ const StudySessions = () => {
                   </CardHeader>
                   <CardContent className="space-y-2">
                     <div className="flex items-center text-sm">
-                      <CalendarIcon className="h-4 w-4 mr-1 text-muted-foreground" />
+                      <Calendar className="h-4 w-4 mr-1 text-muted-foreground" />
                       <span>{format(session.date, 'EEEE, MMMM d, yyyy')}</span>
                     </div>
                     <div className="flex items-center text-sm">
