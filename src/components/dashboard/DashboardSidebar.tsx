@@ -15,10 +15,25 @@ import {
   Target,
   Download,
   ShoppingCart,
-  Search
+  Search,
+  LogOut
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarRail,
+  SidebarTrigger
+} from '@/components/ui/sidebar';
 
 interface DashboardSidebarProps {
   currentUser: any;
@@ -50,14 +65,14 @@ export const DashboardSidebar = ({ currentUser, activeTab, setActiveTab }: Dashb
     }
   };
   
-  const sidebarItems = [
+  const menuItems = [
     { id: 'search', label: 'Search Materials', icon: <Search className="w-4 h-4" /> },
     { id: 'questions', label: 'Past Questions', icon: <BookOpen className="w-4 h-4" /> },
     { id: 'marketplace', label: 'Marketplace', icon: <ShoppingCart className="w-4 h-4" /> },
     { id: 'downloads', label: 'My Downloads', icon: <Download className="w-4 h-4" /> },
     { id: 'profile', label: 'Profile', icon: <User className="w-4 h-4" /> },
     { id: 'groups', label: 'Study Groups', icon: <Users className="w-4 h-4" /> },
-    { id: 'study-sessions', label: 'Study Sessions', icon: <Target className="w-4 h-4" /> },
+    { id: 'sessions', label: 'Study Sessions', icon: <Target className="w-4 h-4" /> },
     { id: 'chat', label: 'Group Chat', icon: <MessageSquare className="w-4 h-4" /> },
     { id: 'leaderboard', label: 'Leaderboard', icon: <Trophy className="w-4 h-4" /> },
     { id: 'referrals', label: 'Referrals', icon: <Gift className="w-4 h-4" /> },
@@ -66,60 +81,73 @@ export const DashboardSidebar = ({ currentUser, activeTab, setActiveTab }: Dashb
     { id: 'notifications', label: 'Notifications', icon: <Bell className="w-4 h-4" /> },
   ];
 
-  // Add admin items if user is admin
+  // Add admin item if user is admin
   if (isAdmin()) {
-    sidebarItems.push(
+    menuItems.push(
       { id: 'admin', label: 'Admin Panel', icon: <User className="w-4 h-4" /> }
     );
   }
   
   return (
-    <aside className="glass-panel rounded-xl py-6 mb-6 lg:mb-0 h-full">
-      <div className="flex flex-col h-full">
-        {/* User Profile Section */}
-        <div className="px-4 mb-6 text-center">
-          <Avatar className="w-20 h-20 mx-auto mb-3">
+    <Sidebar>
+      <SidebarRail />
+      <SidebarHeader className="flex flex-col justify-center items-center py-4">
+        <div className="flex items-center justify-between w-full px-3">
+          <h2 className="text-lg font-semibold">Dashboard</h2>
+          <SidebarTrigger />
+        </div>
+        <div className="flex flex-col items-center mt-4 space-y-2">
+          <Avatar className="w-16 h-16">
             <AvatarImage src={currentUser?.avatar || ''} alt={currentUser?.name || 'User'} />
             <AvatarFallback className="text-lg bg-primary text-primary-foreground">
               {userInitials}
             </AvatarFallback>
           </Avatar>
-          <h3 className="font-medium">{currentUser?.name || currentUser?.email}</h3>
-          <p className="text-sm text-muted-foreground">{currentUser?.email}</p>
+          <div className="text-center">
+            <h3 className="font-medium">{currentUser?.name || currentUser?.email}</h3>
+            <p className="text-xs text-muted-foreground">{currentUser?.email}</p>
+          </div>
         </div>
-        
-        {/* Navigation */}
-        <nav className="flex-grow px-2 mb-6 space-y-1 overflow-y-auto">
-          {sidebarItems.map((item) => (
-            <Button
-              key={item.id}
-              variant={activeTab === item.id ? "default" : "ghost"}
-              className="w-full justify-start"
-              onClick={() => {
-                if (item.id === 'admin') {
-                  navigate('/admin');
-                } else {
-                  setActiveTab(item.id);
-                }
-              }}
-            >
-              {item.icon}
-              <span className="ml-2">{item.label}</span>
-            </Button>
-          ))}
-        </nav>
-        
-        {/* Logout Button */}
-        <div className="px-4">
-          <Button 
-            variant="outline" 
-            className="w-full"
-            onClick={handleLogout}
-          >
-            Logout
-          </Button>
-        </div>
-      </div>
-    </aside>
+      </SidebarHeader>
+      
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {menuItems.map((item) => (
+                <SidebarMenuItem key={item.id}>
+                  <SidebarMenuButton 
+                    isActive={activeTab === item.id}
+                    onClick={() => {
+                      if (item.id === 'admin') {
+                        navigate('/admin');
+                      } else {
+                        setActiveTab(item.id);
+                      }
+                    }}
+                    tooltip={item.label}
+                  >
+                    {item.icon}
+                    <span>{item.label}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      
+      <SidebarFooter>
+        <Button 
+          variant="outline" 
+          className="w-full justify-start"
+          onClick={handleLogout}
+        >
+          <LogOut className="w-4 h-4 mr-2" />
+          Logout
+        </Button>
+      </SidebarFooter>
+    </Sidebar>
   );
 };
