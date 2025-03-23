@@ -1,66 +1,55 @@
+import { useState } from 'react';
+import { Routes, Route } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from 'react-query';
+import { ThemeProvider } from "@/components/ui/theme-provider"
+import { Toaster } from 'sonner';
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import Dashboard from "./pages/Dashboard";
-import AdminPanel from "./pages/AdminPanel";
-import StudentChat from "./pages/StudentChat";
-import ExamListing from "./pages/ExamListing";
-import QuestionView from "./pages/QuestionView";
-import { AuthProvider } from "./contexts/AuthContext";
-import ProtectedRoute from "./components/ProtectedRoute";
+import Index from './pages/Index';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
+import Dashboard from './pages/Dashboard';
+import QuestionView from './pages/QuestionView';
+import StudentChat from './pages/StudentChat';
+import ExamListing from './pages/ExamListing';
+import AdminPanel from './pages/AdminPanel';
+import NotFound from './pages/NotFound';
+import ProtectedRoute from './components/ProtectedRoute';
+import { AuthProvider } from './contexts/AuthContext';
+import PaymentCallback from './pages/PaymentCallback';
 
-const queryClient = new QueryClient();
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
+function App() {
+  const [queryClient] = useState(() => new QueryClient());
+  
+  return (
+    <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <Toaster />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
-            <Route path="/dashboard" element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            } />
-            <Route path="/student-chat" element={
-              <ProtectedRoute>
-                <StudentChat />
-              </ProtectedRoute>
-            } />
-            <Route path="/exams" element={
-              <ProtectedRoute>
-                <ExamListing />
-              </ProtectedRoute>
-            } />
-            <Route path="/questions/:packId" element={
-              <ProtectedRoute>
-                <QuestionView />
-              </ProtectedRoute>
-            } />
-            <Route path="/admin" element={
-              <ProtectedRoute requireAdmin={true}>
-                <AdminPanel />
-              </ProtectedRoute>
-            } />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="/payment-callback" element={<PaymentCallback />} />
+            
+            {/* Protected routes */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/questions/:packId" element={<QuestionView />} />
+              <Route path="/chat" element={<StudentChat />} />
+              <Route path="/exams" element={<ExamListing />} />
+            </Route>
+            
+            {/* Admin routes */}
+            <Route element={<ProtectedRoute adminOnly />}>
+              <Route path="/admin" element={<AdminPanel />} />
+            </Route>
+            
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
+        </AuthProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
+  );
+}
 
 export default App;

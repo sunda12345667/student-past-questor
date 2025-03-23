@@ -1,52 +1,126 @@
 
-import api from '@/services/api';
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
-/**
- * Initiates the Paystack payment process for purchasing a question pack
- * 
- * @param packId - The ID of the question pack being purchased
- * @param packDescription - Description of the question pack
- * @param amount - The amount to charge in Naira
- * @returns A Promise that resolves when the payment process is initiated
- */
-export const processQuestionPackPurchase = async (
-  packId: string,
-  packDescription: string,
-  amount: number
-): Promise<void> => {
+interface InitializePaymentParams {
+  email: string;
+  amount: number;
+  metadata: {
+    userId: string;
+    materialId?: string;
+    packId?: string;
+    service: string;
+  };
+}
+
+interface VerifyPaymentParams {
+  reference: string;
+}
+
+export const initializePayment = async ({
+  email,
+  amount,
+  metadata,
+}: InitializePaymentParams) => {
   try {
-    // The backend will handle redirecting to Paystack checkout
-    const response = await api.post('/payment/initialize', {
-      packId,
-      packDescription,
-      amount, // This is in Naira, server will convert to kobo if needed
+    const response = await fetch("/api/payment/initialize", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email,
+        amount,
+        metadata,
+      }),
     });
 
-    if (response.data && response.data.authorization_url) {
-      // Redirect to Paystack checkout page
-      window.location.href = response.data.authorization_url;
-    } else {
-      console.error('Invalid response from payment initialization:', response);
-      throw new Error('Failed to initialize payment. Please try again.');
+    if (!response.ok) {
+      throw new Error("Failed to initialize payment");
     }
+
+    const data = await response.json();
+    return data;
   } catch (error) {
-    console.error('Payment initialization error:', error);
+    console.error("Payment initialization error:", error);
+    toast.error("Payment initialization failed. Please try again.");
     throw error;
   }
 };
 
-/**
- * Verify a Paystack payment transaction
- * 
- * @param reference - The transaction reference returned by Paystack
- * @returns A Promise that resolves with the transaction verification result
- */
-export const verifyPaystackTransaction = async (reference: string): Promise<any> => {
+export const verifyPayment = async ({ reference }: VerifyPaymentParams) => {
   try {
-    const response = await api.get(`/payment/verify/${reference}`);
-    return response.data;
+    const response = await fetch(`/api/payment/verify/${reference}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to verify payment");
+    }
+
+    const data = await response.json();
+    
+    if (data.status === "success") {
+      toast.success("Payment verified successfully!");
+    } else {
+      toast.error("Payment verification failed.");
+    }
+    
+    return data;
   } catch (error) {
-    console.error('Transaction verification error:', error);
+    console.error("Payment verification error:", error);
+    toast.error("Payment verification failed. Please contact support.");
+    throw error;
+  }
+};
+
+export const checkPurchaseStatus = async (userId: string, materialId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from("purchases")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("material_id", materialId)
+      .single();
+
+    if (error && error.code !== "PGRST116") {
+      // PGRST116 means no rows returned
+      console.error("Error checking purchase status:", error);
+      return false;
+    }
+
+    return !!data;
+  } catch (error) {
+    console.error("Error checking purchase status:", error);
+    return false;
+  }
+};
+
+export const recordPurchase = async (
+  userId: string,
+  materialId: string,
+  amount: number,
+  transactionRef: string
+) => {
+  try {
+    const { data, error } = await supabase.from("purchases").insert({
+      user_id: userId,
+      material_id: materialId,
+      amount,
+      transaction_ref: transactionRef,
+    });
+
+    if (error) {
+      console.error("Error recording purchase:", error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Error recording purchase:", error);
     throw error;
   }
 };
