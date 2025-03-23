@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -26,7 +25,7 @@ import {
   Users, 
   Plus, 
   Settings, 
-  LockClosed, 
+  Lock, 
   Globe, 
   UserPlus, 
   MessageSquare, 
@@ -215,7 +214,7 @@ const StudyGroups = () => {
                   }
                 />
                 <Label htmlFor="private-group" className="flex items-center">
-                  <LockClosed className="h-4 w-4 mr-2" />
+                  <Lock className="h-4 w-4 mr-2" />
                   Make this group private (invite only)
                 </Label>
               </div>
@@ -257,7 +256,7 @@ const StudyGroups = () => {
                         <CardTitle className="flex items-center">
                           {group.name}
                           {group.isPrivate && (
-                            <LockClosed className="h-4 w-4 ml-2 text-muted-foreground" />
+                            <Lock className="h-4 w-4 ml-2 text-muted-foreground" />
                           )}
                         </CardTitle>
                         <CardDescription>{group.description}</CardDescription>

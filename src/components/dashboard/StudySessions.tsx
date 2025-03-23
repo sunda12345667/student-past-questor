@@ -1,42 +1,44 @@
-
 import { useState } from 'react';
-import { useToast } from '@/hooks/use-toast';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle
-} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardFooter, 
+  CardHeader, 
+  CardTitle 
+} from '@/components/ui/card';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger 
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   Calendar, 
   Clock, 
   Users, 
-  Plus, 
   Video, 
-  BookOpen, 
-  BellRing, 
-  Calendar as CalendarIcon 
+  Plus, 
+  CalendarDays,
+  ClipboardCheck,
+  User,
+  BookOpen,
+  Share2
 } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger
-} from '@/components/ui/dialog';
-import { format } from 'date-fns';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
-import { CalendarDatePicker } from '@/components/ui/calendar';
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { 
+  Tabs, 
+  TabsContent, 
+  TabsList, 
+  TabsTrigger 
+} from '@/components/ui/tabs';
 import { 
   Select, 
   SelectContent, 
@@ -44,9 +46,9 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/contexts/AuthContext';
 
-// Mock study sessions data
 const upcomingSessions = [
   {
     id: '1',
@@ -162,7 +164,6 @@ const StudySessions = () => {
     setUpcoming(prev => [createdSession, ...prev]);
     setIsCreatingSession(false);
     
-    // Reset form
     setNewSession({
       title: '',
       group: '',

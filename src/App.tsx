@@ -1,7 +1,8 @@
+
 import { useState } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from 'react-query';
-import { ThemeProvider } from "@/components/ui/theme-provider"
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ThemeProvider } from "./components/ui/theme-provider";
 import { Toaster } from 'sonner';
 
 import Index from './pages/Index';
@@ -32,7 +33,7 @@ function App() {
             <Route path="/payment-callback" element={<PaymentCallback />} />
             
             {/* Protected routes */}
-            <Route element={<ProtectedRoute />}>
+            <Route element={<ProtectedRoute children={undefined} />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/questions/:packId" element={<QuestionView />} />
               <Route path="/chat" element={<StudentChat />} />
@@ -40,7 +41,7 @@ function App() {
             </Route>
             
             {/* Admin routes */}
-            <Route element={<ProtectedRoute adminOnly />}>
+            <Route element={<ProtectedRoute children={undefined} requireAdmin={true} />}>
               <Route path="/admin" element={<AdminPanel />} />
             </Route>
             

@@ -1,53 +1,54 @@
 
-import QuestionsTab from './QuestionsTab';
-import NotificationsTab from './NotificationsTab';
-import ReferralSystem from './ReferralSystem';
+import { ReactNode } from 'react';
+import { QuestionsTab } from './QuestionsTab';
+import { NotificationsTab } from './NotificationsTab';
+import BillPayments from './BillPayments';
+import ChatbotSupport from './ChatbotSupport';
+import Downloads from './Downloads';
+import LeaderboardTab from './LeaderboardTab';
+import Marketplace from './Marketplace';
 import PaymentMethods from './PaymentMethods';
+import ReferralSystem from './ReferralSystem';
+import RewardsTab from './RewardsTab';
 import SearchMaterials from './SearchMaterials';
-import UserProfile from './UserProfile';
 import StudyGroups from './StudyGroups';
 import StudySessions from './StudySessions';
-import LeaderboardTab from './LeaderboardTab';
-import GroupChat from './GroupChat';
-import RewardsTab from './RewardsTab';
-import Downloads from './Downloads';
-import Marketplace from './Marketplace';
-import { useAuth } from '@/contexts/AuthContext';
+import UserProfile from './UserProfile';
 
 interface TabContentProps {
   activeTab: string;
 }
 
-export const TabContent = ({ activeTab }: TabContentProps) => {
-  const { currentUser } = useAuth();
-
+export const TabContent = ({ activeTab }: TabContentProps): ReactNode => {
   switch (activeTab) {
-    case 'search':
-      return <SearchMaterials />;
     case 'questions':
       return <QuestionsTab />;
-    case 'marketplace':
-      return <Marketplace />;
+    case 'notifications':
+      return <NotificationsTab />;
     case 'downloads':
       return <Downloads />;
     case 'profile':
-      return <UserProfile user={currentUser} />;
+      return <UserProfile />;
+    case 'bills':
+      return <BillPayments />;
+    case 'marketplace':
+      return <Marketplace />;
     case 'groups':
       return <StudyGroups />;
-    case 'study-sessions':
+    case 'sessions':
       return <StudySessions />;
-    case 'chat':
-      return <GroupChat />;
+    case 'search':
+      return <SearchMaterials />;
     case 'leaderboard':
       return <LeaderboardTab />;
-    case 'referrals':
-      return <ReferralSystem />;
     case 'rewards':
       return <RewardsTab />;
+    case 'referrals':
+      return <ReferralSystem />;
     case 'payments':
       return <PaymentMethods />;
-    case 'notifications':
-      return <NotificationsTab />;
+    case 'chat':
+      return <ChatbotSupport />;
     default:
       return <QuestionsTab />;
   }

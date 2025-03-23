@@ -124,3 +124,19 @@ export const recordPurchase = async (
     throw error;
   }
 };
+
+// Add the missing function that's being imported in SampleQuestions.tsx
+export const processQuestionPackPurchase = async (
+  packId: string,
+  title: string,
+  amount: number
+) => {
+  try {
+    // Mock implementation - in a real app, this would call initializePayment
+    toast.success(`Processing payment for ${title}...`);
+    return { success: true, reference: `mock-ref-${Date.now()}` };
+  } catch (error) {
+    console.error("Error processing question pack purchase:", error);
+    throw error;
+  }
+};
