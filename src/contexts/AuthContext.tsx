@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
@@ -34,7 +35,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .from('profiles')
         .select('id, name, email, role')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
       
       if (error) {
         console.error('Error fetching user profile:', error);
@@ -50,6 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Set up the auth state listener for Supabase
   useEffect(() => {
+    console.log('Setting up auth state listener');
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
@@ -85,6 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // THEN check for existing session
     supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
+      console.log('Checking for existing session:', currentSession ? 'Found' : 'Not found');
       setSession(currentSession);
       
       if (currentSession) {
@@ -118,16 +121,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      console.log(`Attempting login for: ${email}`);
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
-        console.error('Login error:', error.message);
+        console.error('Login error from Supabase:', error.message);
         throw error;
       }
       
+      if (!data.session) {
+        console.error('No session returned from login');
+        throw new Error('Authentication failed. Please try again.');
+      }
+      
+      console.log('Login successful, session established');
       // Toast will be shown after the auth state change event
     } catch (error: any) {
       console.error('Login failed:', error);

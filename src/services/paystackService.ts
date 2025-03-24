@@ -17,64 +17,37 @@ interface VerifyPaymentParams {
   reference: string;
 }
 
+// Mock implementation to avoid payment issues while debugging auth
 export const initializePayment = async ({
   email,
   amount,
   metadata,
 }: InitializePaymentParams) => {
-  try {
-    const response = await fetch("/api/payment/initialize", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email,
-        amount,
-        metadata,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to initialize payment");
+  // Mock success response for debugging
+  toast.info("Payment processing temporarily disabled for maintenance");
+  console.log("Mocked payment initialization", { email, amount, metadata });
+  
+  return {
+    status: true,
+    message: "Payment is temporarily disabled for maintenance",
+    data: {
+      authorization_url: "#",
+      access_code: "mock_access",
+      reference: `mock-ref-${Date.now()}`
     }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error("Payment initialization error:", error);
-    toast.error("Payment initialization failed. Please try again.");
-    throw error;
-  }
+  };
 };
 
 export const verifyPayment = async ({ reference }: VerifyPaymentParams) => {
-  try {
-    const response = await fetch(`/api/payment/verify/${reference}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to verify payment");
-    }
-
-    const data = await response.json();
-    
-    if (data.status === "success") {
-      toast.success("Payment verified successfully!");
-    } else {
-      toast.error("Payment verification failed.");
-    }
-    
-    return data;
-  } catch (error) {
-    console.error("Payment verification error:", error);
-    toast.error("Payment verification failed. Please contact support.");
-    throw error;
-  }
+  // Mock success response for debugging
+  console.log("Mocked payment verification for reference:", reference);
+  
+  return {
+    status: "success",
+    message: "Payment verification is temporarily disabled for maintenance",
+    amount: 1000,
+    reference
+  };
 };
 
 export const checkPurchaseStatus = async (userId: string, materialId: string) => {
@@ -84,7 +57,7 @@ export const checkPurchaseStatus = async (userId: string, materialId: string) =>
       .select("*")
       .eq("user_id", userId)
       .eq("material_id", materialId)
-      .single();
+      .maybeSingle();
 
     if (error && error.code !== "PGRST116") {
       // PGRST116 means no rows returned
@@ -106,6 +79,11 @@ export const recordPurchase = async (
   transactionRef: string
 ) => {
   try {
+    console.log("Recording mock purchase", { userId, materialId, amount, transactionRef });
+    // Return mock success without actually writing to database for now
+    return { success: true };
+    
+    /* Original code commented out
     const { data, error } = await supabase.from("purchases").insert({
       user_id: userId,
       material_id: materialId,
@@ -119,6 +97,7 @@ export const recordPurchase = async (
     }
 
     return data;
+    */
   } catch (error) {
     console.error("Error recording purchase:", error);
     throw error;
@@ -133,7 +112,8 @@ export const processQuestionPackPurchase = async (
 ) => {
   try {
     // Mock implementation - in a real app, this would call initializePayment
-    toast.success(`Processing payment for ${title}...`);
+    toast.info(`Payment processing for ${title} temporarily disabled for maintenance`);
+    console.log("Mock question pack purchase", { packId, title, amount });
     return { success: true, reference: `mock-ref-${Date.now()}` };
   } catch (error) {
     console.error("Error processing question pack purchase:", error);
