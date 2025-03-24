@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
@@ -107,12 +106,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.error('Error fetching user data:', error);
           setCurrentUser(null);
         }
-        
-        setIsLoading(false);
-      } else {
-        setCurrentUser(null);
-        setIsLoading(false);
       }
+      
+      setIsLoading(false);
     });
 
     return () => {
@@ -121,7 +117,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string) => {
-    setIsLoading(true);
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email,
@@ -129,17 +124,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (error) {
+        console.error('Login error:', error.message);
         throw error;
       }
       
-      toast.success('Login successful! Welcome back.');
+      // Toast will be shown after the auth state change event
     } catch (error: any) {
       console.error('Login failed:', error);
-      const errorMessage = error.message || 'Login failed. Please try again.';
-      toast.error(errorMessage);
       throw error;
-    } finally {
-      setIsLoading(false);
     }
   };
 

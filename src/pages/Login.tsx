@@ -16,8 +16,9 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const loginSchema = z.object({
   email: z.string()
@@ -30,6 +31,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 const Login = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -42,14 +44,22 @@ const Login = () => {
   });
 
   const onSubmit = async (data: LoginFormValues) => {
+    if (isSubmitting) return;
+    
     setIsSubmitting(true);
+    setLoginError(null);
+    
     try {
+      console.log('Attempting login with:', data.email);
       await login(data.email, data.password);
+      console.log('Login successful');
       toast.success('Login successful! Welcome back.');
       navigate('/dashboard');
-    } catch (error) {
-      console.error(error);
-      toast.error('Login failed. Please check your credentials and try again.');
+    } catch (error: any) {
+      console.error('Login error:', error);
+      const errorMessage = error?.message || 'Login failed. Please check your credentials and try again.';
+      setLoginError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -63,6 +73,13 @@ const Login = () => {
           <p className="text-muted-foreground text-center mb-8">
             Log in to access your questions and resources
           </p>
+
+          {loginError && (
+            <Alert variant="destructive" className="mb-6">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{loginError}</AlertDescription>
+            </Alert>
+          )}
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

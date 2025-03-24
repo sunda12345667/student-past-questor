@@ -23,12 +23,15 @@ router.post('/signup', async (req, res) => {
       email_confirm: true
     });
     
-    if (authError) throw authError;
+    if (authError) {
+      console.error('Signup error:', authError);
+      return res.status(400).json({ error: authError.message });
+    }
     
     res.status(201).json({ message: 'User created successfully' });
   } catch (error) {
     console.error('Signup error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message || 'An error occurred during signup' });
   }
 });
 
@@ -44,12 +47,15 @@ router.post('/login', async (req, res) => {
       .eq('email', email)
       .single();
     
-    if (userError) throw userError;
+    if (userError) {
+      console.error('Login error:', userError);
+      return res.status(400).json({ error: userError.message });
+    }
     
     res.status(200).json(user);
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message || 'An error occurred during login' });
   }
 });
 
