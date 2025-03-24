@@ -31,6 +31,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Fetch user profile data from the profiles table
   const fetchUserProfile = async (userId: string) => {
     try {
+      console.log('Fetching user profile for:', userId);
       const { data, error } = await supabase
         .from('profiles')
         .select('id, name, email, role')
@@ -42,6 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
       
+      console.log('Profile data received:', data);
       return data as User;
     } catch (error) {
       console.error('Error in fetchUserProfile:', error);
@@ -52,20 +54,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Set up the auth state listener for Supabase
   useEffect(() => {
     console.log('Setting up auth state listener');
+    let mounted = true;
+    
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
-        console.log('Auth state changed:', event);
-        setSession(newSession);
+        console.log('Auth state changed:', event, newSession ? 'Session exists' : 'No session');
+        
+        if (!mounted) return;
         
         if (newSession) {
+          setSession(newSession);
           try {
             const profileData = await fetchUserProfile(newSession.user.id);
             
             if (profileData) {
+              console.log('Setting user from profile:', profileData);
               setCurrentUser(profileData);
             } else {
               // Fallback to session data if profile not found
+              console.log('Profile not found, using session data');
               setCurrentUser({
                 id: newSession.user.id,
                 email: newSession.user.email || '',
@@ -74,30 +82,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               });
             }
           } catch (error) {
-            console.error('Error fetching user data:', error);
-            setCurrentUser(null);
+            console.error('Error setting user data after auth change:', error);
+            // Still set user from session to avoid blocking the login
+            setCurrentUser({
+              id: newSession.user.id,
+              email: newSession.user.email || '',
+              name: newSession.user.user_metadata?.name || newSession.user.email?.split('@')[0] || '',
+              role: newSession.user.user_metadata?.role || 'user',
+            });
           }
         } else {
+          setSession(null);
           setCurrentUser(null);
         }
         
-        setIsLoading(false);
+        if (mounted) setIsLoading(false);
       }
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
-      console.log('Checking for existing session:', currentSession ? 'Found' : 'Not found');
-      setSession(currentSession);
-      
-      if (currentSession) {
-        try {
-          const profileData = await fetchUserProfile(currentSession.user.id);
-          
-          if (profileData) {
-            setCurrentUser(profileData);
-          } else {
-            // Fallback to session data if profile not found
+    const checkExistingSession = async () => {
+      try {
+        console.log('Checking for existing session');
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        console.log('Existing session check result:', currentSession ? 'Found' : 'Not found');
+        
+        if (!mounted) return;
+        
+        if (currentSession) {
+          setSession(currentSession);
+          try {
+            const profileData = await fetchUserProfile(currentSession.user.id);
+            
+            if (profileData) {
+              console.log('Setting user from existing session profile');
+              setCurrentUser(profileData);
+            } else {
+              // Fallback to session data if profile not found
+              console.log('Profile not found for existing session, using session data');
+              setCurrentUser({
+                id: currentSession.user.id,
+                email: currentSession.user.email || '',
+                name: currentSession.user.user_metadata?.name || currentSession.user.email?.split('@')[0] || '',
+                role: currentSession.user.user_metadata?.role || 'user',
+              });
+            }
+          } catch (error) {
+            console.error('Error setting user from existing session:', error);
+            // Still set user from session to avoid blocking the login
             setCurrentUser({
               id: currentSession.user.id,
               email: currentSession.user.email || '',
@@ -105,16 +137,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               role: currentSession.user.user_metadata?.role || 'user',
             });
           }
-        } catch (error) {
-          console.error('Error fetching user data:', error);
-          setCurrentUser(null);
         }
+        
+        if (mounted) setIsLoading(false);
+      } catch (error) {
+        console.error('Error checking existing session:', error);
+        if (mounted) setIsLoading(false);
       }
-      
-      setIsLoading(false);
-    });
+    };
+    
+    checkExistingSession();
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
@@ -139,7 +174,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       console.log('Login successful, session established');
-      // Toast will be shown after the auth state change event
+      // Auth state change event will handle setting the user
+      return;
     } catch (error: any) {
       console.error('Login failed:', error);
       throw error;

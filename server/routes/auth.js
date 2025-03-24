@@ -15,6 +15,8 @@ router.post('/signup', async (req, res) => {
   try {
     const { name, email, password } = req.body;
     
+    console.log(`Server: Creating user with email: ${email}`);
+    
     // Create user in Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
@@ -28,6 +30,7 @@ router.post('/signup', async (req, res) => {
       return res.status(400).json({ error: authError.message });
     }
     
+    console.log('Server: User created successfully');
     res.status(201).json({ message: 'User created successfully' });
   } catch (error) {
     console.error('Signup error:', error);
@@ -40,18 +43,26 @@ router.post('/login', async (req, res) => {
   try {
     const { email } = req.body;
     
+    console.log(`Server: Fetching user profile for email: ${email}`);
+    
     // Get user by email (for compatibility with old code)
     const { data: user, error: userError } = await supabase
       .from('profiles')
       .select('*')
       .eq('email', email)
-      .single();
+      .maybeSingle();
     
-    if (userError) {
+    if (userError && userError.code !== 'PGRST116') { // PGRST116 means no rows returned
       console.error('Login error:', userError);
       return res.status(400).json({ error: userError.message });
     }
     
+    if (!user) {
+      console.log(`Server: No profile found for email: ${email}`);
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    console.log('Server: User profile retrieved successfully');
     res.status(200).json(user);
   } catch (error) {
     console.error('Login error:', error);

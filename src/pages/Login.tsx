@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
@@ -32,8 +32,23 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 const Login = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
-  const { login } = useAuth();
+  const [mounted, setMounted] = useState(false);
+  const { login, currentUser } = useAuth();
   const navigate = useNavigate();
+
+  // Set mounted state to true after component mounts
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
+  // Check if user is already logged in
+  useEffect(() => {
+    if (mounted && currentUser) {
+      console.log('User already logged in, redirecting to dashboard', currentUser);
+      navigate('/dashboard');
+    }
+  }, [currentUser, navigate, mounted]);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -52,16 +67,21 @@ const Login = () => {
     try {
       console.log('Attempting login with:', data.email);
       await login(data.email, data.password);
+      
       console.log('Login successful');
       toast.success('Login successful! Welcome back.');
-      navigate('/dashboard');
+      
+      // Let the auth state change event redirect the user
+      // navigate() will be called in the useEffect when currentUser is set
     } catch (error: any) {
-      console.error('Login error:', error);
+      console.error('Login error details:', error);
       const errorMessage = error?.message || 'Login failed. Please check your credentials and try again.';
       setLoginError(errorMessage);
       toast.error(errorMessage);
     } finally {
-      setIsSubmitting(false);
+      if (mounted) {
+        setIsSubmitting(false);
+      }
     }
   };
 
