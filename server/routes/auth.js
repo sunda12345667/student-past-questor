@@ -5,7 +5,7 @@ const { createClient } = require('@supabase/supabase-js');
 
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL || "https://mincssuyfzyrtuwooeyo.supabase.co";
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ""; // This should be set in your server environment
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pbmNzc3V5Znp5cnR1d29vZXlvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0MjIwNTQwNSwiZXhwIjoyMDU3NzgxNDA1fQ.MvdkBvEaYqDQ1K2gTOXYv3K4a7wnoAKQc9PXOWDbIHM"; 
 
 // Service role key is used only on the server side for admin operations
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -30,7 +30,7 @@ router.post('/signup', async (req, res) => {
       return res.status(400).json({ error: authError.message });
     }
     
-    console.log('Server: User created successfully');
+    console.log('Server: User created successfully', authData);
     res.status(201).json({ message: 'User created successfully' });
   } catch (error) {
     console.error('Signup error:', error);

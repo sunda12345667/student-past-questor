@@ -158,14 +158,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log(`Attempting login for: ${email}`);
       
-      // Use Supabase auth directly for login
+      // Try direct Supabase auth first, which is more reliable
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
-        console.error('Login error from Supabase:', error.message);
+        console.error('Login error from Supabase:', error);
         // Pass the error to the caller with code for specific handling
         throw {
           message: error.message,
@@ -178,7 +178,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('Authentication failed. Please try again.');
       }
       
-      console.log('Login successful, session established');
+      console.log('Login successful, session established:', data.session.user.email);
       // Auth state change event will handle setting the user
       return;
     } catch (error: any) {

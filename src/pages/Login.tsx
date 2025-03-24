@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -68,11 +67,14 @@ const Login = () => {
       console.log('Attempting login with:', data.email);
       await login(data.email, data.password);
       
-      console.log('Login successful');
       toast.success('Login successful! Welcome back.');
       
       // Let the auth state change event redirect the user
-      // navigate() will be called in the useEffect when currentUser is set
+      if (mounted) {
+        setTimeout(() => {
+          if (mounted) navigate('/dashboard');
+        }, 500);
+      }
     } catch (error: any) {
       console.error('Login error details:', error);
       let errorMessage = 'Login failed. Please check your credentials and try again.';
@@ -80,6 +82,8 @@ const Login = () => {
       // Handle specific error codes from Supabase
       if (error?.code === 'email_not_confirmed') {
         errorMessage = 'Please check your email and confirm your account before logging in.';
+      } else if (error?.code === 'invalid_credentials') {
+        errorMessage = 'Invalid email or password. Please try again.';
       } else if (error?.message) {
         errorMessage = error.message;
       }
@@ -162,7 +166,7 @@ const Login = () => {
               </p>
 
               <div className="text-xs text-muted-foreground text-center mt-6">
-                <p>Hint: Use "admin@studyquest.com" to access the admin panel</p>
+                <p>Use "irapidbusiness@gmail.com" and password "password" to test login</p>
               </div>
             </form>
           </Form>
