@@ -114,8 +114,8 @@ export default function Marketplace() {
         }
       });
 
-      // Redirect to Paystack payment page
-      window.location.href = response.authorization_url;
+      // Fix: Access authorization_url via the data property
+      window.location.href = response.data.authorization_url;
     } catch (error) {
       console.error('Error initializing payment:', error);
     }

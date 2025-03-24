@@ -17,12 +17,23 @@ interface VerifyPaymentParams {
   reference: string;
 }
 
+// Response type for initializePayment to make TypeScript happy
+interface PaymentResponse {
+  status: boolean;
+  message: string;
+  data: {
+    authorization_url: string;
+    access_code: string;
+    reference: string;
+  };
+}
+
 // Mock implementation to avoid payment issues while debugging auth
 export const initializePayment = async ({
   email,
   amount,
   metadata,
-}: InitializePaymentParams) => {
+}: InitializePaymentParams): Promise<PaymentResponse> => {
   // Mock success response for debugging
   toast.info("Payment processing temporarily disabled for maintenance");
   console.log("Mocked payment initialization", { email, amount, metadata });
