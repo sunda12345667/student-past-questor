@@ -158,6 +158,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log(`Attempting login for: ${email}`);
       
+      // Use Supabase auth directly for login
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -165,7 +166,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error('Login error from Supabase:', error.message);
-        throw error;
+        // Pass the error to the caller with code for specific handling
+        throw {
+          message: error.message,
+          code: error.code
+        };
       }
       
       if (!data.session) {
@@ -185,6 +190,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signup = async (name: string, email: string, password: string) => {
     setIsLoading(true);
     try {
+      // Using signUp for client-side signup
       const { error } = await supabase.auth.signUp({
         email,
         password,

@@ -75,7 +75,15 @@ const Login = () => {
       // navigate() will be called in the useEffect when currentUser is set
     } catch (error: any) {
       console.error('Login error details:', error);
-      const errorMessage = error?.message || 'Login failed. Please check your credentials and try again.';
+      let errorMessage = 'Login failed. Please check your credentials and try again.';
+      
+      // Handle specific error codes from Supabase
+      if (error?.code === 'email_not_confirmed') {
+        errorMessage = 'Please check your email and confirm your account before logging in.';
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
       setLoginError(errorMessage);
       toast.error(errorMessage);
     } finally {

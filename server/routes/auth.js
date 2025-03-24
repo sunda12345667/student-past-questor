@@ -22,7 +22,7 @@ router.post('/signup', async (req, res) => {
       email,
       password,
       user_metadata: { name, role: 'user' },
-      email_confirm: true
+      email_confirm: true // Set to true to auto-confirm emails for testing
     });
     
     if (authError) {
@@ -38,32 +38,55 @@ router.post('/signup', async (req, res) => {
   }
 });
 
-// Login - This is handled directly by the client with Supabase
+// Login endpoint - enhanced for better error handling
 router.post('/login', async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email, password } = req.body;
     
-    console.log(`Server: Fetching user profile for email: ${email}`);
+    console.log(`Server: Processing login for email: ${email}`);
     
-    // Get user by email (for compatibility with old code)
-    const { data: user, error: userError } = await supabase
+    // Use Supabase auth to sign in
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+    
+    if (authError) {
+      console.error('Login auth error:', authError);
+      return res.status(400).json({ 
+        error: authError.message,
+        code: authError.code 
+      });
+    }
+    
+    if (!authData.user) {
+      console.error('Login error: No user returned');
+      return res.status(401).json({ error: 'Authentication failed' });
+    }
+    
+    // Get user profile data
+    const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select('*')
-      .eq('email', email)
+      .eq('id', authData.user.id)
       .maybeSingle();
     
-    if (userError && userError.code !== 'PGRST116') { // PGRST116 means no rows returned
-      console.error('Login error:', userError);
-      return res.status(400).json({ error: userError.message });
+    if (profileError) {
+      console.error('Profile fetch error:', profileError);
+      // Don't fail the login if profile fetch fails
     }
     
-    if (!user) {
-      console.log(`Server: No profile found for email: ${email}`);
-      return res.status(404).json({ error: 'User not found' });
-    }
+    // Combine user and profile data for response
+    const userData = {
+      id: authData.user.id,
+      email: authData.user.email,
+      name: profileData?.name || authData.user.user_metadata?.name || authData.user.email?.split('@')[0] || '',
+      role: profileData?.role || authData.user.user_metadata?.role || 'user',
+      ...profileData
+    };
     
-    console.log('Server: User profile retrieved successfully');
-    res.status(200).json(user);
+    console.log('Server: Login successful for user:', userData.email);
+    res.status(200).json(userData);
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: error.message || 'An error occurred during login' });
