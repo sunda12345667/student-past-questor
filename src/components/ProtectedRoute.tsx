@@ -20,10 +20,12 @@ const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps)
   }
 
   if (!currentUser) {
+    console.log('User not authenticated, redirecting to login');
     return <Navigate to="/login" replace />;
   }
 
   if (requireAdmin && !isAdmin()) {
+    console.log('User not admin, redirecting to dashboard');
     return <Navigate to="/dashboard" replace />;
   }
 

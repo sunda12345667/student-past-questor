@@ -65,38 +65,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         if (newSession) {
           setSession(newSession);
-          try {
-            const profileData = await fetchUserProfile(newSession.user.id);
-            
-            if (profileData) {
-              console.log('Setting user from profile:', profileData);
-              setCurrentUser(profileData);
-            } else {
-              // Fallback to session data if profile not found
-              console.log('Profile not found, using session data');
+          // Use setTimeout to prevent potential deadlocks with Supabase auth
+          setTimeout(async () => {
+            if (!mounted) return;
+            try {
+              const profileData = await fetchUserProfile(newSession.user.id);
+              
+              if (profileData) {
+                console.log('Setting user from profile:', profileData);
+                setCurrentUser(profileData);
+              } else {
+                // Fallback to session data if profile not found
+                console.log('Profile not found, using session data');
+                setCurrentUser({
+                  id: newSession.user.id,
+                  email: newSession.user.email || '',
+                  name: newSession.user.user_metadata?.name || newSession.user.email?.split('@')[0] || '',
+                  role: newSession.user.user_metadata?.role || 'user',
+                });
+              }
+            } catch (error) {
+              console.error('Error setting user data after auth change:', error);
+              // Still set user from session to avoid blocking the login
               setCurrentUser({
                 id: newSession.user.id,
                 email: newSession.user.email || '',
                 name: newSession.user.user_metadata?.name || newSession.user.email?.split('@')[0] || '',
                 role: newSession.user.user_metadata?.role || 'user',
               });
+            } finally {
+              if (mounted) setIsLoading(false);
             }
-          } catch (error) {
-            console.error('Error setting user data after auth change:', error);
-            // Still set user from session to avoid blocking the login
-            setCurrentUser({
-              id: newSession.user.id,
-              email: newSession.user.email || '',
-              name: newSession.user.user_metadata?.name || newSession.user.email?.split('@')[0] || '',
-              role: newSession.user.user_metadata?.role || 'user',
-            });
-          }
+          }, 0);
         } else {
           setSession(null);
           setCurrentUser(null);
+          if (mounted) setIsLoading(false);
         }
-        
-        if (mounted) setIsLoading(false);
       }
     );
 
@@ -111,35 +116,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         if (currentSession) {
           setSession(currentSession);
-          try {
-            const profileData = await fetchUserProfile(currentSession.user.id);
-            
-            if (profileData) {
-              console.log('Setting user from existing session profile');
-              setCurrentUser(profileData);
-            } else {
-              // Fallback to session data if profile not found
-              console.log('Profile not found for existing session, using session data');
+          // Use setTimeout to prevent potential deadlocks with Supabase auth
+          setTimeout(async () => {
+            if (!mounted) return;
+            try {
+              const profileData = await fetchUserProfile(currentSession.user.id);
+              
+              if (profileData) {
+                console.log('Setting user from existing session profile');
+                setCurrentUser(profileData);
+              } else {
+                // Fallback to session data if profile not found
+                console.log('Profile not found for existing session, using session data');
+                setCurrentUser({
+                  id: currentSession.user.id,
+                  email: currentSession.user.email || '',
+                  name: currentSession.user.user_metadata?.name || currentSession.user.email?.split('@')[0] || '',
+                  role: currentSession.user.user_metadata?.role || 'user',
+                });
+              }
+            } catch (error) {
+              console.error('Error setting user from existing session:', error);
+              // Still set user from session to avoid blocking the login
               setCurrentUser({
                 id: currentSession.user.id,
                 email: currentSession.user.email || '',
                 name: currentSession.user.user_metadata?.name || currentSession.user.email?.split('@')[0] || '',
                 role: currentSession.user.user_metadata?.role || 'user',
               });
+            } finally {
+              if (mounted) setIsLoading(false);
             }
-          } catch (error) {
-            console.error('Error setting user from existing session:', error);
-            // Still set user from session to avoid blocking the login
-            setCurrentUser({
-              id: currentSession.user.id,
-              email: currentSession.user.email || '',
-              name: currentSession.user.user_metadata?.name || currentSession.user.email?.split('@')[0] || '',
-              role: currentSession.user.user_metadata?.role || 'user',
-            });
-          }
+          }, 0);
+        } else {
+          if (mounted) setIsLoading(false);
         }
-        
-        if (mounted) setIsLoading(false);
       } catch (error) {
         console.error('Error checking existing session:', error);
         if (mounted) setIsLoading(false);
@@ -199,6 +210,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             name,
             role: 'user',
           },
+          emailRedirectTo: window.location.origin + '/login',
         },
       });
 

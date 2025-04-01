@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -68,13 +69,7 @@ const Login = () => {
       await login(data.email, data.password);
       
       toast.success('Login successful! Welcome back.');
-      
-      // Let the auth state change event redirect the user
-      if (mounted) {
-        setTimeout(() => {
-          if (mounted) navigate('/dashboard');
-        }, 500);
-      }
+      navigate('/dashboard');
     } catch (error: any) {
       console.error('Login error details:', error);
       let errorMessage = 'Login failed. Please check your credentials and try again.';
@@ -100,8 +95,8 @@ const Login = () => {
   return (
     <Layout>
       <div className="container max-w-md mx-auto px-4 pt-32 pb-16">
-        <div className="glass-panel p-8 rounded-xl">
-          <h1 className="heading-md text-center mb-6">Welcome Back</h1>
+        <div className="bg-card p-8 rounded-xl shadow-lg">
+          <h1 className="text-2xl font-bold text-center mb-6">Welcome Back</h1>
           <p className="text-muted-foreground text-center mb-8">
             Log in to access your questions and resources
           </p>
