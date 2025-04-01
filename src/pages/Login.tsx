@@ -1,5 +1,5 @@
+
 import { useState, useEffect } from 'react';
-import { Layout } from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { z } from 'zod';
@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 const loginSchema = z.object({
   email: z.string()
@@ -92,81 +93,143 @@ const Login = () => {
   };
 
   return (
-    <Layout>
-      <div className="container max-w-md mx-auto px-4 pt-32 pb-16">
-        <div className="bg-card p-8 rounded-xl shadow-lg">
-          <h1 className="text-2xl font-bold text-center mb-6">Welcome Back</h1>
-          <p className="text-muted-foreground text-center mb-8">
-            Log in to access your questions and resources
-          </p>
-
-          {loginError && (
-            <Alert variant="destructive" className="mb-6">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{loginError}</AlertDescription>
-            </Alert>
-          )}
-
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input placeholder="student@example.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="********" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <Button 
-                type="submit" 
-                className="w-full mt-6"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Logging in...
-                  </>
-                ) : (
-                  'Log in'
-                )}
-              </Button>
-              
-              <p className="text-sm text-center mt-4">
-                Don't have an account?{' '}
-                <Link to="/signup" className="text-primary hover:underline">
-                  Sign up
-                </Link>
-              </p>
-
-              <div className="text-xs text-muted-foreground text-center mt-6">
-                <p>Use "irapidbusiness@gmail.com" and password "password" to test login</p>
+    <div className="min-h-screen flex flex-col md:flex-row">
+      {/* Left side - Branding area */}
+      <div className="hidden md:flex md:w-1/2 bg-primary/10 flex-col justify-between p-12">
+        <div>
+          <Link to="/" className="flex items-center space-x-2 font-bold text-xl mb-12">
+            <span className="text-primary">StudyQuest</span>
+          </Link>
+          
+          <div className="mt-24">
+            <h1 className="text-4xl font-bold mb-6">Welcome back to StudyQuest</h1>
+            <p className="text-lg text-muted-foreground mb-6">
+              Your personalized learning journey continues here. Access thousands of past questions and study resources.
+            </p>
+            <div className="hidden md:block">
+              <div className="p-6 bg-white/10 backdrop-blur border border-border rounded-xl mt-12">
+                <p className="italic text-sm mb-4">"StudyQuest has transformed how I prepare for exams. The practice questions are spot-on!"</p>
+                <div className="flex items-center">
+                  <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-medium">JD</div>
+                  <div className="ml-3">
+                    <p className="font-medium">Jane Doe</p>
+                    <p className="text-xs text-muted-foreground">Student, University of Lagos</p>
+                  </div>
+                </div>
               </div>
-            </form>
-          </Form>
+            </div>
+          </div>
+        </div>
+        <div className="hidden md:block">
+          <p className="text-sm text-muted-foreground">
+            © {new Date().getFullYear()} StudyQuest. All rights reserved.
+          </p>
         </div>
       </div>
-    </Layout>
+      
+      {/* Right side - Login form */}
+      <div className="flex-1 flex flex-col p-6 md:p-12">
+        <div className="flex justify-between items-center mb-12">
+          <div className="md:hidden">
+            <Link to="/" className="flex items-center space-x-2 font-bold text-xl">
+              <span className="text-primary">StudyQuest</span>
+            </Link>
+          </div>
+          <div className="ml-auto">
+            <ThemeToggle />
+          </div>
+        </div>
+        
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-full max-w-md">
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-bold mb-2">Sign in to your account</h2>
+              <p className="text-muted-foreground">
+                Enter your details to access your dashboard
+              </p>
+            </div>
+
+            {loginError && (
+              <Alert variant="destructive" className="mb-6">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{loginError}</AlertDescription>
+              </Alert>
+            )}
+
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input placeholder="student@example.com" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="********" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <Button 
+                  type="submit" 
+                  className="w-full mt-6"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Signing in...
+                    </>
+                  ) : (
+                    'Sign in'
+                  )}
+                </Button>
+                
+                <div className="mt-6 text-center space-y-4">
+                  <p className="text-sm">
+                    Don't have an account?{' '}
+                    <Link to="/signup" className="text-primary hover:underline font-medium">
+                      Create account
+                    </Link>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    By signing in, you agree to our{' '}
+                    <a href="#" className="underline">Terms of Service</a> and{' '}
+                    <a href="#" className="underline">Privacy Policy</a>.
+                  </p>
+                </div>
+
+                <div className="text-xs text-muted-foreground text-center mt-6 border-t border-border pt-6">
+                  <p>Use "irapidbusiness@gmail.com" and password "password" to test login</p>
+                </div>
+              </form>
+            </Form>
+          </div>
+        </div>
+        
+        <div className="md:hidden text-center mt-8">
+          <p className="text-xs text-muted-foreground">
+            © {new Date().getFullYear()} StudyQuest. All rights reserved.
+          </p>
+        </div>
+      </div>
+    </div>
   );
 };
 
