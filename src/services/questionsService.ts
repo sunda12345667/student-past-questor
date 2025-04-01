@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 
 // Define question types
@@ -94,6 +93,46 @@ const sampleQuestionPacks: QuestionPack[] = [
     questionCount: 40,
     price: 1200,
   },
+  { 
+    id: '7', 
+    title: 'UNILAG Post-UTME 2023', 
+    description: 'Complete set of University of Lagos Post-UTME past questions for all courses.',
+    subject: 'General',
+    examType: 'Post-UTME',
+    year: '2023',
+    questionCount: 100,
+    price: 2000,
+  },
+  { 
+    id: '8', 
+    title: 'UI Post-UTME Science 2023', 
+    description: 'University of Ibadan Post-UTME past questions for science courses with solutions.',
+    subject: 'Science',
+    examType: 'Post-UTME',
+    year: '2023',
+    questionCount: 80,
+    price: 1800,
+  },
+  { 
+    id: '9', 
+    title: 'OAU Post-UTME Arts & Humanities 2023', 
+    description: 'Obafemi Awolowo University Post-UTME past questions for arts and humanities.',
+    subject: 'Arts',
+    examType: 'Post-UTME',
+    year: '2023',
+    questionCount: 70,
+    price: 1700,
+  },
+  { 
+    id: '10', 
+    title: 'UNIBEN Post-UTME Engineering 2023', 
+    description: 'University of Benin Post-UTME engineering past questions with solutions.',
+    subject: 'Engineering',
+    examType: 'Post-UTME',
+    year: '2023',
+    questionCount: 85,
+    price: 1900,
+  }
 ];
 
 // Sample questions for a pack

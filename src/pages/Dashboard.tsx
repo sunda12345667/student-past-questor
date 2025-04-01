@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Layout } from '@/components/Layout';
+import { DashboardLayout } from '@/components/DashboardLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { DashboardContent } from '@/components/dashboard/DashboardContent';
@@ -11,10 +11,10 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('questions');
   
   return (
-    <Layout>
-      <div className="container mx-auto px-4 pt-28 pb-16">
+    <DashboardLayout>
+      <div className="container mx-auto px-4 py-8">
         <SidebarProvider>
-          <div className="flex min-h-[calc(100vh-13rem)] w-full">
+          <div className="flex min-h-[calc(100vh-8rem)] w-full">
             <DashboardSidebar 
               currentUser={currentUser} 
               activeTab={activeTab} 
@@ -24,7 +24,7 @@ const Dashboard = () => {
           </div>
         </SidebarProvider>
       </div>
-    </Layout>
+    </DashboardLayout>
   );
 };
 

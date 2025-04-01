@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from 'react';
-import { Layout } from '@/components/Layout';
+import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,12 +7,11 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { useNavigate } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';
-import { Book, Search, Filter, Bookmark, ShoppingCart } from 'lucide-react';
+import { toast } from 'sonner';
+import { Book, Search, Filter, Bookmark, ShoppingCart, Download, FileText } from 'lucide-react';
 import { fetchQuestionPacks, QuestionPack, purchaseQuestionPack } from '@/services/questionsService';
 
 const ExamListing = () => {
-  const { toast } = useToast();
   const navigate = useNavigate();
   
   const [questionPacks, setQuestionPacks] = useState<QuestionPack[]>([]);
@@ -22,8 +20,8 @@ const ExamListing = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [purchasing, setPurchasing] = useState<string | null>(null);
   
-  const examTypes = ['All', 'WAEC', 'JAMB', 'NECO', 'Cambridge'];
-  const subjects = ['All', 'Mathematics', 'English', 'Physics', 'Chemistry', 'Biology', 'Economics'];
+  const examTypes = ['All', 'WAEC', 'JAMB', 'NECO', 'Cambridge', 'Post-UTME'];
+  const subjects = ['All', 'Mathematics', 'English', 'Physics', 'Chemistry', 'Biology', 'Economics', 'General', 'Science', 'Arts', 'Engineering'];
   const years = ['All', '2023', '2022', '2021', '2020', '2019'];
   
   const [selectedExamType, setSelectedExamType] = useState('All');
@@ -38,11 +36,7 @@ const ExamListing = () => {
         setQuestionPacks(packs);
         setFilteredPacks(packs);
       } catch (error) {
-        toast({
-          title: 'Error',
-          description: 'Failed to load question packs',
-          variant: 'destructive',
-        });
+        toast.error('Failed to load question packs');
       } finally {
         setLoading(false);
       }
@@ -52,7 +46,6 @@ const ExamListing = () => {
   }, [toast]);
 
   useEffect(() => {
-    // Filter question packs based on search query and selected filters
     let filtered = [...questionPacks];
     
     if (searchQuery) {
@@ -84,7 +77,6 @@ const ExamListing = () => {
       setPurchasing(packId);
       await purchaseQuestionPack(packId);
       
-      // Update the local state to reflect the purchase
       setQuestionPacks(prevPacks => 
         prevPacks.map(pack => 
           pack.id === packId 
@@ -97,35 +89,33 @@ const ExamListing = () => {
         )
       );
       
-      // Navigate to the dashboard
       navigate('/dashboard');
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to purchase question pack',
-        variant: 'destructive',
-      });
+      toast.error('Failed to purchase question pack');
     } finally {
       setPurchasing(null);
     }
   };
 
-  const handleViewQuestions = (packId: string) => {
-    navigate(`/questions/${packId}`);
+  const handleDownload = (packId: string, title: string) => {
+    toast.success(`Started downloading ${title} PDF...`);
+    
+    setTimeout(() => {
+      toast.success(`${title} PDF downloaded successfully!`);
+    }, 2500);
   };
 
   return (
-    <Layout>
-      <div className="container mx-auto px-4 pt-28 pb-16">
+    <DashboardLayout>
+      <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto mb-8">
-          <h1 className="text-3xl font-bold mb-2">Past Questions</h1>
+          <h1 className="text-3xl font-bold mb-2">Past Questions PDF Library</h1>
           <p className="text-muted-foreground">
-            Browse our comprehensive collection of past exam questions to prepare for your exams.
+            Browse our comprehensive collection of downloadable past exam question PDFs to prepare for your exams.
           </p>
         </div>
         
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* Filters Sidebar */}
           <div className="lg:w-64">
             <Card>
               <CardHeader>
@@ -190,13 +180,12 @@ const ExamListing = () => {
             </Card>
           </div>
           
-          {/* Main Content */}
           <div className="flex-1">
             <div className="mb-6">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search past questions..."
+                  placeholder="Search past question PDFs..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
@@ -206,7 +195,7 @@ const ExamListing = () => {
             
             <Tabs defaultValue="all">
               <TabsList className="mb-6">
-                <TabsTrigger value="all">All Questions</TabsTrigger>
+                <TabsTrigger value="all">All PDFs</TabsTrigger>
                 <TabsTrigger value="purchased">Purchased</TabsTrigger>
               </TabsList>
               
@@ -234,7 +223,7 @@ const ExamListing = () => {
                         <CardHeader>
                           <div className="flex justify-between items-start">
                             <div>
-                              <CardTitle>{pack.title}</CardTitle>
+                              <CardTitle>{pack.title} PDF</CardTitle>
                               <CardDescription>{pack.description}</CardDescription>
                             </div>
                             {pack.purchasedDate && (
@@ -254,7 +243,7 @@ const ExamListing = () => {
                               {pack.year}
                             </Badge>
                             <Badge variant="outline" className="bg-primary/10">
-                              {pack.questionCount} Questions
+                              <FileText className="h-3 w-3 mr-1" /> PDF Document
                             </Badge>
                           </div>
                         </CardContent>
@@ -265,11 +254,11 @@ const ExamListing = () => {
                           <div className="flex gap-2">
                             {pack.purchasedDate ? (
                               <Button 
-                                onClick={() => handleViewQuestions(pack.id)}
+                                onClick={() => handleDownload(pack.id, pack.title)}
                                 variant="default"
                               >
-                                <Book className="h-4 w-4 mr-2" />
-                                View Questions
+                                <Download className="h-4 w-4 mr-2" />
+                                Download PDF
                               </Button>
                             ) : (
                               <Button 
@@ -277,7 +266,7 @@ const ExamListing = () => {
                                 disabled={purchasing === pack.id}
                               >
                                 <ShoppingCart className="h-4 w-4 mr-2" />
-                                {purchasing === pack.id ? 'Processing...' : 'Purchase'}
+                                {purchasing === pack.id ? 'Processing...' : 'Purchase PDF'}
                               </Button>
                             )}
                           </div>
@@ -288,7 +277,7 @@ const ExamListing = () => {
                 ) : (
                   <div className="text-center py-12 glass-panel rounded-xl">
                     <Bookmark className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-xl font-medium mb-2">No Questions Found</h3>
+                    <h3 className="text-xl font-medium mb-2">No PDFs Found</h3>
                     <p className="text-muted-foreground">
                       Try adjusting your search or filters to find what you're looking for.
                     </p>
@@ -319,7 +308,7 @@ const ExamListing = () => {
                       .map((pack) => (
                         <Card key={pack.id}>
                           <CardHeader>
-                            <CardTitle>{pack.title}</CardTitle>
+                            <CardTitle>{pack.title} PDF</CardTitle>
                             <CardDescription>{pack.description}</CardDescription>
                           </CardHeader>
                           <CardContent>
@@ -334,7 +323,7 @@ const ExamListing = () => {
                                 {pack.year}
                               </Badge>
                               <Badge variant="outline" className="bg-primary/10">
-                                {pack.questionCount} Questions
+                                <FileText className="h-3 w-3 mr-1" /> PDF Document
                               </Badge>
                             </div>
                             <div className="text-sm text-muted-foreground">
@@ -344,10 +333,10 @@ const ExamListing = () => {
                           <CardFooter>
                             <Button 
                               className="w-full"
-                              onClick={() => handleViewQuestions(pack.id)}
+                              onClick={() => handleDownload(pack.id, pack.title)}
                             >
-                              <Book className="h-4 w-4 mr-2" />
-                              View Questions
+                              <Download className="h-4 w-4 mr-2" />
+                              Download PDF
                             </Button>
                           </CardFooter>
                         </Card>
@@ -356,12 +345,12 @@ const ExamListing = () => {
                 ) : (
                   <div className="text-center py-12 glass-panel rounded-xl">
                     <ShoppingCart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-xl font-medium mb-2">No Purchased Questions</h3>
+                    <h3 className="text-xl font-medium mb-2">No Purchased PDFs</h3>
                     <p className="text-muted-foreground mb-4">
-                      You haven't purchased any past questions yet.
+                      You haven't purchased any past question PDFs yet.
                     </p>
                     <Button onClick={() => navigate('/exams')}>
-                      Browse Questions
+                      Browse PDFs
                     </Button>
                   </div>
                 )}
@@ -370,7 +359,7 @@ const ExamListing = () => {
           </div>
         </div>
       </div>
-    </Layout>
+    </DashboardLayout>
   );
 };
 

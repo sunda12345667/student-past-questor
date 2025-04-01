@@ -27,12 +27,13 @@ function App() {
         <AuthProvider>
           <Toaster />
           <Routes>
+            {/* Public routes with regular layout */}
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/payment-callback" element={<PaymentCallback />} />
             
-            {/* Protected routes */}
+            {/* Protected routes with dashboard layout */}
             <Route element={<ProtectedRoute children={undefined} />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/questions/:packId" element={<QuestionView />} />
