@@ -9,8 +9,9 @@ import { Separator } from '@/components/ui/separator';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Book, Search, Filter, Bookmark, ShoppingCart, Download, FileText } from 'lucide-react';
-import { fetchQuestionPacks, QuestionPack, purchaseQuestionPack, processQuestionPackPurchase } from '@/services/questionsService';
-import { useAuth } from '@/hooks/auth';
+import { fetchQuestionPacks, QuestionPack, purchaseQuestionPack } from '@/services/questionsService';
+import { processQuestionPackPurchase } from '@/services/paystackService'; 
+import { useAuth } from '@/contexts/AuthContext';
 
 const ExamListing = () => {
   const navigate = useNavigate();

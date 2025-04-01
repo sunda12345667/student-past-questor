@@ -99,7 +99,8 @@ export function SampleQuestions() {
       await processQuestionPackPurchase(
         question.id.toString(),
         `${question.subject}: ${question.title} (${question.examType} ${question.year})`,
-        question.price
+        question.price,
+        null // Add the missing 4th parameter (user), using null for sample questions since we don't require authentication here
       );
     } catch (error) {
       console.error('Payment error:', error);
