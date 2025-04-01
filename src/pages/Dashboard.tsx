@@ -1,14 +1,33 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { DashboardContent } from '@/components/dashboard/DashboardContent';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
   const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState('questions');
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  // Extract tab from URL or set default
+  useEffect(() => {
+    const tabFromUrl = location.hash.replace('#', '');
+    if (tabFromUrl && ['questions', 'notifications', 'downloads', 'profile', 'bills', 
+                       'marketplace', 'groups', 'sessions', 'search', 'leaderboard', 
+                       'rewards', 'referrals', 'payments', 'chat'].includes(tabFromUrl)) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [location]);
+
+  // Update URL when tab changes
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    navigate(`/dashboard#${tab}`, { replace: true });
+  };
   
   return (
     <DashboardLayout>
@@ -18,7 +37,7 @@ const Dashboard = () => {
             <DashboardSidebar 
               currentUser={currentUser} 
               activeTab={activeTab} 
-              setActiveTab={setActiveTab} 
+              setActiveTab={handleTabChange} 
             />
             <DashboardContent activeTab={activeTab} />
           </div>

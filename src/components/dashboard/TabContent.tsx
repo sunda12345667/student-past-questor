@@ -15,6 +15,8 @@ import StudyGroups from './StudyGroups';
 import StudySessions from './StudySessions';
 import UserProfile from './UserProfile';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 
 interface TabContentProps {
   activeTab: string;
@@ -22,6 +24,15 @@ interface TabContentProps {
 
 export const TabContent = ({ activeTab }: TabContentProps): ReactNode => {
   const { currentUser } = useAuth();
+  const navigate = useNavigate();
+  
+  // Handle special navigation cases
+  useEffect(() => {
+    if (activeTab === 'marketplace') {
+      // Redirect to the exams page which has the marketplace functionality
+      navigate('/exams');
+    }
+  }, [activeTab, navigate]);
   
   switch (activeTab) {
     case 'questions':

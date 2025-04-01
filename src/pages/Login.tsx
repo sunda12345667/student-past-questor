@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -35,14 +34,15 @@ const Login = () => {
   const [mounted, setMounted] = useState(false);
   const { login, currentUser } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  const from = location.state?.from?.pathname || '/dashboard';
 
-  // Set mounted state to true after component mounts
   useEffect(() => {
     setMounted(true);
     return () => setMounted(false);
   }, []);
 
-  // Check if user is already logged in
   useEffect(() => {
     if (mounted && currentUser) {
       console.log('User already logged in, redirecting to dashboard', currentUser);
@@ -69,12 +69,11 @@ const Login = () => {
       await login(data.email, data.password);
       
       toast.success('Login successful! Welcome back.');
-      navigate('/dashboard');
+      navigate(from, { replace: true });
     } catch (error: any) {
       console.error('Login error details:', error);
       let errorMessage = 'Login failed. Please check your credentials and try again.';
       
-      // Handle specific error codes from Supabase
       if (error?.code === 'email_not_confirmed') {
         errorMessage = 'Please check your email and confirm your account before logging in.';
       } else if (error?.code === 'invalid_credentials') {

@@ -9,10 +9,12 @@ import { Separator } from '@/components/ui/separator';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Book, Search, Filter, Bookmark, ShoppingCart, Download, FileText } from 'lucide-react';
-import { fetchQuestionPacks, QuestionPack, purchaseQuestionPack } from '@/services/questionsService';
+import { fetchQuestionPacks, QuestionPack, purchaseQuestionPack, processQuestionPackPurchase } from '@/services/questionsService';
+import { useAuth } from '@/hooks/auth';
 
 const ExamListing = () => {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
   
   const [questionPacks, setQuestionPacks] = useState<QuestionPack[]>([]);
   const [filteredPacks, setFilteredPacks] = useState<QuestionPack[]>([]);
@@ -75,23 +77,38 @@ const ExamListing = () => {
   const handlePurchase = async (packId: string) => {
     try {
       setPurchasing(packId);
-      await purchaseQuestionPack(packId);
+      const pack = questionPacks.find(p => p.id === packId);
       
-      setQuestionPacks(prevPacks => 
-        prevPacks.map(pack => 
-          pack.id === packId 
-            ? { 
-                ...pack, 
-                purchasedDate: new Date().toISOString().split('T')[0],
-                status: 'Available'
-              } 
-            : pack
-        )
+      if (!pack) {
+        toast.error('Question pack not found');
+        return;
+      }
+      
+      const result = await processQuestionPackPurchase(
+        packId, 
+        pack.title, 
+        pack.price, 
+        currentUser
       );
       
-      navigate('/dashboard');
+      if (result.success) {
+        setQuestionPacks(prevPacks => 
+          prevPacks.map(pack => 
+            pack.id === packId 
+              ? { 
+                  ...pack, 
+                  purchasedDate: new Date().toISOString().split('T')[0],
+                  status: 'Available'
+                } 
+              : pack
+          )
+        );
+        
+        navigate('/dashboard');
+      }
     } catch (error) {
       toast.error('Failed to purchase question pack');
+      console.error('Purchase error:', error);
     } finally {
       setPurchasing(null);
     }
