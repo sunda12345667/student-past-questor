@@ -61,20 +61,20 @@ export const getUserGroups = async (): Promise<ChatGroup[]> => {
     const groupIds = data.map(member => member.group_id);
     
     const { data: groups, error: groupsError } = await supabase
-      .from("chat_groups")
-      .select("*, group_members:group_members(count)")
+      .from("study_groups")
+      .select("*, group_members!group_members(count)")
       .in("id", groupIds);
 
     if (groupsError) throw groupsError;
 
-    return groups.map(group => ({
+    return (groups || []).map(group => ({
       id: group.id,
       name: group.name,
       description: group.description,
       created_at: group.created_at,
-      created_by: group.created_by,
+      created_by: group.owner_id, // Changed from created_by to owner_id
       is_private: group.is_private,
-      members: group.group_members.length,
+      members: group.group_members?.length || 0,
       unread: 0 // We'll implement unread count in a future update
     }));
   } catch (error) {
@@ -102,8 +102,8 @@ export const getPublicGroups = async (): Promise<ChatGroup[]> => {
 
     // Get public groups the user is not a member of
     const { data: groups, error } = await supabase
-      .from("chat_groups")
-      .select("*, group_members:group_members(count)")
+      .from("study_groups")
+      .select("*, group_members!group_members(count)")
       .eq("is_private", false)
       .not("id", "in", memberGroupIds.length > 0 ? memberGroupIds : ['']);
 
@@ -114,9 +114,9 @@ export const getPublicGroups = async (): Promise<ChatGroup[]> => {
       name: group.name,
       description: group.description,
       created_at: group.created_at,
-      created_by: group.created_by,
+      created_by: group.owner_id, // Changed from created_by to owner_id
       is_private: group.is_private,
-      members: group.group_members.length
+      members: group.group_members?.length || 0
     }));
   } catch (error) {
     console.error("Error fetching public groups:", error);
@@ -129,14 +129,14 @@ export const getPublicGroups = async (): Promise<ChatGroup[]> => {
 export const getGroupMessages = async (groupId: string): Promise<ChatMessage[]> => {
   try {
     const { data: messages, error } = await supabase
-      .from("chat_messages")
+      .from("group_messages")
       .select(`
         id,
         group_id,
-        user_id,
+        sender_id:user_id,
         content,
         created_at,
-        profiles:user_id(id, name, avatar_url)
+        profiles!user_id(id, name, avatar_url)
       `)
       .eq("group_id", groupId)
       .order("created_at", { ascending: true });
@@ -146,14 +146,14 @@ export const getGroupMessages = async (groupId: string): Promise<ChatMessage[]> 
     return (messages || []).map(message => ({
       id: message.id,
       group_id: message.group_id,
-      user_id: message.user_id,
+      user_id: message.sender_id,
       content: message.content,
       created_at: message.created_at,
-      sender: {
+      sender: message.profiles ? {
         id: message.profiles.id,
         name: message.profiles.name,
         avatar: message.profiles.avatar_url
-      }
+      } : undefined
     }));
   } catch (error) {
     console.error("Error fetching group messages:", error);
@@ -175,7 +175,7 @@ export const sendGroupMessage = async (
     }
 
     const { data: message, error } = await supabase
-      .from("chat_messages")
+      .from("group_messages")
       .insert({
         group_id: groupId,
         user_id: user.user.id,
@@ -184,10 +184,10 @@ export const sendGroupMessage = async (
       .select(`
         id,
         group_id,
-        user_id,
+        sender_id:user_id,
         content,
         created_at,
-        profiles:user_id(id, name, avatar_url)
+        profiles!user_id(id, name, avatar_url)
       `)
       .single();
 
@@ -196,14 +196,14 @@ export const sendGroupMessage = async (
     return {
       id: message.id,
       group_id: message.group_id,
-      user_id: message.user_id,
+      user_id: message.sender_id,
       content: message.content,
       created_at: message.created_at,
-      sender: {
+      sender: message.profiles ? {
         id: message.profiles.id,
         name: message.profiles.name,
         avatar: message.profiles.avatar_url
-      }
+      } : undefined
     };
   } catch (error) {
     console.error("Error sending message:", error);
@@ -227,11 +227,11 @@ export const createChatGroup = async (
 
     // Create the group
     const { data: group, error } = await supabase
-      .from("chat_groups")
+      .from("study_groups")
       .insert({
         name,
         description,
-        created_by: user.user.id,
+        owner_id: user.user.id,
         is_private: isPrivate
       })
       .select()
@@ -255,7 +255,7 @@ export const createChatGroup = async (
       name: group.name,
       description: group.description,
       created_at: group.created_at,
-      created_by: group.created_by,
+      created_by: group.owner_id,
       is_private: group.is_private,
       members: 1
     };
@@ -331,7 +331,7 @@ export const getGroupMembers = async (groupId: string): Promise<GroupMember[]> =
         user_id,
         joined_at,
         is_admin,
-        profiles:user_id(id, name, avatar_url)
+        profiles!user_id(id, name, avatar_url)
       `)
       .eq("group_id", groupId);
 
@@ -343,11 +343,11 @@ export const getGroupMembers = async (groupId: string): Promise<GroupMember[]> =
       user_id: member.user_id,
       joined_at: member.joined_at,
       is_admin: member.is_admin,
-      user: {
+      user: member.profiles ? {
         id: member.profiles.id,
         name: member.profiles.name,
         avatar_url: member.profiles.avatar_url
-      }
+      } : undefined
     }));
   } catch (error) {
     console.error("Error fetching group members:", error);
@@ -368,7 +368,7 @@ export const subscribeToGroupMessages = (
       {
         event: 'INSERT',
         schema: 'public',
-        table: 'chat_messages',
+        table: 'group_messages',
         filter: `group_id=eq.${groupId}`
       },
       async (payload) => {
