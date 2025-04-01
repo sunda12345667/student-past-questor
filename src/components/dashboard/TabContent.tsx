@@ -14,7 +14,8 @@ import SearchMaterials from './SearchMaterials';
 import StudyGroups from './StudyGroups';
 import StudySessions from './StudySessions';
 import UserProfile from './UserProfile';
-import { useAuth } from '@/contexts/AuthContext';
+import GroupChat from './GroupChat';
+import { useAuth } from '@/hooks/auth';
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 
@@ -63,7 +64,7 @@ export const TabContent = ({ activeTab }: TabContentProps): ReactNode => {
     case 'payments':
       return <PaymentMethods />;
     case 'chat':
-      return <ChatbotSupport />;
+      return <GroupChat />;
     default:
       return <QuestionsTab />;
   }

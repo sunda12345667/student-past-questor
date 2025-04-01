@@ -1,101 +1,85 @@
 
-import { SearchBar } from './SearchBar';
-import { Eye, Download, BookOpen, ShoppingCart } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
-import { toast } from 'sonner';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Download, ExternalLink } from 'lucide-react';
+import { fetchSampleQuestions } from '@/services/questionsService';
 import { processQuestionPackPurchase } from '@/services/paystackService';
+import { useToast } from '@/hooks/use-toast';
 
-const sampleQuestions = [
-  {
-    id: 1,
-    subject: 'Mathematics',
-    examType: 'WAEC',
-    year: '2023',
-    title: 'Algebra and Equations',
-    questions: 45,
-    preview: "Solve for x: If 2x + 5 = 11, then x = ?",
-    price: 1500
-  },
-  {
-    id: 2,
-    subject: 'Physics',
-    examType: 'JAMB',
-    year: '2023',
-    title: 'Mechanics and Motion',
-    questions: 38,
-    preview: "A car moves with a constant acceleration of 2 m/s². If it starts from rest, what will be its velocity after 5 seconds?",
-    price: 1500
-  },
-  {
-    id: 3,
-    subject: 'English',
-    examType: 'NECO',
-    year: '2022',
-    title: 'Comprehension and Grammar',
-    questions: 60,
-    preview: "Read the passage and answer: The author's main argument is best described as...",
-    price: 1200
-  },
-  {
-    id: 4,
-    subject: 'Chemistry',
-    examType: 'Cambridge',
-    year: '2022',
-    title: 'Organic Chemistry',
-    questions: 42,
-    preview: "What is the molecular formula of benzene?",
-    price: 1800
-  },
-  {
-    id: 5,
-    subject: 'Biology',
-    examType: 'WAEC',
-    year: '2021',
-    title: 'Cell Biology and Genetics',
-    questions: 50,
-    preview: "Which of the following is NOT a function of the cell membrane?",
-    price: 1500
-  },
-  {
-    id: 6,
-    subject: 'Economics',
-    examType: 'University',
-    year: '2023',
-    title: 'Microeconomics Principles',
-    questions: 35,
-    preview: "Define price elasticity of demand and explain its determinants.",
-    price: 1200
-  }
-];
+interface Question {
+  id: number;
+  subject: string;
+  examType: string;
+  year: number;
+  title: string;
+  content: string;
+  price: number;
+}
+
+interface SubjectGroup {
+  subject: string;
+  questions: Question[];
+}
 
 export function SampleQuestions() {
-  const [activeTab, setActiveTab] = useState<string>('All');
-  const [processingPayment, setProcessingPayment] = useState<number | null>(null);
+  const { toast } = useToast();
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [activeTab, setActiveTab] = useState<string>('');
+  const [subjectGroups, setSubjectGroups] = useState<SubjectGroup[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadQuestions = async () => {
+      try {
+        setLoading(true);
+        const data = await fetchSampleQuestions();
+        setQuestions(data);
+        
+        // Group questions by subject
+        const groupedQuestions = data.reduce<Record<string, Question[]>>((acc, question) => {
+          if (!acc[question.subject]) {
+            acc[question.subject] = [];
+          }
+          acc[question.subject].push(question);
+          return acc;
+        }, {});
+        
+        const groups = Object.entries(groupedQuestions).map(([subject, questions]) => ({
+          subject,
+          questions
+        }));
+        
+        setSubjectGroups(groups);
+        
+        // Set initial active tab
+        if (groups.length > 0) {
+          setActiveTab(groups[0].subject);
+        }
+      } catch (error) {
+        console.error('Failed to fetch sample questions:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load sample questions",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadQuestions();
+  }, [toast]);
   
-  const filteredQuestions = activeTab === 'All' 
-    ? sampleQuestions 
-    : sampleQuestions.filter(q => q.subject === activeTab);
-
-  const handlePreviewQuestion = (questionId: number) => {
-    toast.info(`Previewing question set #${questionId}`);
-  };
-
-  const handleSaveQuestion = (questionId: number) => {
-    toast.success(`Question set #${questionId} saved to your library`);
-  };
-
-  const handleViewFullSet = (subject: string, examType: string) => {
-    toast.info(`Loading full ${subject} ${examType} question set...`);
-  };
-
-  const handleViewAllQuestions = () => {
-    toast.info('Loading complete question database...');
-  };
-
-  const handlePayNow = async (question: typeof sampleQuestions[0]) => {
+  const handleDownload = async (question: Question) => {
     try {
-      setProcessingPayment(question.id);
+      toast({
+        title: "Downloading...",
+        description: `Preparing ${question.subject} sample questions`,
+      });
+      
       await processQuestionPackPurchase(
         question.id.toString(),
         `${question.subject}: ${question.title} (${question.examType} ${question.year})`,
@@ -104,120 +88,118 @@ export function SampleQuestions() {
       );
     } catch (error) {
       console.error('Payment error:', error);
-      toast.error('Payment processing failed. Please try again.');
-    } finally {
-      setProcessingPayment(null);
+      toast({
+        title: "Download Failed",
+        description: "There was an error downloading these sample questions",
+        variant: "destructive"
+      });
     }
   };
 
-  return (
-    <section id="questions" className="py-20">
-      <div className="container mx-auto px-4">
-        <div className="text-center max-w-3xl mx-auto mb-12">
-          <h2 className="heading-lg mb-4">Explore our question bank</h2>
-          <p className="text-lg text-muted-foreground mb-8">
-            Search through thousands of past questions or browse our sample collection below.
-          </p>
+  if (loading) {
+    return (
+      <section className="py-12">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-bold">Sample Questions</h2>
+            <p className="text-muted-foreground mt-2">Loading sample questions...</p>
+          </div>
           
-          <SearchBar />
-        </div>
-        
-        <div className="mb-8 overflow-x-auto pb-2">
-          <div className="flex space-x-2 min-w-max">
-            {['All', 'Mathematics', 'Physics', 'Chemistry', 'Biology', 'English', 'Economics'].map((tab) => (
-              <Button
-                key={tab}
-                variant={activeTab === tab ? "default" : "outline"}
-                className="rounded-full"
-                onClick={() => setActiveTab(tab)}
-              >
-                {tab}
-              </Button>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(3)].map((_, i) => (
+              <Card key={i} className="animate-pulse">
+                <CardHeader className="space-y-2">
+                  <div className="h-5 bg-muted rounded w-1/3"></div>
+                  <div className="h-6 bg-muted rounded w-2/3"></div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="h-4 bg-muted rounded w-full"></div>
+                  <div className="h-4 bg-muted rounded w-full"></div>
+                  <div className="h-4 bg-muted rounded w-3/4"></div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="py-12">
+      <div className="container mx-auto px-4">
+        <div className="text-center mb-10">
+          <h2 className="text-3xl font-bold">Sample Questions</h2>
+          <p className="text-muted-foreground mt-2">Preview our high-quality exam prep materials</p>
+        </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredQuestions.map((question) => (
-            <div 
-              key={question.id} 
-              className="glass-panel rounded-xl overflow-hidden card-hover"
-            >
-              <div className="p-5 bg-gradient-to-br from-primary/5 to-primary/10">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="px-3 py-1 text-xs font-medium bg-primary/20 rounded-full text-primary">
-                    {question.examType} {question.year}
-                  </span>
-                  <span className="text-sm text-muted-foreground">
-                    {question.questions} questions
-                  </span>
+        {subjectGroups.length > 0 ? (
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <div className="flex justify-center mb-8">
+              <TabsList>
+                {subjectGroups.map((group) => (
+                  <TabsTrigger key={group.subject} value={group.subject}>
+                    {group.subject}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
+
+            {subjectGroups.map((group) => (
+              <TabsContent key={group.subject} value={group.subject} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {group.questions.map((question) => (
+                    <Card key={question.id} className="overflow-hidden">
+                      <CardHeader className="bg-muted/30">
+                        <div className="flex justify-between items-start mb-2">
+                          <Badge variant="outline" className="bg-background">
+                            {question.examType} {question.year}
+                          </Badge>
+                        </div>
+                        <CardTitle className="text-lg">{question.title}</CardTitle>
+                        <CardDescription>{question.subject}</CardDescription>
+                      </CardHeader>
+                      <CardContent className="pt-4">
+                        <p className="text-sm mb-4 line-clamp-3">{question.content}</p>
+                        <div className="flex justify-between items-center">
+                          <p className="text-sm text-muted-foreground">
+                            Free sample
+                          </p>
+                          <div className="flex gap-2">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleDownload(question)}
+                            >
+                              <Download className="h-4 w-4 mr-2" /> Download
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
-                <h3 className="text-xl font-medium">{question.subject}</h3>
-                <p className="text-sm text-muted-foreground">{question.title}</p>
-                <div className="mt-2 text-md font-semibold text-primary">
-                  ₦{question.price.toLocaleString()}
-                </div>
-              </div>
-              
-              <div className="p-5 border-t border-border/60">
-                <p className="text-sm mb-5">{question.preview}</p>
                 
-                <div className="flex flex-col space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex space-x-2">
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
-                        className="h-8 px-2"
-                        onClick={() => handlePreviewQuestion(question.id)}
-                      >
-                        <Eye className="h-4 w-4 mr-1" />
-                        Preview
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
-                        className="h-8 px-2"
-                        onClick={() => handleSaveQuestion(question.id)}
-                      >
-                        <Download className="h-4 w-4 mr-1" />
-                        Save
-                      </Button>
-                    </div>
-                    
-                    <Button 
-                      size="sm" 
-                      className="h-8"
-                      onClick={() => handleViewFullSet(question.subject, question.examType)}
-                    >
-                      <BookOpen className="h-4 w-4 mr-1" />
-                      View Full Set
-                    </Button>
-                  </div>
-                  
-                  <Button
-                    className="w-full"
-                    onClick={() => handlePayNow(question)}
-                    disabled={processingPayment === question.id}
-                  >
-                    <ShoppingCart className="h-4 w-4 mr-2" />
-                    {processingPayment === question.id ? 'Processing...' : 'Pay Now'}
+                <div className="text-center mt-8">
+                  <Button asChild>
+                    <a href="/exams">
+                      View All Available Questions <ExternalLink className="ml-2 h-4 w-4" />
+                    </a>
                   </Button>
                 </div>
-              </div>
-            </div>
-          ))}
-        </div>
-        
-        <div className="text-center mt-12">
-          <Button 
-            size="lg" 
-            variant="outline"
-            onClick={handleViewAllQuestions}
-          >
-            View all questions
-          </Button>
-        </div>
+              </TabsContent>
+            ))}
+          </Tabs>
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">No sample questions available at the moment.</p>
+            <Button asChild className="mt-4">
+              <a href="/exams">
+                View All Available Questions <ExternalLink className="ml-2 h-4 w-4" />
+              </a>
+            </Button>
+          </div>
+        )}
       </div>
     </section>
   );

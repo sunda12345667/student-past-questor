@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useRef } from 'react';
-import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/auth';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,8 @@ import {
   Paperclip, 
   Users, 
   Info, 
-  Settings 
+  Settings,
+  Plus
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -23,57 +24,124 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/contexts/AuthContext';
-
-// Mock data for chat groups and messages
-const chatGroups = [
-  { id: '1', name: 'JAMB Study Club', unread: 3 },
-  { id: '2', name: 'Physics Masters', unread: 0 },
-  { id: '3', name: 'WAEC Mathematics', unread: 5 },
-  { id: '4', name: 'Biology Enthusiasts', unread: 0 },
-  { id: '5', name: 'Chemistry Lab', unread: 2 }
-];
-
-const mockMessages = {
-  '1': [
-    { id: '1', sender: { id: 'user1', name: 'Chioma A.', avatar: '' }, content: 'Hello everyone! Ready for our JAMB study session?', timestamp: new Date(Date.now() - 3600000 * 3) },
-    { id: '2', sender: { id: 'user2', name: 'David O.', avatar: '' }, content: 'Yes, I just finished reviewing the Chemistry section.', timestamp: new Date(Date.now() - 3600000 * 2) },
-    { id: '3', sender: { id: 'user3', name: 'Fatima M.', avatar: '' }, content: 'I found a really helpful resource for Physics formulas. Would anyone like me to share it?', timestamp: new Date(Date.now() - 3600000) },
-    { id: '4', sender: { id: 'user4', name: 'Samuel E.', avatar: '' }, content: 'Yes please! I would really appreciate that.', timestamp: new Date(Date.now() - 1800000) },
-    { id: '5', sender: { id: 'user3', name: 'Fatima M.', avatar: '' }, content: 'Great! Here it is: [Physics Formulas PDF]', timestamp: new Date(Date.now() - 1700000) }
-  ],
-  '2': [
-    { id: '1', sender: { id: 'user5', name: 'Ibrahim K.', avatar: '' }, content: 'Can someone explain the difference between scalar and vector quantities?', timestamp: new Date(Date.now() - 86400000) },
-    { id: '2', sender: { id: 'user6', name: 'Grace A.', avatar: '' }, content: 'Scalar quantities have only magnitude, while vector quantities have both magnitude and direction.', timestamp: new Date(Date.now() - 82800000) }
-  ],
-  '3': [
-    { id: '1', sender: { id: 'user7', name: 'Michael R.', avatar: '' }, content: 'What topics should we focus on for the upcoming WAEC Math exam?', timestamp: new Date(Date.now() - 172800000) },
-    { id: '2', sender: { id: 'user8', name: 'Joy P.', avatar: '' }, content: 'Based on past papers, I would suggest focusing on Algebra, Trigonometry, and Statistics.', timestamp: new Date(Date.now() - 169200000) }
-  ]
-};
+import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Separator } from '@/components/ui/separator';
+import { 
+  ChatGroup, 
+  ChatMessage, 
+  getUserGroups,
+  getPublicGroups,
+  getGroupMessages,
+  sendGroupMessage,
+  createChatGroup,
+  joinChatGroup,
+  leaveChatGroup,
+  getGroupMembers,
+  subscribeToGroupMessages,
+  subscribeToTypingIndicators,
+  sendTypingIndicator
+} from '@/services/groupChatService';
+import { supabase } from '@/integrations/supabase/client';
 
 const GroupChat = () => {
-  const { toast } = useToast();
   const { currentUser } = useAuth();
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
-  const [messages, setMessages] = useState<any[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [messageInput, setMessageInput] = useState('');
-  const [groups, setGroups] = useState(chatGroups);
+  const [groups, setGroups] = useState<ChatGroup[]>([]);
+  const [publicGroups, setPublicGroups] = useState<ChatGroup[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [isCreatingGroup, setIsCreatingGroup] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [newGroupDescription, setNewGroupDescription] = useState('');
+  const [newGroupIsPrivate, setNewGroupIsPrivate] = useState(false);
+  const [groupMembers, setGroupMembers] = useState<any[]>([]);
+  const [showMembersModal, setShowMembersModal] = useState(false);
+  const [activeTab, setActiveTab] = useState('my-groups');
+  const [typingUsers, setTypingUsers] = useState<string[]>([]);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
+  // Load user's groups
+  useEffect(() => {
+    const loadGroups = async () => {
+      setLoading(true);
+      try {
+        const userGroups = await getUserGroups();
+        setGroups(userGroups);
+        
+        // Load public groups too
+        const availablePublicGroups = await getPublicGroups();
+        setPublicGroups(availablePublicGroups);
+        
+        // If there are groups, select the first one
+        if (userGroups.length > 0 && !selectedGroup) {
+          setSelectedGroup(userGroups[0].id);
+        }
+      } catch (error) {
+        console.error("Error loading groups:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadGroups();
+  }, []);
+  
+  // Load messages when selected group changes
   useEffect(() => {
     if (selectedGroup) {
-      setMessages(mockMessages[selectedGroup as keyof typeof mockMessages] || []);
+      const loadMessages = async () => {
+        const groupMessages = await getGroupMessages(selectedGroup);
+        setMessages(groupMessages);
+        
+        // Also load group members
+        const members = await getGroupMembers(selectedGroup);
+        setGroupMembers(members);
+      };
       
-      // Mark as read
-      setGroups(prev => 
-        prev.map(group => 
-          group.id === selectedGroup ? { ...group, unread: 0 } : group
-        )
+      loadMessages();
+      
+      // Subscribe to real-time updates
+      const messageChannel = subscribeToGroupMessages(
+        selectedGroup,
+        (newMessage) => {
+          setMessages(prev => [...prev, newMessage]);
+        }
       );
+      
+      // Subscribe to typing indicators
+      const typingChannel = subscribeToTypingIndicators(
+        selectedGroup,
+        (typingUserIds) => {
+          // Filter out current user
+          const filteredTypingUsers = typingUserIds.filter(
+            id => id !== currentUser?.id
+          );
+          setTypingUsers(filteredTypingUsers);
+        }
+      );
+      
+      return () => {
+        // Clean up subscriptions
+        supabase.removeChannel(messageChannel);
+        supabase.removeChannel(typingChannel);
+      };
     }
-  }, [selectedGroup]);
+  }, [selectedGroup, currentUser?.id]);
   
+  // Scroll to bottom when messages change
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
@@ -82,42 +150,130 @@ const GroupChat = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
   
-  const handleSendMessage = () => {
-    if (!messageInput.trim() || !selectedGroup) return;
+  const handleSendMessage = async () => {
+    if (!messageInput.trim() || !selectedGroup || !currentUser) return;
     
-    const newMessage = {
-      id: Date.now().toString(),
-      sender: {
-        id: currentUser?.id || 'current-user',
-        name: currentUser?.name || 'You',
-        avatar: '' // Just use empty string since avatar_url is not in the User type
-      },
-      content: messageInput,
-      timestamp: new Date()
-    };
-    
-    setMessages(prev => [...prev, newMessage]);
-    setMessageInput('');
-  };
-  
-  const formatTimestamp = (timestamp: Date) => {
-    const now = new Date();
-    const diffInHours = (now.getTime() - timestamp.getTime()) / (1000 * 60 * 60);
-    
-    if (diffInHours < 24) {
-      return timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } else if (diffInHours < 48) {
-      return 'Yesterday';
-    } else {
-      return timestamp.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    const success = await sendGroupMessage(selectedGroup, messageInput);
+    if (success) {
+      setMessageInput('');
     }
   };
   
-  const handleAttachFile = () => {
-    toast({
-      title: "Feature coming soon",
-      description: "File attachment will be available soon.",
+  const handleCreateGroup = async () => {
+    if (!newGroupName.trim()) return;
+    
+    const newGroup = await createChatGroup(
+      newGroupName,
+      newGroupDescription,
+      newGroupIsPrivate
+    );
+    
+    if (newGroup) {
+      setGroups(prev => [newGroup, ...prev]);
+      setSelectedGroup(newGroup.id);
+      setIsCreatingGroup(false);
+      
+      // Reset form
+      setNewGroupName('');
+      setNewGroupDescription('');
+      setNewGroupIsPrivate(false);
+    }
+  };
+  
+  const handleJoinGroup = async (groupId: string) => {
+    const success = await joinChatGroup(groupId);
+    
+    if (success) {
+      // Find the group in public groups
+      const joinedGroup = publicGroups.find(g => g.id === groupId);
+      if (joinedGroup) {
+        // Remove from public groups
+        setPublicGroups(prev => prev.filter(g => g.id !== groupId));
+        
+        // Add to user's groups
+        setGroups(prev => [joinedGroup, ...prev]);
+        
+        // Select the group
+        setSelectedGroup(groupId);
+      }
+    }
+  };
+  
+  const handleLeaveGroup = async (groupId: string) => {
+    if (window.confirm("Are you sure you want to leave this group?")) {
+      const success = await leaveChatGroup(groupId);
+      
+      if (success) {
+        // Remove from user's groups
+        setGroups(prev => prev.filter(g => g.id !== groupId));
+        
+        // If the user was viewing this group, clear the selection
+        if (selectedGroup === groupId) {
+          setSelectedGroup(null);
+          setMessages([]);
+        }
+      }
+    }
+  };
+  
+  const handleShowMembers = async (groupId: string) => {
+    setMembersLoading(true);
+    try {
+      const members = await getGroupMembers(groupId);
+      setGroupMembers(members);
+      setShowMembersModal(true);
+    } finally {
+      setMembersLoading(false);
+    }
+  };
+  
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+    
+    if (diffInHours < 24) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } else if (diffInHours < 48) {
+      return 'Yesterday';
+    } else {
+      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    }
+  };
+  
+  const handleTyping = () => {
+    if (currentUser && selectedGroup) {
+      sendTypingIndicator(
+        selectedGroup,
+        currentUser.id,
+        currentUser.name || 'User'
+      );
+    }
+  };
+  
+  // Determine if user is admin of the current group
+  const isGroupAdmin = () => {
+    if (!selectedGroup || !currentUser) return false;
+    const member = groupMembers.find(m => m.user_id === currentUser.id);
+    return member?.is_admin || false;
+  };
+  
+  const getTypingIndicator = () => {
+    if (typingUsers.length === 0) return null;
+    
+    // Get names for user IDs
+    const typingNames = typingUsers.map(userId => {
+      const member = groupMembers.find(m => m.user_id === userId);
+      return member ? member.user?.name || 'Someone' : 'Someone';
     });
+    
+    if (typingNames.length === 1) {
+      return `${typingNames[0]} is typing...`;
+    } else if (typingNames.length === 2) {
+      return `${typingNames[0]} and ${typingNames[1]} are typing...`;
+    } else {
+      return `${typingNames.length} people are typing...`;
+    }
   };
   
   return (
@@ -125,29 +281,110 @@ const GroupChat = () => {
       {/* Groups Sidebar */}
       <div className="w-full md:w-64 flex-shrink-0 border rounded-lg overflow-hidden">
         <div className="p-3 border-b bg-muted/30">
-          <h3 className="font-medium flex items-center">
-            <Users className="h-4 w-4 mr-2" />
-            Study Groups
-          </h3>
-        </div>
-        <div className="p-2 h-[calc(100%-3rem)] overflow-y-auto">
-          {groups.map(group => (
-            <Button
-              key={group.id}
-              variant={selectedGroup === group.id ? "default" : "ghost"}
-              className="w-full justify-start mb-1 relative"
-              onClick={() => setSelectedGroup(group.id)}
+          <div className="flex justify-between items-center">
+            <h3 className="font-medium flex items-center">
+              <Users className="h-4 w-4 mr-2" />
+              Study Groups
+            </h3>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 w-8 p-0" 
+              onClick={() => setIsCreatingGroup(true)}
             >
-              <div className="flex items-center w-full overflow-hidden">
-                <span className="truncate">{group.name}</span>
-                {group.unread > 0 && (
-                  <Badge className="ml-auto bg-red-500 text-white min-w-[1.5rem] flex items-center justify-center">
-                    {group.unread}
-                  </Badge>
-                )}
-              </div>
+              <Plus className="h-4 w-4" />
             </Button>
-          ))}
+          </div>
+        </div>
+        <div className="p-2">
+          <div className="flex space-x-2 mb-2">
+            <Button
+              variant={activeTab === 'my-groups' ? "default" : "outline"}
+              size="sm"
+              className="w-1/2"
+              onClick={() => setActiveTab('my-groups')}
+            >
+              My Groups
+            </Button>
+            <Button
+              variant={activeTab === 'discover' ? "default" : "outline"}
+              size="sm"
+              className="w-1/2"
+              onClick={() => setActiveTab('discover')}
+            >
+              Discover
+            </Button>
+          </div>
+        </div>
+        <div className="p-2 h-[calc(100%-6rem)] overflow-y-auto">
+          {loading ? (
+            <div className="flex flex-col gap-2">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="h-14 bg-muted animate-pulse rounded-md"></div>
+              ))}
+            </div>
+          ) : (
+            activeTab === 'my-groups' ? (
+              groups.length > 0 ? (
+                groups.map(group => (
+                  <Button
+                    key={group.id}
+                    variant={selectedGroup === group.id ? "default" : "ghost"}
+                    className="w-full justify-start mb-1 relative"
+                    onClick={() => setSelectedGroup(group.id)}
+                  >
+                    <div className="flex items-center w-full overflow-hidden">
+                      <span className="truncate">{group.name}</span>
+                      {group.unread && group.unread > 0 && (
+                        <Badge className="ml-auto bg-red-500 text-white min-w-[1.5rem] flex items-center justify-center">
+                          {group.unread}
+                        </Badge>
+                      )}
+                    </div>
+                  </Button>
+                ))
+              ) : (
+                <div className="text-center py-6 text-muted-foreground">
+                  <p>You haven't joined any groups yet.</p>
+                  <Button 
+                    variant="link" 
+                    onClick={() => setActiveTab('discover')}
+                  >
+                    Discover groups
+                  </Button>
+                </div>
+              )
+            ) : (
+              publicGroups.length > 0 ? (
+                publicGroups.map(group => (
+                  <div key={group.id} className="mb-2 p-2 border rounded-md">
+                    <div className="font-medium">{group.name}</div>
+                    <div className="text-sm text-muted-foreground mb-1">
+                      {group.members} members
+                    </div>
+                    <div className="flex justify-end">
+                      <Button 
+                        size="sm" 
+                        onClick={() => handleJoinGroup(group.id)}
+                      >
+                        Join
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-6 text-muted-foreground">
+                  <p>No public groups available.</p>
+                  <Button 
+                    variant="link" 
+                    onClick={() => setIsCreatingGroup(true)}
+                  >
+                    Create a group
+                  </Button>
+                </div>
+              )
+            )
+          )}
         </div>
       </div>
       
@@ -161,8 +398,12 @@ const GroupChat = () => {
                 {groups.find(g => g.id === selectedGroup)?.name}
               </h3>
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon">
-                  <Info className="h-4 w-4" />
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => handleShowMembers(selectedGroup)}
+                >
+                  <Users className="h-4 w-4" />
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -175,9 +416,20 @@ const GroupChat = () => {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem>Mute Notifications</DropdownMenuItem>
                     <DropdownMenuItem>Pin Chat</DropdownMenuItem>
-                    <DropdownMenuItem>Member List</DropdownMenuItem>
+                    {isGroupAdmin() && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem>Manage Members</DropdownMenuItem>
+                        <DropdownMenuItem>Group Settings</DropdownMenuItem>
+                      </>
+                    )}
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-red-500">Leave Group</DropdownMenuItem>
+                    <DropdownMenuItem 
+                      className="text-red-500"
+                      onClick={() => handleLeaveGroup(selectedGroup)}
+                    >
+                      Leave Group
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -194,7 +446,7 @@ const GroupChat = () => {
               ) : (
                 <div className="space-y-4">
                   {messages.map((message) => {
-                    const isCurrentUser = message.sender.id === currentUser?.id || message.sender.id === 'current-user';
+                    const isCurrentUser = message.user_id === currentUser?.id;
                     
                     return (
                       <div 
@@ -203,9 +455,9 @@ const GroupChat = () => {
                       >
                         {!isCurrentUser && (
                           <Avatar className="h-8 w-8">
-                            <AvatarImage src={message.sender.avatar} alt={message.sender.name} />
+                            <AvatarImage src={message.sender?.avatar} alt={message.sender?.name} />
                             <AvatarFallback>
-                              {message.sender.name.split(' ').map((n: string) => n[0]).join('')}
+                              {message.sender?.name?.split(' ').map(n => n[0]).join('')}
                             </AvatarFallback>
                           </Avatar>
                         )}
@@ -213,7 +465,7 @@ const GroupChat = () => {
                         <div className={`max-w-[70%]`}>
                           {!isCurrentUser && (
                             <p className="text-xs text-muted-foreground mb-1">
-                              {message.sender.name}
+                              {message.sender?.name}
                             </p>
                           )}
                           
@@ -228,21 +480,31 @@ const GroupChat = () => {
                           <p className={`text-xs text-muted-foreground mt-1 ${
                             isCurrentUser ? 'text-right' : 'text-left'
                           }`}>
-                            {formatTimestamp(message.timestamp)}
+                            {formatTimestamp(message.created_at)}
                           </p>
                         </div>
                         
                         {isCurrentUser && (
                           <Avatar className="h-8 w-8">
-                            <AvatarImage src={message.sender.avatar} alt={message.sender.name} />
+                            <AvatarImage src={message.sender?.avatar} alt={message.sender?.name} />
                             <AvatarFallback>
-                              {message.sender.name.split(' ').map((n: string) => n[0]).join('')}
+                              {message.sender?.name?.split(' ').map(n => n[0]).join('')}
                             </AvatarFallback>
                           </Avatar>
                         )}
                       </div>
                     );
                   })}
+                  {typingUsers.length > 0 && (
+                    <div className="flex items-center text-sm text-muted-foreground animate-pulse">
+                      <div className="flex items-center space-x-1 ml-2">
+                        <div className="w-1 h-1 bg-current rounded-full animate-bounce"></div>
+                        <div className="w-1 h-1 bg-current rounded-full animate-bounce delay-75"></div>
+                        <div className="w-1 h-1 bg-current rounded-full animate-bounce delay-150"></div>
+                      </div>
+                      <span className="ml-2">{getTypingIndicator()}</span>
+                    </div>
+                  )}
                   <div ref={messagesEndRef} />
                 </div>
               )}
@@ -254,7 +516,10 @@ const GroupChat = () => {
                 <Input 
                   placeholder="Type your message..." 
                   value={messageInput}
-                  onChange={(e) => setMessageInput(e.target.value)}
+                  onChange={(e) => {
+                    setMessageInput(e.target.value);
+                    handleTyping();
+                  }}
                   onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
                 />
                 
@@ -265,11 +530,11 @@ const GroupChat = () => {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={handleAttachFile}>
+                    <DropdownMenuItem>
                       <File className="h-4 w-4 mr-2" />
                       Document
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleAttachFile}>
+                    <DropdownMenuItem>
                       <Image className="h-4 w-4 mr-2" />
                       Photo
                     </DropdownMenuItem>
@@ -290,6 +555,110 @@ const GroupChat = () => {
           </div>
         )}
       </div>
+      
+      {/* Create Group Modal */}
+      <Dialog open={isCreatingGroup} onOpenChange={setIsCreatingGroup}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create a New Study Group</DialogTitle>
+            <DialogDescription>
+              Create a study group to collaborate with other students.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Group Name</Label>
+              <Input 
+                id="name" 
+                value={newGroupName}
+                onChange={(e) => setNewGroupName(e.target.value)}
+                placeholder="e.g., Physics Study Group" 
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea 
+                id="description" 
+                value={newGroupDescription}
+                onChange={(e) => setNewGroupDescription(e.target.value)}
+                placeholder="What will your group be studying?"
+                rows={3}
+              />
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="private"
+                checked={newGroupIsPrivate}
+                onCheckedChange={setNewGroupIsPrivate}
+              />
+              <Label htmlFor="private">Private Group</Label>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreatingGroup(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateGroup}>
+              Create Group
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Members Modal */}
+      <Dialog open={showMembersModal} onOpenChange={setShowMembersModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Group Members</DialogTitle>
+            <DialogDescription>
+              {groups.find(g => g.id === selectedGroup)?.name || "Group"} has {groupMembers.length} members.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            {membersLoading ? (
+              <div className="space-y-2">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="flex items-center space-x-2">
+                    <div className="w-8 h-8 rounded-full bg-muted animate-pulse" />
+                    <div className="h-4 w-40 bg-muted animate-pulse rounded" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                {groupMembers.map(member => (
+                  <div key={member.id} className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={member.user?.avatar_url} />
+                        <AvatarFallback>
+                          {member.user?.name?.split(' ').map((n: string) => n[0]).join('')}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span>{member.user?.name}</span>
+                    </div>
+                    
+                    {member.is_admin && (
+                      <Badge variant="outline">Admin</Badge>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button onClick={() => setShowMembersModal(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
