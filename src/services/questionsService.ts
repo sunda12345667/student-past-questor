@@ -1,3 +1,4 @@
+
 import { toast } from 'sonner';
 
 // Define question types
@@ -23,6 +24,17 @@ export interface QuestionPack {
   price: number;
   purchasedDate?: string;
   status?: 'Available' | 'Downloaded';
+}
+
+// For the SampleQuestions component
+export interface SampleQuestion {
+  id: number;
+  subject: string;
+  examType: string;
+  year: number;
+  title: string;
+  content: string;
+  price: number;
 }
 
 // Sample question data
@@ -135,8 +147,57 @@ const sampleQuestionPacks: QuestionPack[] = [
   }
 ];
 
+// Sample sample questions for homepage display
+const sampleQuestions: SampleQuestion[] = [
+  {
+    id: 1,
+    subject: 'Mathematics',
+    examType: 'WAEC',
+    year: 2023,
+    title: 'Algebra and Calculus',
+    content: 'This sample pack contains questions on algebraic expressions, equations, and basic calculus concepts commonly tested in WAEC examinations.',
+    price: 0 // Free sample
+  },
+  {
+    id: 2,
+    subject: 'Physics',
+    examType: 'JAMB',
+    year: 2023,
+    title: 'Mechanics and Electricity',
+    content: 'Sample physics questions covering mechanics, electricity, and magnetism as frequently tested in JAMB examinations.',
+    price: 0 // Free sample
+  },
+  {
+    id: 3,
+    subject: 'Chemistry',
+    examType: 'NECO',
+    year: 2023,
+    title: 'Organic Chemistry',
+    content: 'Sample questions on organic chemistry, covering hydrocarbons, functional groups, and reactions from recent NECO examinations.',
+    price: 0 // Free sample
+  },
+  {
+    id: 4,
+    subject: 'Biology',
+    examType: 'WAEC',
+    year: 2023,
+    title: 'Ecology and Genetics',
+    content: 'Sample biology questions focusing on ecological concepts and genetic principles frequently tested in WAEC examinations.',
+    price: 0 // Free sample
+  },
+  {
+    id: 5,
+    subject: 'English',
+    examType: 'JAMB',
+    year: 2023,
+    title: 'Comprehension and Grammar',
+    content: 'Sample English language questions featuring reading comprehension passages and grammatical concepts from recent JAMB examinations.',
+    price: 0 // Free sample
+  }
+];
+
 // Sample questions for a pack
-const sampleQuestions: Record<string, Question[]> = {
+const questionsByPack: Record<string, Question[]> = {
   '1': [
     {
       id: '1-1',
@@ -193,6 +254,12 @@ export const fetchQuestionPacks = async (): Promise<QuestionPack[]> => {
   return [...sampleQuestionPacks];
 };
 
+export const fetchSampleQuestions = async (): Promise<SampleQuestion[]> => {
+  // Simulate API delay
+  await new Promise(resolve => setTimeout(resolve, 500));
+  return [...sampleQuestions];
+};
+
 export const fetchPurchasedQuestionPacks = async (): Promise<QuestionPack[]> => {
   // Simulate API delay
   await new Promise(resolve => setTimeout(resolve, 800));
@@ -202,7 +269,7 @@ export const fetchPurchasedQuestionPacks = async (): Promise<QuestionPack[]> => 
 export const fetchQuestionsByPackId = async (packId: string): Promise<Question[]> => {
   // Simulate API delay
   await new Promise(resolve => setTimeout(resolve, 1000));
-  return sampleQuestions[packId] || [];
+  return questionsByPack[packId] || [];
 };
 
 export const purchaseQuestionPack = async (packId: string): Promise<QuestionPack> => {

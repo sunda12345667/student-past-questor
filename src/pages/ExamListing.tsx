@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { Layout } from '@/components/Layout';
@@ -148,7 +147,7 @@ const ExamListing = () => {
                     <div className="flex justify-between items-center mb-4">
                       <div className="flex items-center">
                         <FileText className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">{pack.questionsCount} Questions</span>
+                        <span className="text-sm text-muted-foreground">{pack.questionCount} Questions</span>
                       </div>
                       <div className="text-sm text-primary font-medium">
                         {pack.price ? `₦${pack.price.toLocaleString()}` : 'Free'}

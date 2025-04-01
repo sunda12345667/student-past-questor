@@ -1,32 +1,21 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Download, ExternalLink } from 'lucide-react';
-import { fetchSampleQuestions } from '@/services/questionsService';
+import { fetchSampleQuestions, SampleQuestion } from '@/services/questionsService';
 import { processQuestionPackPurchase } from '@/services/paystackService';
 import { useToast } from '@/hooks/use-toast';
 
-interface Question {
-  id: number;
-  subject: string;
-  examType: string;
-  year: number;
-  title: string;
-  content: string;
-  price: number;
-}
-
 interface SubjectGroup {
   subject: string;
-  questions: Question[];
+  questions: SampleQuestion[];
 }
 
 export function SampleQuestions() {
   const { toast } = useToast();
-  const [questions, setQuestions] = useState<Question[]>([]);
+  const [questions, setQuestions] = useState<SampleQuestion[]>([]);
   const [activeTab, setActiveTab] = useState<string>('');
   const [subjectGroups, setSubjectGroups] = useState<SubjectGroup[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,7 +28,7 @@ export function SampleQuestions() {
         setQuestions(data);
         
         // Group questions by subject
-        const groupedQuestions = data.reduce<Record<string, Question[]>>((acc, question) => {
+        const groupedQuestions = data.reduce<Record<string, SampleQuestion[]>>((acc, question) => {
           if (!acc[question.subject]) {
             acc[question.subject] = [];
           }
@@ -73,7 +62,7 @@ export function SampleQuestions() {
     loadQuestions();
   }, [toast]);
   
-  const handleDownload = async (question: Question) => {
+  const handleDownload = async (question: SampleQuestion) => {
     try {
       toast({
         title: "Downloading...",
