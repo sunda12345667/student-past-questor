@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/auth';
 import { Card, CardContent } from '@/components/ui/card';
@@ -49,7 +50,7 @@ import {
   subscribeToGroupMessages,
   subscribeToTypingIndicators,
   sendTypingIndicator
-} from '@/services/groupChatService';
+} from '@/services/chat';
 import { supabase } from '@/integrations/supabase/client';
 
 const GroupChat = () => {
