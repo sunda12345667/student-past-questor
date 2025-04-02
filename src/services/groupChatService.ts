@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -72,10 +71,10 @@ export const getUserGroups = async (): Promise<ChatGroup[]> => {
       name: group.name,
       description: group.description,
       created_at: group.created_at,
-      created_by: group.owner_id, // Changed from created_by to owner_id
+      created_by: group.owner_id,
       is_private: group.is_private,
       members: group.group_members?.length || 0,
-      unread: 0 // We'll implement unread count in a future update
+      unread: 0
     }));
   } catch (error) {
     console.error("Error fetching user groups:", error);
@@ -92,7 +91,6 @@ export const getPublicGroups = async (): Promise<ChatGroup[]> => {
       return [];
     }
 
-    // Get groups the user is already a member of
     const { data: memberGroups } = await supabase
       .from("group_members")
       .select("group_id")
@@ -100,7 +98,6 @@ export const getPublicGroups = async (): Promise<ChatGroup[]> => {
 
     const memberGroupIds = memberGroups?.map(m => m.group_id) || [];
 
-    // Get public groups the user is not a member of
     const { data: groups, error } = await supabase
       .from("study_groups")
       .select("*, group_members!group_members(count)")
@@ -114,7 +111,7 @@ export const getPublicGroups = async (): Promise<ChatGroup[]> => {
       name: group.name,
       description: group.description,
       created_at: group.created_at,
-      created_by: group.owner_id, // Changed from created_by to owner_id
+      created_by: group.owner_id,
       is_private: group.is_private,
       members: group.group_members?.length || 0
     }));
@@ -136,7 +133,7 @@ export const getGroupMessages = async (groupId: string): Promise<ChatMessage[]> 
         sender_id,
         content,
         created_at,
-        profiles:sender_id(id, name, avatar_url)
+        sender:profiles(id, name, avatar_url)
       `)
       .eq("group_id", groupId)
       .order("created_at", { ascending: true });
@@ -149,10 +146,10 @@ export const getGroupMessages = async (groupId: string): Promise<ChatMessage[]> 
       user_id: message.sender_id,
       content: message.content,
       created_at: message.created_at,
-      sender: message.profiles ? {
-        id: message.profiles.id,
-        name: message.profiles.name,
-        avatar: message.profiles.avatar_url
+      sender: message.sender ? {
+        id: message.sender.id,
+        name: message.sender.name,
+        avatar: message.sender.avatar_url
       } : undefined
     }));
   } catch (error) {
@@ -187,7 +184,7 @@ export const sendGroupMessage = async (
         sender_id,
         content,
         created_at,
-        profiles:sender_id(id, name, avatar_url)
+        sender:profiles(id, name, avatar_url)
       `)
       .single();
 
@@ -199,10 +196,10 @@ export const sendGroupMessage = async (
       user_id: message.sender_id,
       content: message.content,
       created_at: message.created_at,
-      sender: message.profiles ? {
-        id: message.profiles.id,
-        name: message.profiles.name,
-        avatar: message.profiles.avatar_url
+      sender: message.sender ? {
+        id: message.sender.id,
+        name: message.sender.name,
+        avatar: message.sender.avatar_url
       } : undefined
     };
   } catch (error) {
@@ -225,7 +222,6 @@ export const createChatGroup = async (
       return null;
     }
 
-    // Create the group
     const { data: group, error } = await supabase
       .from("study_groups")
       .insert({
@@ -239,7 +235,6 @@ export const createChatGroup = async (
 
     if (error) throw error;
 
-    // Add the creator as a member and admin
     const { error: memberError } = await supabase
       .from("group_members")
       .insert({
@@ -331,7 +326,7 @@ export const getGroupMembers = async (groupId: string): Promise<GroupMember[]> =
         user_id,
         joined_at,
         is_admin,
-        profiles:user_id(id, name, avatar_url)
+        user:profiles(id, name, avatar_url)
       `)
       .eq("group_id", groupId);
 
@@ -343,10 +338,10 @@ export const getGroupMembers = async (groupId: string): Promise<GroupMember[]> =
       user_id: member.user_id,
       joined_at: member.joined_at,
       is_admin: member.is_admin,
-      user: member.profiles ? {
-        id: member.profiles.id,
-        name: member.profiles.name,
-        avatar_url: member.profiles.avatar_url
+      user: member.user ? {
+        id: member.user.id,
+        name: member.user.name,
+        avatar_url: member.user.avatar_url
       } : undefined
     }));
   } catch (error) {
@@ -372,7 +367,6 @@ export const subscribeToGroupMessages = (
         filter: `group_id=eq.${groupId}`
       },
       async (payload) => {
-        // Get the full message with sender details
         const { data } = await supabase
           .from('profiles')
           .select('id, name, avatar_url')
@@ -412,18 +406,15 @@ export const subscribeToTypingIndicators = (
     .on('broadcast', { event: 'typing' }, (payload) => {
       const { user_id, user_name } = payload.payload;
       
-      // Clear any existing timeout for this user
       if (typingUsers.has(user_id)) {
         clearTimeout(typingUsers.get(user_id)!);
       }
       
-      // Add user to typing list
       typingUsers.set(user_id, setTimeout(() => {
         typingUsers.delete(user_id);
         onTypingUpdate(Array.from(typingUsers.keys()));
       }, 3000));
       
-      // Notify about typing users
       onTypingUpdate(Array.from(typingUsers.keys()));
     })
     .subscribe();
