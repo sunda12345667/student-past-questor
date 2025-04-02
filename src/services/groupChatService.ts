@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -125,6 +126,7 @@ export const getPublicGroups = async (): Promise<ChatGroup[]> => {
 // Get messages for a specific group
 export const getGroupMessages = async (groupId: string): Promise<ChatMessage[]> => {
   try {
+    // Fixing the query to properly define the relationship
     const { data: messages, error } = await supabase
       .from("group_messages")
       .select(`
@@ -133,7 +135,7 @@ export const getGroupMessages = async (groupId: string): Promise<ChatMessage[]> 
         sender_id,
         content,
         created_at,
-        sender:profiles(id, name, avatar_url)
+        profiles!inner(id, name, avatar_url)
       `)
       .eq("group_id", groupId)
       .order("created_at", { ascending: true });
@@ -146,11 +148,11 @@ export const getGroupMessages = async (groupId: string): Promise<ChatMessage[]> 
       user_id: message.sender_id,
       content: message.content,
       created_at: message.created_at,
-      sender: message.sender ? {
-        id: message.sender.id,
-        name: message.sender.name,
-        avatar: message.sender.avatar_url
-      } : undefined
+      sender: {
+        id: message.profiles.id,
+        name: message.profiles.name,
+        avatar: message.profiles.avatar_url
+      }
     }));
   } catch (error) {
     console.error("Error fetching group messages:", error);
@@ -171,36 +173,39 @@ export const sendGroupMessage = async (
       return null;
     }
 
-    const { data: message, error } = await supabase
+    // First insert the message
+    const { data: insertedMessage, error: insertError } = await supabase
       .from("group_messages")
       .insert({
         group_id: groupId,
         sender_id: user.user.id,
         content
       })
-      .select(`
-        id,
-        group_id,
-        sender_id,
-        content,
-        created_at,
-        sender:profiles(id, name, avatar_url)
-      `)
+      .select(`id, group_id, sender_id, content, created_at`)
       .single();
 
-    if (error) throw error;
+    if (insertError) throw insertError;
+
+    // Then fetch the sender profile details
+    const { data: profileData, error: profileError } = await supabase
+      .from("profiles")
+      .select(`id, name, avatar_url`)
+      .eq("id", user.user.id)
+      .single();
+
+    if (profileError) throw profileError;
 
     return {
-      id: message.id,
-      group_id: message.group_id,
-      user_id: message.sender_id,
-      content: message.content,
-      created_at: message.created_at,
-      sender: message.sender ? {
-        id: message.sender.id,
-        name: message.sender.name,
-        avatar: message.sender.avatar_url
-      } : undefined
+      id: insertedMessage.id,
+      group_id: insertedMessage.group_id,
+      user_id: insertedMessage.sender_id,
+      content: insertedMessage.content,
+      created_at: insertedMessage.created_at,
+      sender: {
+        id: profileData.id,
+        name: profileData.name,
+        avatar: profileData.avatar_url
+      }
     };
   } catch (error) {
     console.error("Error sending message:", error);
@@ -318,6 +323,7 @@ export const leaveChatGroup = async (groupId: string): Promise<boolean> => {
 // Get group members
 export const getGroupMembers = async (groupId: string): Promise<GroupMember[]> => {
   try {
+    // Fixing the query to properly define the relationship
     const { data: members, error } = await supabase
       .from("group_members")
       .select(`
@@ -326,7 +332,7 @@ export const getGroupMembers = async (groupId: string): Promise<GroupMember[]> =
         user_id,
         joined_at,
         is_admin,
-        user:profiles(id, name, avatar_url)
+        profiles!inner(id, name, avatar_url)
       `)
       .eq("group_id", groupId);
 
@@ -338,11 +344,11 @@ export const getGroupMembers = async (groupId: string): Promise<GroupMember[]> =
       user_id: member.user_id,
       joined_at: member.joined_at,
       is_admin: member.is_admin,
-      user: member.user ? {
-        id: member.user.id,
-        name: member.user.name,
-        avatar_url: member.user.avatar_url
-      } : undefined
+      user: {
+        id: member.profiles.id,
+        name: member.profiles.name,
+        avatar_url: member.profiles.avatar_url
+      }
     }));
   } catch (error) {
     console.error("Error fetching group members:", error);
