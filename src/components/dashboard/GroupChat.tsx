@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/auth';
 import { Card, CardContent } from '@/components/ui/card';
@@ -73,6 +72,16 @@ const GroupChat = () => {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
+  // Check for selectedGroupId in sessionStorage on component mount
+  useEffect(() => {
+    const storedGroupId = sessionStorage.getItem('selectedGroupId');
+    if (storedGroupId) {
+      setSelectedGroup(storedGroupId);
+      // Clear it after we've used it so subsequent visits don't auto-select
+      sessionStorage.removeItem('selectedGroupId');
+    }
+  }, []);
+  
   // Load user's groups
   useEffect(() => {
     const loadGroups = async () => {
@@ -85,7 +94,7 @@ const GroupChat = () => {
         const availablePublicGroups = await getPublicGroups();
         setPublicGroups(availablePublicGroups);
         
-        // If there are groups, select the first one
+        // If there are groups, select the first one only if nothing else was selected
         if (userGroups.length > 0 && !selectedGroup) {
           setSelectedGroup(userGroups[0].id);
         }

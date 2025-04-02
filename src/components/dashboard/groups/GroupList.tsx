@@ -1,7 +1,8 @@
 
-import { Globe, Users } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import React from 'react';
 import GroupCard from './GroupCard';
+import { Button } from '@/components/ui/button';
+import { Plus, Search } from 'lucide-react';
 
 interface Group {
   id: string;
@@ -17,51 +18,62 @@ interface Group {
 
 interface GroupListProps {
   groups: Group[];
-  isMyGroups: boolean;
-  onJoinGroup?: (groupId: string) => void;
+  isMyGroups?: boolean;
   onDiscoverGroups?: () => void;
   onCreateGroup?: () => void;
+  onJoinGroup?: (groupId: string) => void;
+  onOpenChat?: (groupId: string) => void;
+  onOpenSessions?: (groupId: string) => void;
 }
 
-const GroupList = ({ groups, isMyGroups, onJoinGroup, onDiscoverGroups, onCreateGroup }: GroupListProps) => {
-  if (groups.length === 0) {
+const GroupList = ({ 
+  groups, 
+  isMyGroups = false, 
+  onDiscoverGroups,
+  onCreateGroup,
+  onJoinGroup,
+  onOpenChat,
+  onOpenSessions
+}: GroupListProps) => {
+  if (!groups || groups.length === 0) {
     return (
-      <div className="text-center py-8">
+      <div className="flex flex-col items-center justify-center p-8 text-center border rounded-md bg-muted/20">
+        <h3 className="mb-2 text-lg font-medium">
+          {isMyGroups 
+            ? "You haven't joined any study groups yet" 
+            : "No groups available for discovery right now"}
+        </h3>
+        <p className="mb-4 text-muted-foreground">
+          {isMyGroups
+            ? "Join existing groups or create your own to collaborate with other students"
+            : "Check back soon or create your own study group"}
+        </p>
+        
         {isMyGroups ? (
-          <>
-            <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium">No groups yet</h3>
-            <p className="text-muted-foreground mb-4">
-              You haven't joined any study groups yet.
-            </p>
-            <Button onClick={onDiscoverGroups}>
-              Discover Groups
-            </Button>
-          </>
+          <Button onClick={onDiscoverGroups}>
+            <Search className="w-4 h-4 mr-2" />
+            Discover Groups
+          </Button>
         ) : (
-          <>
-            <Globe className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium">No groups to discover</h3>
-            <p className="text-muted-foreground mb-4">
-              There are no public groups available to join at the moment.
-            </p>
-            <Button onClick={onCreateGroup}>
-              Create a Group
-            </Button>
-          </>
+          <Button onClick={onCreateGroup}>
+            <Plus className="w-4 h-4 mr-2" />
+            Create a Group
+          </Button>
         )}
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="grid gap-4 md:grid-cols-2">
       {groups.map(group => (
         <GroupCard 
           key={group.id} 
           group={group} 
           isMyGroup={isMyGroups}
           onJoinGroup={onJoinGroup}
+          onOpenChat={onOpenChat}
+          onOpenSessions={onOpenSessions}
         />
       ))}
     </div>

@@ -136,7 +136,7 @@ export const getGroupMessages = async (groupId: string): Promise<ChatMessage[]> 
         sender_id,
         content,
         created_at,
-        sender:profiles!sender_id(id, name, avatar_url)
+        profiles(id, name, avatar_url)
       `)
       .eq("group_id", groupId)
       .order("created_at", { ascending: true });
@@ -149,10 +149,10 @@ export const getGroupMessages = async (groupId: string): Promise<ChatMessage[]> 
       user_id: message.sender_id,
       content: message.content,
       created_at: message.created_at,
-      sender: message.sender ? {
-        id: message.sender.id,
-        name: message.sender.name,
-        avatar: message.sender.avatar_url
+      sender: message.profiles ? {
+        id: message.profiles.id,
+        name: message.profiles.name,
+        avatar: message.profiles.avatar_url
       } : undefined
     }));
   } catch (error) {
@@ -187,7 +187,7 @@ export const sendGroupMessage = async (
         sender_id,
         content,
         created_at,
-        sender:profiles!sender_id(id, name, avatar_url)
+        profiles(id, name, avatar_url)
       `)
       .single();
 
@@ -199,10 +199,10 @@ export const sendGroupMessage = async (
       user_id: message.sender_id,
       content: message.content,
       created_at: message.created_at,
-      sender: message.sender ? {
-        id: message.sender.id,
-        name: message.sender.name,
-        avatar: message.sender.avatar_url
+      sender: message.profiles ? {
+        id: message.profiles.id,
+        name: message.profiles.name,
+        avatar: message.profiles.avatar_url
       } : undefined
     };
   } catch (error) {
@@ -331,7 +331,7 @@ export const getGroupMembers = async (groupId: string): Promise<GroupMember[]> =
         user_id,
         joined_at,
         is_admin,
-        profiles!user_id(id, name, avatar_url)
+        user:profiles(id, name, avatar_url)
       `)
       .eq("group_id", groupId);
 
@@ -343,10 +343,10 @@ export const getGroupMembers = async (groupId: string): Promise<GroupMember[]> =
       user_id: member.user_id,
       joined_at: member.joined_at,
       is_admin: member.is_admin,
-      user: member.profiles ? {
-        id: member.profiles.id,
-        name: member.profiles.name,
-        avatar_url: member.profiles.avatar_url
+      user: member.user ? {
+        id: member.user.id,
+        name: member.user.name,
+        avatar_url: member.user.avatar_url
       } : undefined
     }));
   } catch (error) {

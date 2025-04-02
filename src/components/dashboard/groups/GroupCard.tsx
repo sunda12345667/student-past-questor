@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Lock, Settings, MessageSquare, Calendar, Users, UserPlus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface GroupCardProps {
   group: {
@@ -25,9 +26,37 @@ interface GroupCardProps {
   };
   isMyGroup?: boolean;
   onJoinGroup?: (groupId: string) => void;
+  onOpenChat?: (groupId: string) => void;
+  onOpenSessions?: (groupId: string) => void;
 }
 
-const GroupCard = ({ group, isMyGroup = false, onJoinGroup }: GroupCardProps) => {
+const GroupCard = ({ 
+  group, 
+  isMyGroup = false, 
+  onJoinGroup,
+  onOpenChat,
+  onOpenSessions
+}: GroupCardProps) => {
+  const navigate = useNavigate();
+  
+  const handleChatClick = () => {
+    if (onOpenChat) {
+      onOpenChat(group.id);
+    } else {
+      // Navigate to dashboard with chat tab and group selected
+      navigate(`/dashboard#chat?groupId=${group.id}`);
+    }
+  };
+  
+  const handleSessionsClick = () => {
+    if (onOpenSessions) {
+      onOpenSessions(group.id);
+    } else {
+      // Navigate to dashboard with sessions tab
+      navigate(`/dashboard#sessions?groupId=${group.id}`);
+    }
+  };
+
   return (
     <Card className="transition-all hover:border-primary">
       <CardHeader className="pb-2">
@@ -75,12 +104,12 @@ const GroupCard = ({ group, isMyGroup = false, onJoinGroup }: GroupCardProps) =>
       <CardFooter className="pt-0 flex gap-2">
         {isMyGroup ? (
           <>
-            <Button className="flex-1">
+            <Button className="flex-1" onClick={handleChatClick}>
               <MessageSquare className="h-4 w-4 mr-2" />
               Chat
             </Button>
             {(group.upcomingSessions || 0) > 0 && (
-              <Button variant="outline" className="flex-1">
+              <Button variant="outline" className="flex-1" onClick={handleSessionsClick}>
                 <Calendar className="h-4 w-4 mr-2" />
                 Sessions
               </Button>

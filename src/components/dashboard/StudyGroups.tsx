@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import CreateGroupDialog from './groups/CreateGroupDialog';
 import GroupList from './groups/GroupList';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 // Mock data types
 interface StudyGroup {
@@ -67,6 +68,7 @@ const mockGroups = [
 const StudyGroups = () => {
   const { toast } = useToast();
   const { currentUser } = useAuth();
+  const navigate = useNavigate();
   
   const [myGroups, setMyGroups] = useState<StudyGroup[]>(mockGroups);
   const [publicGroups, setPublicGroups] = useState<PublicGroup[]>([
@@ -145,6 +147,19 @@ const StudyGroups = () => {
     }, 0);
   };
   
+  const handleOpenChat = (groupId: string) => {
+    // Navigate to dashboard chat tab with this group selected
+    navigate(`/dashboard#chat`);
+    // Store the selected group ID in sessionStorage so the chat component can use it
+    sessionStorage.setItem('selectedGroupId', groupId);
+  };
+  
+  const handleOpenSessions = (groupId: string) => {
+    navigate(`/dashboard#sessions`);
+    // Store the selected group ID for the sessions tab
+    sessionStorage.setItem('selectedGroupId', groupId);
+  };
+  
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -163,6 +178,8 @@ const StudyGroups = () => {
             groups={myGroups} 
             isMyGroups={true}
             onDiscoverGroups={handleDiscoverGroups}
+            onOpenChat={handleOpenChat}
+            onOpenSessions={handleOpenSessions}
           />
         </TabsContent>
         
