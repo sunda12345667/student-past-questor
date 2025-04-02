@@ -1,44 +1,95 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Layout } from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { ChatRoomList } from '@/components/student-chat/ChatRoomList';
 import { ChatContainer } from '@/components/student-chat/ChatContainer';
-import { getChatRooms, getMessagesForRoom, sendMessage, joinChatRoom, ChatMessage, ChatRoom } from '@/services/chatService';
+import { 
+  getUserGroups, 
+  getPublicGroups, 
+  getGroupMessages, 
+  sendGroupMessage, 
+  joinChatGroup, 
+  subscribeToGroupMessages, 
+  subscribeToTypingIndicators, 
+  sendTypingIndicator 
+} from '@/services/chat';
+import { ChatGroup, ChatMessage } from '@/services/chat/types';
+import { useNavigate } from 'react-router-dom';
 
 const StudentChat = () => {
   const { currentUser } = useAuth();
+  const navigate = useNavigate();
   const [activeRoom, setActiveRoom] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
-  const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
+  const [userGroups, setUserGroups] = useState<ChatGroup[]>([]);
+  const [publicGroups, setPublicGroups] = useState<ChatGroup[]>([]);
   const [loading, setLoading] = useState(true);
+  const messageSubscription = useRef<any>(null);
+  const typingSubscription = useRef<any>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load chat rooms on component mount
+  // Redirect if not logged in
   useEffect(() => {
-    const loadChatRooms = async () => {
+    if (!currentUser && !loading) {
+      toast.error("Please log in to access the chat");
+      navigate('/login');
+    }
+  }, [currentUser, navigate, loading]);
+  
+  // Load user's groups and public groups
+  useEffect(() => {
+    const loadGroups = async () => {
       try {
         setLoading(true);
-        const rooms = await getChatRooms();
-        setChatRooms(rooms);
+        const [userGroupsData, publicGroupsData] = await Promise.all([
+          getUserGroups(),
+          getPublicGroups()
+        ]);
+        
+        setUserGroups(userGroupsData);
+        setPublicGroups(publicGroupsData);
       } catch (error) {
-        toast.error('Failed to load chat rooms');
-        console.error('Error loading chat rooms:', error);
+        console.error('Error loading groups:', error);
+        toast.error('Failed to load chat groups');
       } finally {
         setLoading(false);
       }
     };
     
-    loadChatRooms();
+    if (currentUser) {
+      loadGroups();
+    }
+  }, [currentUser]);
+
+  // Clean up subscriptions on unmount
+  useEffect(() => {
+    return () => {
+      if (messageSubscription.current) {
+        messageSubscription.current.unsubscribe();
+      }
+      if (typingSubscription.current) {
+        typingSubscription.current.unsubscribe();
+      }
+    };
   }, []);
 
-  // Load messages when active room changes
+  // Load messages when active room changes and set up subscriptions
   useEffect(() => {
-    if (activeRoom) {
+    if (activeRoom && currentUser) {
+      // Clean up previous subscriptions
+      if (messageSubscription.current) {
+        messageSubscription.current.unsubscribe();
+      }
+      if (typingSubscription.current) {
+        typingSubscription.current.unsubscribe();
+      }
+
       const loadMessages = async () => {
         try {
-          const roomMessages = await getMessagesForRoom(activeRoom);
+          const roomMessages = await getGroupMessages(activeRoom);
           setMessages(roomMessages);
         } catch (error) {
           toast.error('Failed to load messages');
@@ -47,27 +98,44 @@ const StudentChat = () => {
       };
       
       loadMessages();
+      
+      // Set up real-time subscriptions
+      messageSubscription.current = subscribeToGroupMessages(
+        activeRoom,
+        (newMessage: ChatMessage) => {
+          setMessages(prev => [...prev, newMessage]);
+        }
+      );
+      
+      typingSubscription.current = subscribeToTypingIndicators(
+        activeRoom,
+        (users: string[]) => {
+          setTypingUsers(users);
+        }
+      );
     } else {
       setMessages([]);
+      setTypingUsers([]);
     }
-  }, [activeRoom]);
+  }, [activeRoom, currentUser]);
 
   const handleSendMessage = async (content: string) => {
     if (!content.trim() || !activeRoom || !currentUser) return;
     
     try {
-      const newMessage = await sendMessage(
+      const newMessage = await sendGroupMessage(
         activeRoom,
-        currentUser.id,
-        currentUser.name,
         content
       );
       
-      setMessages(prev => [...prev, newMessage]);
+      if (newMessage && !messages.some(m => m.id === newMessage.id)) {
+        setMessages(prev => [...prev, newMessage]);
+      }
       
       // Clear user from typing list when message is sent
-      if (currentUser.name) {
-        setTypingUsers(prev => prev.filter(name => name !== currentUser.name));
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
       }
     } catch (error) {
       toast.error('Failed to send message');
@@ -76,33 +144,53 @@ const StudentChat = () => {
   };
 
   const handleTyping = () => {
-    // Add current user to typing users if not already there
-    if (currentUser?.name && !typingUsers.includes(currentUser.name)) {
-      setTypingUsers(prev => [...prev, currentUser.name]);
-      
-      // Simulate real-time typing timeout
-      setTimeout(() => {
-        setTypingUsers(prev => prev.filter(name => name !== currentUser?.name));
-      }, 3000);
+    if (!currentUser || !activeRoom) return;
+
+    try {
+      sendTypingIndicator(
+        activeRoom, 
+        currentUser.id, 
+        currentUser.name
+      );
+    } catch (error) {
+      console.error('Error sending typing indicator:', error);
     }
   };
 
   const handleJoinRoom = async (roomId: string) => {
     try {
-      await joinChatRoom(roomId);
+      if (!currentUser) {
+        toast.error("Please log in to join a chat room");
+        navigate('/login');
+        return;
+      }
+      
+      await joinChatGroup(roomId);
       setActiveRoom(roomId);
+      
+      // Refresh groups after joining
+      const userGroupsData = await getUserGroups();
+      setUserGroups(userGroupsData);
+      
+      const publicGroupsData = await getPublicGroups();
+      setPublicGroups(publicGroupsData);
     } catch (error) {
       toast.error('Failed to join chat room');
       console.error('Error joining chat room:', error);
     }
   };
 
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const formatTime = (date: string) => {
+    return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  const allGroups = [
+    ...userGroups.map(group => ({ ...group, joined: true })),
+    ...publicGroups.map(group => ({ ...group, joined: false }))
+  ];
+
   const activeRoomName = activeRoom 
-    ? chatRooms.find(room => room.id === activeRoom)?.name 
+    ? allGroups.find(group => group.id === activeRoom)?.name 
     : null;
 
   return (
@@ -114,7 +202,7 @@ const StudentChat = () => {
           {/* Chat Rooms */}
           <div className="lg:col-span-1">
             <ChatRoomList 
-              chatRooms={chatRooms}
+              chatRooms={allGroups}
               activeRoom={activeRoom}
               onJoinRoom={handleJoinRoom}
               isLoading={loading}
