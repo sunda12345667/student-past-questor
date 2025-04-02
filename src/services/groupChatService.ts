@@ -133,10 +133,10 @@ export const getGroupMessages = async (groupId: string): Promise<ChatMessage[]> 
       .select(`
         id,
         group_id,
-        sender_id:user_id,
+        sender_id,
         content,
         created_at,
-        profiles!user_id(id, name, avatar_url)
+        profiles(id, name, avatar_url)
       `)
       .eq("group_id", groupId)
       .order("created_at", { ascending: true });
@@ -178,16 +178,16 @@ export const sendGroupMessage = async (
       .from("group_messages")
       .insert({
         group_id: groupId,
-        user_id: user.user.id,
+        sender_id: user.user.id,
         content
       })
       .select(`
         id,
         group_id,
-        sender_id:user_id,
+        sender_id,
         content,
         created_at,
-        profiles!user_id(id, name, avatar_url)
+        profiles(id, name, avatar_url)
       `)
       .single();
 
@@ -331,7 +331,7 @@ export const getGroupMembers = async (groupId: string): Promise<GroupMember[]> =
         user_id,
         joined_at,
         is_admin,
-        profiles!user_id(id, name, avatar_url)
+        user:user_id(id:id, name:name, avatar_url:avatar_url)
       `)
       .eq("group_id", groupId);
 
@@ -343,10 +343,10 @@ export const getGroupMembers = async (groupId: string): Promise<GroupMember[]> =
       user_id: member.user_id,
       joined_at: member.joined_at,
       is_admin: member.is_admin,
-      user: member.profiles ? {
-        id: member.profiles.id,
-        name: member.profiles.name,
-        avatar_url: member.profiles.avatar_url
+      user: member.user ? {
+        id: member.user.id,
+        name: member.user.name,
+        avatar_url: member.user.avatar_url
       } : undefined
     }));
   } catch (error) {
@@ -376,17 +376,17 @@ export const subscribeToGroupMessages = (
         const { data } = await supabase
           .from('profiles')
           .select('id, name, avatar_url')
-          .eq('id', payload.new.user_id)
+          .eq('id', payload.new.sender_id)
           .single();
 
         const fullMessage: ChatMessage = {
           id: payload.new.id,
           group_id: payload.new.group_id,
-          user_id: payload.new.user_id,
+          user_id: payload.new.sender_id,
           content: payload.new.content,
           created_at: payload.new.created_at,
           sender: {
-            id: payload.new.user_id,
+            id: payload.new.sender_id,
             name: data?.name || 'Unknown User',
             avatar: data?.avatar_url
           }
