@@ -1,13 +1,10 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ChatMessage } from "./types";
-import { joinGroupIfNotMember } from "./membershipService"; // Import the function from membershipService
+import { joinGroupIfNotMember } from "./membershipService";
 
-// Get messages for a specific group
 export const getGroupMessages = async (groupId: string): Promise<ChatMessage[]> => {
   try {
-    // Check if user is a member of the group
     const { data: user } = await supabase.auth.getUser();
     if (!user.user) {
       toast.error("You must be logged in to view messages");
@@ -22,7 +19,6 @@ export const getGroupMessages = async (groupId: string): Promise<ChatMessage[]> 
       .single();
 
     if (!memberCheck) {
-      // Automatically join the group if not a member
       const joined = await joinGroupIfNotMember(groupId, user.user.id);
       if (!joined) {
         toast.error("You need to be a member of this group to view messages");
@@ -30,7 +26,6 @@ export const getGroupMessages = async (groupId: string): Promise<ChatMessage[]> 
       }
     }
 
-    // Get the messages
     const { data: messages, error: messageError } = await supabase
       .from("group_messages")
       .select(`
@@ -50,7 +45,6 @@ export const getGroupMessages = async (groupId: string): Promise<ChatMessage[]> 
       return [];
     }
     
-    // Get profiles for all message senders
     const senderIds = [...new Set(messages.map(msg => msg.sender_id))];
     
     const { data: profiles, error: profileError } = await supabase
@@ -60,7 +54,6 @@ export const getGroupMessages = async (groupId: string): Promise<ChatMessage[]> 
       
     if (profileError) throw profileError;
 
-    // Map profiles to messages
     return messages.map(message => {
       const sender = profiles?.find(p => p.id === message.sender_id);
       
@@ -85,7 +78,6 @@ export const getGroupMessages = async (groupId: string): Promise<ChatMessage[]> 
   }
 };
 
-// Send a message to a group
 export const sendGroupMessage = async (
   groupId: string,
   content: string
@@ -97,7 +89,6 @@ export const sendGroupMessage = async (
       return null;
     }
 
-    // Check if user is a member of the group
     const { data: memberCheck } = await supabase
       .from("group_members")
       .select("id")
@@ -110,7 +101,6 @@ export const sendGroupMessage = async (
       return null;
     }
 
-    // First insert the message
     const { data: insertedMessage, error: insertError } = await supabase
       .from("group_messages")
       .insert({
@@ -124,7 +114,6 @@ export const sendGroupMessage = async (
 
     if (insertError) throw insertError;
 
-    // Then fetch the sender profile details
     const { data: profileData, error: profileError } = await supabase
       .from("profiles")
       .select(`id, name, avatar_url`)
@@ -153,7 +142,6 @@ export const sendGroupMessage = async (
   }
 };
 
-// Add a reaction to a message
 export const addMessageReaction = async (
   messageId: string, 
   reaction: string
@@ -165,7 +153,6 @@ export const addMessageReaction = async (
       return false;
     }
 
-    // First get current message data
     const { data: message, error: fetchError } = await supabase
       .from("group_messages")
       .select("reactions")
@@ -174,25 +161,20 @@ export const addMessageReaction = async (
 
     if (fetchError) throw fetchError;
 
-    // Update the reactions object
     let updatedReactions = { ...message?.reactions } || {};
     if (!updatedReactions[reaction]) {
       updatedReactions[reaction] = [];
     }
     
-    // Check if user already reacted with this emoji
     if (!updatedReactions[reaction].includes(user.user.id)) {
       updatedReactions[reaction] = [...updatedReactions[reaction], user.user.id];
     } else {
-      // Remove the reaction if user already used it (toggle behavior)
       updatedReactions[reaction] = updatedReactions[reaction].filter(id => id !== user.user.id);
-      // Remove the reaction type if no users have it anymore
       if (updatedReactions[reaction].length === 0) {
         delete updatedReactions[reaction];
       }
     }
 
-    // Update the message
     const { error: updateError } = await supabase
       .from("group_messages")
       .update({ reactions: updatedReactions })

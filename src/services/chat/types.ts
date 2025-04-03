@@ -5,7 +5,7 @@ export interface ChatGroup {
   name: string;
   description?: string;
   created_at: string;
-  owner_id: string;
+  owner_id: string;  // Change from created_by to owner_id to match the database schema
   is_private: boolean;
   members: number;
   unread?: number;

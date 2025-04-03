@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ChatGroup } from "./types";
@@ -36,7 +35,7 @@ export const getUserGroups = async (): Promise<ChatGroup[]> => {
       name: group.name,
       description: group.description,
       created_at: group.created_at,
-      created_by: group.owner_id,
+      owner_id: group.owner_id,
       is_private: group.is_private,
       members: group.group_members?.length || 0,
       unread: 0
@@ -76,7 +75,7 @@ export const getPublicGroups = async (): Promise<ChatGroup[]> => {
       name: group.name,
       description: group.description,
       created_at: group.created_at,
-      created_by: group.owner_id,
+      owner_id: group.owner_id,
       is_private: group.is_private,
       members: group.group_members?.length || 0
     }));
@@ -128,7 +127,7 @@ export const createChatGroup = async (
       name: group.name,
       description: group.description,
       created_at: group.created_at,
-      created_by: group.owner_id,
+      owner_id: group.owner_id,
       is_private: group.is_private,
       members: 1
     };
