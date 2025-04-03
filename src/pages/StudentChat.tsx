@@ -84,7 +84,11 @@ const StudentChat: React.FC = () => {
       typingSubscription = subscribeToTypingIndicators(
         activeRoom,
         (typingUserIds) => {
-          setTypingUsers(typingUserIds);
+          // Filter out current user
+          const filteredTypingUsers = typingUserIds.filter(
+            id => id !== currentUser?.id
+          );
+          setTypingUsers(filteredTypingUsers);
         }
       );
     }
@@ -97,7 +101,7 @@ const StudentChat: React.FC = () => {
         supabase.removeChannel(typingSubscription);
       }
     };
-  }, [activeRoom, currentUser]);
+  }, [activeRoom, currentUser?.id]);
   
   const loadUserGroups = async () => {
     try {

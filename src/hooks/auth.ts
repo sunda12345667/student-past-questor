@@ -52,7 +52,7 @@ export const signInWithEmail = async (email: string, password: string): Promise<
     }
     
     return false;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Sign in error:', error);
     toast.error('An error occurred during sign in');
     return false;
@@ -62,6 +62,17 @@ export const signInWithEmail = async (email: string, password: string): Promise<
 // Sign up a new user
 export const signUpWithEmail = async (email: string, password: string, name: string): Promise<boolean> => {
   try {
+    // First check if user already exists
+    const { data: existingUserData } = await supabase.auth.signInWithPassword({
+      email,
+      password: password + "_check", // Use invalid password to avoid logging in
+    });
+    
+    if (existingUserData.user) {
+      toast.error('An account with this email already exists');
+      return false;
+    }
+    
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -78,12 +89,28 @@ export const signUpWithEmail = async (email: string, password: string, name: str
     }
     
     if (data.user) {
-      toast.success('Account created successfully! Please verify your email.');
+      toast.success('Account created successfully! Please confirm your email if required.');
+      
+      // For development, let's create a profile immediately
+      try {
+        await supabase
+          .from('profiles')
+          .upsert({
+            id: data.user.id,
+            name: name,
+            email: email,
+            role: 'user'
+          });
+      } catch (profileError) {
+        console.error('Profile creation error:', profileError);
+        // Don't block signup on profile error
+      }
+      
       return true;
     }
     
     return false;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Sign up error:', error);
     toast.error('An error occurred during sign up');
     return false;
@@ -102,7 +129,7 @@ export const signOut = async (): Promise<boolean> => {
     
     toast.success('Successfully signed out');
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Sign out error:', error);
     toast.error('An error occurred during sign out');
     return false;

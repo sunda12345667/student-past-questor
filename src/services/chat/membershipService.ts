@@ -12,6 +12,19 @@ export const joinChatGroup = async (groupId: string): Promise<boolean> => {
       return false;
     }
 
+    // Check if user is already a member
+    const { data: existingMember } = await supabase
+      .from("group_members")
+      .select("id")
+      .eq("group_id", groupId)
+      .eq("user_id", user.user.id)
+      .single();
+
+    if (existingMember) {
+      toast.info("You're already a member of this group");
+      return true;
+    }
+
     const { error } = await supabase
       .from("group_members")
       .insert({
@@ -37,6 +50,18 @@ export const leaveChatGroup = async (groupId: string): Promise<boolean> => {
     const { data: user } = await supabase.auth.getUser();
     if (!user.user) {
       toast.error("You must be logged in to leave a group");
+      return false;
+    }
+
+    // Check if user is the owner of the group
+    const { data: groupData } = await supabase
+      .from("study_groups")
+      .select("owner_id")
+      .eq("id", groupId)
+      .single();
+
+    if (groupData && groupData.owner_id === user.user.id) {
+      toast.error("As the group owner, you cannot leave the group. You can delete it instead.");
       return false;
     }
 
@@ -74,12 +99,12 @@ export const getGroupMembers = async (groupId: string): Promise<GroupMember[]> =
 
     if (memberError) throw memberError;
     
-    // Get profiles for all the member user_ids
-    const userIds = memberRecords.map(member => member.user_id);
-    
-    if (userIds.length === 0) {
+    if (!memberRecords || memberRecords.length === 0) {
       return [];
     }
+    
+    // Get profiles for all the member user_ids
+    const userIds = memberRecords.map(member => member.user_id);
     
     const { data: profiles, error: profileError } = await supabase
       .from("profiles")

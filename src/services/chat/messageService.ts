@@ -6,7 +6,30 @@ import { ChatMessage } from "./types";
 // Get messages for a specific group
 export const getGroupMessages = async (groupId: string): Promise<ChatMessage[]> => {
   try {
-    // First get the messages
+    // Check if user is a member of the group
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) {
+      toast.error("You must be logged in to view messages");
+      return [];
+    }
+
+    const { data: memberCheck } = await supabase
+      .from("group_members")
+      .select("id")
+      .eq("group_id", groupId)
+      .eq("user_id", user.user.id)
+      .single();
+
+    if (!memberCheck) {
+      // Automatically join the group if not a member
+      const joined = await joinGroupIfNotMember(groupId, user.user.id);
+      if (!joined) {
+        toast.error("You need to be a member of this group to view messages");
+        return [];
+      }
+    }
+
+    // Get the messages
     const { data: messages, error: messageError } = await supabase
       .from("group_messages")
       .select(`
@@ -59,6 +82,46 @@ export const getGroupMessages = async (groupId: string): Promise<ChatMessage[]> 
   }
 };
 
+// Helper function to join a group if not already a member
+const joinGroupIfNotMember = async (groupId: string, userId: string): Promise<boolean> => {
+  try {
+    const { data: existingMember } = await supabase
+      .from("group_members")
+      .select("id")
+      .eq("group_id", groupId)
+      .eq("user_id", userId)
+      .single();
+
+    if (existingMember) return true;
+
+    // Check if the group is public
+    const { data: groupData } = await supabase
+      .from("study_groups")
+      .select("is_private")
+      .eq("id", groupId)
+      .single();
+
+    if (groupData && groupData.is_private) {
+      return false; // Don't auto-join private groups
+    }
+
+    const { error } = await supabase
+      .from("group_members")
+      .insert({
+        group_id: groupId,
+        user_id: userId,
+        is_admin: false
+      });
+
+    if (error) throw error;
+    toast.success("You've automatically joined the group");
+    return true;
+  } catch (error) {
+    console.error("Error auto-joining group:", error);
+    return false;
+  }
+};
+
 // Send a message to a group
 export const sendGroupMessage = async (
   groupId: string,
@@ -68,6 +131,19 @@ export const sendGroupMessage = async (
     const { data: user } = await supabase.auth.getUser();
     if (!user.user) {
       toast.error("You must be logged in to send messages");
+      return null;
+    }
+
+    // Check if user is a member of the group
+    const { data: memberCheck } = await supabase
+      .from("group_members")
+      .select("id")
+      .eq("group_id", groupId)
+      .eq("user_id", user.user.id)
+      .single();
+
+    if (!memberCheck) {
+      toast.error("You must be a member of this group to send messages");
       return null;
     }
 
