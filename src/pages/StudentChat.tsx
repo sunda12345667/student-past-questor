@@ -6,7 +6,8 @@ import { ChatContainer } from '@/components/student-chat/ChatContainer';
 import { ChatRoomList } from '@/components/student-chat/ChatRoomList';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import Layout from '@/components/Layout';
+import { Layout } from '@/components/Layout';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   getUserGroups, 
   getPublicGroups, 
@@ -176,7 +177,7 @@ const StudentChat: React.FC = () => {
       await sendTypingIndicator(
         activeRoom,
         currentUser.id,
-        currentUser.displayName || currentUser.email || 'User'
+        currentUser.name || currentUser.email || 'User'
       );
     } catch (error) {
       console.error('Error sending typing indicator:', error);

@@ -6,33 +6,52 @@ import { ChatMessage } from "./types";
 // Get messages for a specific group
 export const getGroupMessages = async (groupId: string): Promise<ChatMessage[]> => {
   try {
-    const { data: messages, error } = await supabase
+    // First get the messages
+    const { data: messages, error: messageError } = await supabase
       .from("group_messages")
       .select(`
         id,
         group_id,
         sender_id,
         content,
-        created_at,
-        profiles(id, name, avatar_url)
+        created_at
       `)
       .eq("group_id", groupId)
       .order("created_at", { ascending: true });
 
-    if (error) throw error;
+    if (messageError) throw messageError;
+    
+    if (!messages || messages.length === 0) {
+      return [];
+    }
+    
+    // Get profiles for all message senders
+    const senderIds = [...new Set(messages.map(msg => msg.sender_id))];
+    
+    const { data: profiles, error: profileError } = await supabase
+      .from("profiles")
+      .select("id, name, avatar_url")
+      .in("id", senderIds);
+      
+    if (profileError) throw profileError;
 
-    return (messages || []).map(message => ({
-      id: message.id,
-      group_id: message.group_id,
-      user_id: message.sender_id,
-      content: message.content,
-      created_at: message.created_at,
-      sender: message.profiles ? {
-        id: message.profiles.id,
-        name: message.profiles.name,
-        avatar: message.profiles.avatar_url
-      } : undefined
-    }));
+    // Map profiles to messages
+    return messages.map(message => {
+      const sender = profiles?.find(p => p.id === message.sender_id);
+      
+      return {
+        id: message.id,
+        group_id: message.group_id,
+        user_id: message.sender_id,
+        content: message.content,
+        created_at: message.created_at,
+        sender: sender ? {
+          id: sender.id,
+          name: sender.name,
+          avatar: sender.avatar_url
+        } : undefined
+      };
+    });
   } catch (error) {
     console.error("Error fetching group messages:", error);
     toast.error("Failed to load messages");

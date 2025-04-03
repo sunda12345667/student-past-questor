@@ -60,32 +60,51 @@ export const leaveChatGroup = async (groupId: string): Promise<boolean> => {
 // Get group members
 export const getGroupMembers = async (groupId: string): Promise<GroupMember[]> => {
   try {
-    const { data: members, error } = await supabase
+    // First get the member records
+    const { data: memberRecords, error: memberError } = await supabase
       .from("group_members")
       .select(`
         id,
         group_id,
         user_id,
         joined_at,
-        is_admin,
-        profiles(id, name, avatar_url)
+        is_admin
       `)
       .eq("group_id", groupId);
 
-    if (error) throw error;
-
-    return (members || []).map(member => ({
-      id: member.id,
-      group_id: member.group_id,
-      user_id: member.user_id,
-      joined_at: member.joined_at,
-      is_admin: member.is_admin,
-      user: member.profiles ? {
-        id: member.profiles.id,
-        name: member.profiles.name,
-        avatar_url: member.profiles.avatar_url
-      } : undefined
-    }));
+    if (memberError) throw memberError;
+    
+    // Get profiles for all the member user_ids
+    const userIds = memberRecords.map(member => member.user_id);
+    
+    if (userIds.length === 0) {
+      return [];
+    }
+    
+    const { data: profiles, error: profileError } = await supabase
+      .from("profiles")
+      .select("id, name, avatar_url")
+      .in("id", userIds);
+      
+    if (profileError) throw profileError;
+    
+    // Map profiles to members
+    return memberRecords.map(member => {
+      const profile = profiles?.find(p => p.id === member.user_id);
+      
+      return {
+        id: member.id,
+        group_id: member.group_id,
+        user_id: member.user_id,
+        joined_at: member.joined_at,
+        is_admin: member.is_admin,
+        user: profile ? {
+          id: profile.id,
+          name: profile.name,
+          avatar_url: profile.avatar_url
+        } : undefined
+      };
+    });
   } catch (error) {
     console.error("Error fetching group members:", error);
     toast.error("Failed to load group members");
