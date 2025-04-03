@@ -2,6 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ChatMessage } from "./types";
+import { joinGroupIfNotMember } from "./membershipService"; // Import the function from membershipService
 
 // Get messages for a specific group
 export const getGroupMessages = async (groupId: string): Promise<ChatMessage[]> => {
@@ -37,7 +38,8 @@ export const getGroupMessages = async (groupId: string): Promise<ChatMessage[]> 
         group_id,
         sender_id,
         content,
-        created_at
+        created_at,
+        reactions
       `)
       .eq("group_id", groupId)
       .order("created_at", { ascending: true });
@@ -68,6 +70,7 @@ export const getGroupMessages = async (groupId: string): Promise<ChatMessage[]> 
         user_id: message.sender_id,
         content: message.content,
         created_at: message.created_at,
+        reactions: message.reactions || {},
         sender: sender ? {
           id: sender.id,
           name: sender.name,
@@ -79,46 +82,6 @@ export const getGroupMessages = async (groupId: string): Promise<ChatMessage[]> 
     console.error("Error fetching group messages:", error);
     toast.error("Failed to load messages");
     return [];
-  }
-};
-
-// Helper function to join a group if not already a member
-const joinGroupIfNotMember = async (groupId: string, userId: string): Promise<boolean> => {
-  try {
-    const { data: existingMember } = await supabase
-      .from("group_members")
-      .select("id")
-      .eq("group_id", groupId)
-      .eq("user_id", userId)
-      .single();
-
-    if (existingMember) return true;
-
-    // Check if the group is public
-    const { data: groupData } = await supabase
-      .from("study_groups")
-      .select("is_private")
-      .eq("id", groupId)
-      .single();
-
-    if (groupData && groupData.is_private) {
-      return false; // Don't auto-join private groups
-    }
-
-    const { error } = await supabase
-      .from("group_members")
-      .insert({
-        group_id: groupId,
-        user_id: userId,
-        is_admin: false
-      });
-
-    if (error) throw error;
-    toast.success("You've automatically joined the group");
-    return true;
-  } catch (error) {
-    console.error("Error auto-joining group:", error);
-    return false;
   }
 };
 
@@ -153,9 +116,10 @@ export const sendGroupMessage = async (
       .insert({
         group_id: groupId,
         sender_id: user.user.id,
-        content
+        content,
+        reactions: {}
       })
-      .select(`id, group_id, sender_id, content, created_at`)
+      .select(`id, group_id, sender_id, content, created_at, reactions`)
       .single();
 
     if (insertError) throw insertError;
@@ -175,6 +139,7 @@ export const sendGroupMessage = async (
       user_id: insertedMessage.sender_id,
       content: insertedMessage.content,
       created_at: insertedMessage.created_at,
+      reactions: insertedMessage.reactions || {},
       sender: {
         id: profileData.id,
         name: profileData.name,
@@ -185,5 +150,59 @@ export const sendGroupMessage = async (
     console.error("Error sending message:", error);
     toast.error("Failed to send message");
     return null;
+  }
+};
+
+// Add a reaction to a message
+export const addMessageReaction = async (
+  messageId: string, 
+  reaction: string
+): Promise<boolean> => {
+  try {
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) {
+      toast.error("You must be logged in to react to messages");
+      return false;
+    }
+
+    // First get current message data
+    const { data: message, error: fetchError } = await supabase
+      .from("group_messages")
+      .select("reactions")
+      .eq("id", messageId)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    // Update the reactions object
+    let updatedReactions = { ...message?.reactions } || {};
+    if (!updatedReactions[reaction]) {
+      updatedReactions[reaction] = [];
+    }
+    
+    // Check if user already reacted with this emoji
+    if (!updatedReactions[reaction].includes(user.user.id)) {
+      updatedReactions[reaction] = [...updatedReactions[reaction], user.user.id];
+    } else {
+      // Remove the reaction if user already used it (toggle behavior)
+      updatedReactions[reaction] = updatedReactions[reaction].filter(id => id !== user.user.id);
+      // Remove the reaction type if no users have it anymore
+      if (updatedReactions[reaction].length === 0) {
+        delete updatedReactions[reaction];
+      }
+    }
+
+    // Update the message
+    const { error: updateError } = await supabase
+      .from("group_messages")
+      .update({ reactions: updatedReactions })
+      .eq("id", messageId);
+
+    if (updateError) throw updateError;
+    return true;
+  } catch (error) {
+    console.error("Error adding reaction:", error);
+    toast.error("Failed to add reaction");
+    return false;
   }
 };

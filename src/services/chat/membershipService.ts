@@ -44,6 +44,46 @@ export const joinChatGroup = async (groupId: string): Promise<boolean> => {
   }
 };
 
+// Helper function to join a group if not already a member
+export const joinGroupIfNotMember = async (groupId: string, userId: string): Promise<boolean> => {
+  try {
+    const { data: existingMember } = await supabase
+      .from("group_members")
+      .select("id")
+      .eq("group_id", groupId)
+      .eq("user_id", userId)
+      .single();
+
+    if (existingMember) return true;
+
+    // Check if the group is public
+    const { data: groupData } = await supabase
+      .from("study_groups")
+      .select("is_private")
+      .eq("id", groupId)
+      .single();
+
+    if (groupData && groupData.is_private) {
+      return false; // Don't auto-join private groups
+    }
+
+    const { error } = await supabase
+      .from("group_members")
+      .insert({
+        group_id: groupId,
+        user_id: userId,
+        is_admin: false
+      });
+
+    if (error) throw error;
+    toast.success("You've automatically joined the group");
+    return true;
+  } catch (error) {
+    console.error("Error auto-joining group:", error);
+    return false;
+  }
+};
+
 // Leave a chat group
 export const leaveChatGroup = async (groupId: string): Promise<boolean> => {
   try {

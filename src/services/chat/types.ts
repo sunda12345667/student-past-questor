@@ -1,22 +1,29 @@
 
-// Shared types for chat functionality
+// Basic group interface
 export interface ChatGroup {
   id: string;
   name: string;
-  description: string;
+  description?: string;
   created_at: string;
-  created_by: string;
+  owner_id: string;
   is_private: boolean;
   members: number;
   unread?: number;
 }
 
+// Interface for message reactions
+export interface MessageReactions {
+  [emoji: string]: string[]; // Map of emoji to array of user IDs who reacted with that emoji
+}
+
+// Chat message interface
 export interface ChatMessage {
   id: string;
   group_id: string;
   user_id: string;
   content: string;
   created_at: string;
+  reactions?: MessageReactions;
   sender?: {
     id: string;
     name: string;
@@ -24,11 +31,12 @@ export interface ChatMessage {
   };
 }
 
+// Group member interface
 export interface GroupMember {
   id: string;
   group_id: string;
   user_id: string;
-  joined_at: string;
+  joined_at?: string;
   is_admin: boolean;
   user?: {
     id: string;

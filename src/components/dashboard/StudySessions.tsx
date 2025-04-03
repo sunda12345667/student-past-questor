@@ -1,507 +1,348 @@
 
-import { useState } from 'react';
-import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardFooter, 
-  CardHeader, 
-  CardTitle 
-} from '@/components/ui/card';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger 
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { 
-  Calendar, 
-  Clock, 
-  Users, 
-  Video, 
-  Plus, 
-  BellRing as Bell,
-  CalendarDays,
-  ClipboardCheck,
-  User,
-  BookOpen,
-  Share2
-} from 'lucide-react';
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { 
-  Tabs, 
-  TabsContent, 
-  TabsList, 
-  TabsTrigger 
-} from '@/components/ui/tabs';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
-import { useAuth } from '@/contexts/AuthContext';
+import { Calendar as CalendarIcon, Clock, Users, Video, MapPin, Plus } from 'lucide-react';
+import { format } from 'date-fns';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { useAuth } from '@/hooks/auth';
 
-const upcomingSessions = [
-  {
-    id: '1',
-    title: 'JAMB Mathematics Group Study',
-    date: new Date(Date.now() + 1000 * 60 * 60 * 24 * 2), // 2 days from now
-    time: '16:00',
-    duration: 60,
-    attendees: 8,
-    group: 'JAMB Study Club',
-    description: 'We will be solving past JAMB Mathematics questions together. Come prepared with your calculator!',
-    isHost: true,
-    location: 'online',
-    meetingLink: 'https://meet.google.com/abc-defg-hij'
-  },
-  {
-    id: '2',
-    title: 'Physics Problem Solving',
-    date: new Date(Date.now() + 1000 * 60 * 60 * 24 * 5), // 5 days from now
-    time: '14:30',
-    duration: 90,
-    attendees: 12,
-    group: 'Physics Masters',
-    description: 'Group session focusing on mechanics and electromagnetism problems.',
-    isHost: false,
-    location: 'online',
-    meetingLink: 'https://zoom.us/j/1234567890'
-  }
-];
-
-const pastSessions = [
-  {
-    id: '3',
-    title: 'English Language Comprehension',
-    date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3), // 3 days ago
-    time: '15:00',
-    duration: 60,
-    attendees: 15,
-    group: 'WAEC Study Group',
-    description: 'Reading comprehension practice and vocabulary building.',
-    isHost: false,
-    location: 'online',
-    meetingLink: 'https://zoom.us/j/abcdefghij'
-  },
-  {
-    id: '4',
-    title: 'Chemistry Equations Review',
-    date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7), // 7 days ago
-    time: '17:00',
-    duration: 45,
-    attendees: 9,
-    group: 'Chemistry Lab',
-    description: 'Balancing chemical equations and stoichiometry practice.',
-    isHost: true,
-    location: 'online',
-    meetingLink: 'https://meet.google.com/xyz-abcd-efg'
-  }
-];
-
-const mockGroups = [
-  { id: '1', name: 'JAMB Study Club' },
-  { id: '2', name: 'Physics Masters' },
-  { id: '3', name: 'WAEC Mathematics' },
-  { id: '4', name: 'Biology Enthusiasts' },
-  { id: '5', name: 'Chemistry Lab' }
-];
-
-const StudySessions = () => {
-  const { toast } = useToast();
-  const [upcoming, setUpcoming] = useState(upcomingSessions);
-  const [past, setPast] = useState(pastSessions);
-  const [isCreatingSession, setIsCreatingSession] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+const SessionCard = ({ session }: { session: any }) => {
+  const sessionDate = new Date(session.session_date);
   
-  const [newSession, setNewSession] = useState({
-    title: '',
-    group: '',
-    description: '',
-    time: '',
-    duration: '60',
-    location: 'online',
-    meetingLink: ''
+  return (
+    <Card className="overflow-hidden">
+      <div className="bg-primary text-primary-foreground p-2 text-center">
+        <div className="text-lg font-semibold">
+          {format(sessionDate, 'EEEE')}
+        </div>
+        <div className="text-2xl font-bold">
+          {format(sessionDate, 'd MMM')}
+        </div>
+      </div>
+      <CardHeader className="pb-2">
+        <CardTitle className="flex justify-between items-center">
+          <div>{session.title}</div>
+          <div className="text-sm font-normal bg-muted py-1 px-2 rounded-md">
+            {session.session_time}
+          </div>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground line-clamp-2">
+            {session.description || 'No description provided.'}
+          </p>
+          
+          <div className="space-y-2">
+            <div className="flex items-center text-sm">
+              <Clock className="h-4 w-4 mr-2" />
+              <span>{session.duration} minutes</span>
+            </div>
+            
+            <div className="flex items-center text-sm">
+              <MapPin className="h-4 w-4 mr-2" />
+              <span>{session.location}</span>
+              {session.meeting_link && session.location === 'online' && (
+                <Button variant="link" className="p-0 ml-2 h-auto" size="sm">
+                  Join
+                </Button>
+              )}
+            </div>
+            
+            <div className="flex items-center text-sm">
+              <Users className="h-4 w-4 mr-2" />
+              <span>0 attendees</span>
+            </div>
+          </div>
+          
+          <div className="flex justify-end pt-2">
+            <Button size="sm">Join Session</Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+const StudySessions: React.FC = () => {
+  const { currentUser } = useAuth();
+  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [isCreating, setIsCreating] = useState(false);
+  
+  // Form state
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [sessionTime, setSessionTime] = useState('');
+  const [duration, setDuration] = useState('60');
+  const [location, setLocation] = useState('online');
+  const [meetingLink, setMeetingLink] = useState('');
+  
+  // Fetch sessions
+  const { data: sessions = [], isLoading } = useQuery({
+    queryKey: ['study-sessions', date?.toISOString()],
+    queryFn: async () => {
+      if (!date) return [];
+      
+      try {
+        const formattedDate = format(date, 'yyyy-MM-dd');
+        
+        const { data, error } = await supabase
+          .from('study_sessions')
+          .select(`
+            id,
+            title,
+            description,
+            session_date,
+            session_time,
+            duration,
+            location,
+            meeting_link,
+            host_id,
+            group_id
+          `)
+          .eq('session_date', formattedDate);
+          
+        if (error) throw error;
+        return data || [];
+      } catch (error) {
+        console.error('Error fetching sessions:', error);
+        toast.error('Failed to load study sessions');
+        return [];
+      }
+    },
   });
   
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setNewSession(prev => ({ ...prev, [name]: value }));
-  };
-  
-  const handleCreateSession = () => {
-    if (!newSession.title || !newSession.group || !selectedDate || !newSession.time) {
-      toast({
-        title: "Missing information",
-        description: "Please fill all required fields.",
-        variant: "destructive"
-      });
+  const handleCreateSession = async () => {
+    if (!title || !sessionTime || !date) {
+      toast.error('Please fill in all required fields');
       return;
     }
     
-    const createdSession = {
-      id: Date.now().toString(),
-      title: newSession.title,
-      date: selectedDate,
-      time: newSession.time,
-      duration: parseInt(newSession.duration),
-      attendees: 1,
-      group: newSession.group,
-      description: newSession.description,
-      isHost: true,
-      location: newSession.location,
-      meetingLink: newSession.meetingLink
-    };
-    
-    setUpcoming(prev => [createdSession, ...prev]);
-    setIsCreatingSession(false);
-    
-    setNewSession({
-      title: '',
-      group: '',
-      description: '',
-      time: '',
-      duration: '60',
-      location: 'online',
-      meetingLink: ''
-    });
-    
-    toast({
-      title: "Study session created",
-      description: `Your study session "${createdSession.title}" has been scheduled.`,
-    });
-  };
-  
-  const handleJoinSession = (sessionId: string) => {
-    toast({
-      title: "Joining session",
-      description: "You'll be redirected to the meeting.",
-    });
-  };
-  
-  const handleCancelSession = (sessionId: string) => {
-    setUpcoming(prev => prev.filter(session => session.id !== sessionId));
-    
-    toast({
-      title: "Session cancelled",
-      description: "The study session has been cancelled.",
-    });
-  };
-  
-  const handleSetReminder = (sessionId: string) => {
-    toast({
-      title: "Reminder set",
-      description: "You'll receive a notification before the session starts.",
-    });
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      
+      if (!user.user) {
+        toast.error('You must be logged in to create a session');
+        return;
+      }
+      
+      const sessionData = {
+        title,
+        description,
+        session_date: format(date, 'yyyy-MM-dd'),
+        session_time: sessionTime,
+        duration: parseInt(duration),
+        location,
+        meeting_link: location === 'online' ? meetingLink : null,
+        host_id: user.user.id,
+        group_id: null // For now, not associated with a group
+      };
+      
+      const { error } = await supabase
+        .from('study_sessions')
+        .insert(sessionData);
+        
+      if (error) throw error;
+      
+      toast.success('Study session created successfully');
+      setIsCreating(false);
+      
+      // Reset form
+      setTitle('');
+      setDescription('');
+      setSessionTime('');
+      setDuration('60');
+      setLocation('online');
+      setMeetingLink('');
+    } catch (error) {
+      console.error('Error creating session:', error);
+      toast.error('Failed to create study session');
+    }
   };
   
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-medium">Study Sessions</h2>
-        <Dialog open={isCreatingSession} onOpenChange={setIsCreatingSession}>
+        <h1 className="text-2xl font-bold">Study Sessions</h1>
+        <Dialog open={isCreating} onOpenChange={setIsCreating}>
           <DialogTrigger asChild>
             <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Schedule Session
+              <Plus className="mr-2 h-4 w-4" /> Create Session
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>Schedule a Study Session</DialogTitle>
+              <DialogTitle>Create Study Session</DialogTitle>
               <DialogDescription>
-                Create a new study session for your group.
+                Schedule a new study session for yourself or your group.
               </DialogDescription>
             </DialogHeader>
-            
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="session-title">Session Title</Label>
-                <Input 
-                  id="session-title"
-                  name="title"
-                  placeholder="e.g., Physics Problem Solving"
-                  value={newSession.title}
-                  onChange={handleInputChange}
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="title" className="text-right">
+                  Title
+                </Label>
+                <Input
+                  id="title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="col-span-3"
                 />
               </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="session-group">Study Group</Label>
-                <Select 
-                  value={newSession.group} 
-                  onValueChange={(value) => setNewSession(prev => ({ ...prev, group: value }))}
-                >
-                  <SelectTrigger id="session-group">
-                    <SelectValue placeholder="Select a group" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {mockGroups.map(group => (
-                      <SelectItem key={group.id} value={group.name}>
-                        {group.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="description" className="text-right">
+                  Description
+                </Label>
+                <Textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="col-span-3"
+                />
               </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Date</Label>
-                  <CalendarComponent
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Date</Label>
+                <div className="col-span-3">
+                  <Calendar
                     mode="single"
-                    selected={selectedDate}
-                    onSelect={setSelectedDate}
+                    selected={date}
+                    onSelect={setDate}
                     disabled={(date) => date < new Date()}
-                    initialFocus
+                    className="rounded-md border"
                   />
                 </div>
-                
-                <div className="space-y-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="session-time">Time</Label>
-                    <Input 
-                      id="session-time"
-                      name="time"
-                      type="time"
-                      value={newSession.time}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2 mt-4">
-                    <Label htmlFor="session-duration">Duration (minutes)</Label>
-                    <Select 
-                      value={newSession.duration} 
-                      onValueChange={(value) => setNewSession(prev => ({ ...prev, duration: value }))}
-                    >
-                      <SelectTrigger id="session-duration">
-                        <SelectValue placeholder="Duration" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="30">30 minutes</SelectItem>
-                        <SelectItem value="45">45 minutes</SelectItem>
-                        <SelectItem value="60">1 hour</SelectItem>
-                        <SelectItem value="90">1.5 hours</SelectItem>
-                        <SelectItem value="120">2 hours</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2 mt-4">
-                    <Label htmlFor="session-location">Location</Label>
-                    <Select 
-                      value={newSession.location} 
-                      onValueChange={(value) => setNewSession(prev => ({ ...prev, location: value }))}
-                    >
-                      <SelectTrigger id="session-location">
-                        <SelectValue placeholder="Location" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="online">Online</SelectItem>
-                        <SelectItem value="physical">Physical Location</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
               </div>
-              
-              {newSession.location === 'online' && (
-                <div className="space-y-2">
-                  <Label htmlFor="meeting-link">Meeting Link (Zoom, Google Meet, etc.)</Label>
-                  <Input 
-                    id="meeting-link"
-                    name="meetingLink"
-                    placeholder="https://..."
-                    value={newSession.meetingLink}
-                    onChange={handleInputChange}
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="time" className="text-right">
+                  Time
+                </Label>
+                <Input
+                  id="time"
+                  type="time"
+                  value={sessionTime}
+                  onChange={(e) => setSessionTime(e.target.value)}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="duration" className="text-right">
+                  Duration (min)
+                </Label>
+                <Input
+                  id="duration"
+                  type="number"
+                  value={duration}
+                  onChange={(e) => setDuration(e.target.value)}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="location" className="text-right">
+                  Location
+                </Label>
+                <select
+                  id="location"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  className="col-span-3 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <option value="online">Online</option>
+                  <option value="in-person">In Person</option>
+                </select>
+              </div>
+              {location === 'online' && (
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="meetingLink" className="text-right">
+                    Meeting Link
+                  </Label>
+                  <Input
+                    id="meetingLink"
+                    value={meetingLink}
+                    onChange={(e) => setMeetingLink(e.target.value)}
+                    className="col-span-3"
                   />
                 </div>
               )}
-              
-              <div className="space-y-2">
-                <Label htmlFor="session-description">Description</Label>
-                <Textarea 
-                  id="session-description"
-                  name="description"
-                  placeholder="Describe what will be covered in this session"
-                  value={newSession.description}
-                  onChange={handleInputChange}
-                />
-              </div>
             </div>
-            
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreatingSession(false)}>Cancel</Button>
-              <Button onClick={handleCreateSession}>Schedule Session</Button>
+              <Button type="button" variant="outline" onClick={() => setIsCreating(false)}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={handleCreateSession}>
+                Create Session
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
-      
-      <Tabs defaultValue="upcoming">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="upcoming">Upcoming Sessions</TabsTrigger>
-          <TabsTrigger value="past">Past Sessions</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="upcoming" className="space-y-4">
-          {upcoming.length === 0 ? (
-            <div className="text-center py-8">
-              <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium">No upcoming sessions</h3>
-              <p className="text-muted-foreground mb-4">
-                You don't have any upcoming study sessions scheduled.
-              </p>
-              <Button onClick={() => setIsCreatingSession(true)}>
-                Schedule a Session
-              </Button>
-            </div>
-          ) : (
+
+      <div className="flex space-x-4">
+        <Card className="w-[300px]">
+          <CardHeader>
+            <CardTitle className="text-center">
+              <CalendarIcon className="h-5 w-5 inline-block mr-2" />
+              Calendar
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Calendar
+              mode="single"
+              selected={date}
+              onSelect={setDate}
+              className="rounded-md border"
+            />
+          </CardContent>
+        </Card>
+
+        <div className="flex-1">
+          <h2 className="text-lg font-medium mb-4">
+            Sessions for {date ? format(date, 'EEEE, MMMM d') : 'Today'}
+          </h2>
+          
+          {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {upcoming.map(session => (
-                <Card key={session.id} className={cn(
-                  "overflow-hidden transition-all hover:border-primary",
-                  session.isHost && "border-primary/50"
-                )}>
-                  <CardHeader className="pb-2">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        {session.isHost && (
-                          <Badge className="mb-2">You're hosting</Badge>
-                        )}
-                        <CardTitle className="text-base">{session.title}</CardTitle>
-                        <CardDescription>{session.group}</CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <div className="flex items-center text-sm">
-                      <Calendar className="h-4 w-4 mr-1 text-muted-foreground" />
-                      <span>{format(session.date, 'EEEE, MMMM d, yyyy')}</span>
-                    </div>
-                    <div className="flex items-center text-sm">
-                      <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
-                      <span>
-                        {session.time} • {session.duration} minutes
-                      </span>
-                    </div>
-                    <div className="flex items-center text-sm">
-                      <Users className="h-4 w-4 mr-1 text-muted-foreground" />
-                      <span>{session.attendees} attendees</span>
-                    </div>
-                    {session.location === 'online' && (
-                      <div className="flex items-center text-sm">
-                        <Video className="h-4 w-4 mr-1 text-muted-foreground" />
-                        <span>Online Meeting</span>
-                      </div>
-                    )}
-                    {session.description && (
-                      <p className="text-sm mt-2 line-clamp-2">
-                        {session.description}
-                      </p>
-                    )}
-                  </CardContent>
-                  <CardFooter className="grid grid-cols-2 gap-2">
-                    {session.isHost ? (
-                      <>
-                        <Button onClick={() => handleJoinSession(session.id)}>
-                          <Video className="h-4 w-4 mr-2" />
-                          Start Session
-                        </Button>
-                        <Button variant="outline" onClick={() => handleCancelSession(session.id)}>
-                          Cancel
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <Button onClick={() => handleJoinSession(session.id)}>
-                          <Video className="h-4 w-4 mr-2" />
-                          Join
-                        </Button>
-                        <Button variant="outline" onClick={() => handleSetReminder(session.id)}>
-                          <Bell className="h-4 w-4 mr-2" />
-                          Remind Me
-                        </Button>
-                      </>
-                    )}
-                  </CardFooter>
+              {[...Array(2)].map((_, i) => (
+                <Card key={i} className="h-[200px] animate-pulse">
+                  <div className="h-full bg-muted/30"></div>
                 </Card>
               ))}
             </div>
-          )}
-        </TabsContent>
-        
-        <TabsContent value="past" className="space-y-4">
-          {past.length === 0 ? (
-            <div className="text-center py-8">
-              <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium">No past sessions</h3>
-              <p className="text-muted-foreground mb-4">
-                You haven't participated in any study sessions yet.
-              </p>
-              <Button onClick={() => document.querySelector('[data-state="inactive"]')?.dispatchEvent(new Event('click', { bubbles: true }))}>
-                View Upcoming Sessions
-              </Button>
-            </div>
-          ) : (
+          ) : sessions.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {past.map(session => (
-                <Card key={session.id} className="overflow-hidden transition-all hover:border-primary">
-                  <CardHeader className="pb-2">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="text-base">{session.title}</CardTitle>
-                        <CardDescription>{session.group}</CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <div className="flex items-center text-sm">
-                      <Calendar className="h-4 w-4 mr-1 text-muted-foreground" />
-                      <span>{format(session.date, 'EEEE, MMMM d, yyyy')}</span>
-                    </div>
-                    <div className="flex items-center text-sm">
-                      <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
-                      <span>
-                        {session.time} • {session.duration} minutes
-                      </span>
-                    </div>
-                    <div className="flex items-center text-sm">
-                      <Users className="h-4 w-4 mr-1 text-muted-foreground" />
-                      <span>{session.attendees} attendees</span>
-                    </div>
-                    {session.description && (
-                      <p className="text-sm mt-2 line-clamp-2">
-                        {session.description}
-                      </p>
-                    )}
-                  </CardContent>
-                  <CardFooter>
-                    <Button variant="outline" className="w-full">
-                      <BookOpen className="h-4 w-4 mr-2" />
-                      View Materials
-                    </Button>
-                  </CardFooter>
-                </Card>
+              {sessions.map(session => (
+                <SessionCard key={session.id} session={session} />
               ))}
             </div>
+          ) : (
+            <Card className="p-8 text-center bg-muted/30">
+              <Video className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium">No study sessions scheduled</h3>
+              <p className="text-muted-foreground mb-4">
+                There are no study sessions for this date.
+              </p>
+              <Button onClick={() => setIsCreating(true)}>
+                <Plus className="mr-2 h-4 w-4" /> Create New Session
+              </Button>
+            </Card>
           )}
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
     </div>
   );
 };
