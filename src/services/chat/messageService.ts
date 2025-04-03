@@ -1,6 +1,7 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ChatMessage } from "./types";
+import { ChatMessage, MessageReactions } from "./types";
 import { joinGroupIfNotMember } from "./membershipService";
 
 export const getGroupMessages = async (groupId: string): Promise<ChatMessage[]> => {
@@ -57,13 +58,23 @@ export const getGroupMessages = async (groupId: string): Promise<ChatMessage[]> 
     return messages.map(message => {
       const sender = profiles?.find(p => p.id === message.sender_id);
       
+      // Convert JSON reactions to MessageReactions type
+      const reactionsObj: MessageReactions = {};
+      if (message.reactions && typeof message.reactions === 'object') {
+        Object.entries(message.reactions as Record<string, string[]>).forEach(([emoji, userIds]) => {
+          if (Array.isArray(userIds)) {
+            reactionsObj[emoji] = userIds;
+          }
+        });
+      }
+      
       return {
         id: message.id,
         group_id: message.group_id,
         user_id: message.sender_id,
         content: message.content,
         created_at: message.created_at,
-        reactions: message.reactions || {},
+        reactions: reactionsObj,
         sender: sender ? {
           id: sender.id,
           name: sender.name,
@@ -122,13 +133,16 @@ export const sendGroupMessage = async (
 
     if (profileError) throw profileError;
 
+    // Empty reactions object for new message
+    const reactionsObj: MessageReactions = {};
+
     return {
       id: insertedMessage.id,
       group_id: insertedMessage.group_id,
       user_id: insertedMessage.sender_id,
       content: insertedMessage.content,
       created_at: insertedMessage.created_at,
-      reactions: insertedMessage.reactions || {},
+      reactions: reactionsObj,
       sender: {
         id: profileData.id,
         name: profileData.name,
@@ -161,7 +175,17 @@ export const addMessageReaction = async (
 
     if (fetchError) throw fetchError;
 
-    let updatedReactions = { ...message?.reactions } || {};
+    // Convert database JSON to our MessageReactions type
+    let updatedReactions: MessageReactions = {};
+    if (message?.reactions && typeof message.reactions === 'object') {
+      Object.entries(message.reactions as Record<string, string[]>).forEach(([emoji, userIds]) => {
+        if (Array.isArray(userIds)) {
+          updatedReactions[emoji] = userIds;
+        }
+      });
+    }
+    
+    // Add or remove the reaction
     if (!updatedReactions[reaction]) {
       updatedReactions[reaction] = [];
     }
