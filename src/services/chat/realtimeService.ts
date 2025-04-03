@@ -30,11 +30,11 @@ export const subscribeToGroupMessages = (
           user_id: payload.new.sender_id,
           content: payload.new.content,
           created_at: payload.new.created_at,
-          sender: {
-            id: payload.new.sender_id,
-            name: data?.name || 'Unknown User',
-            avatar: data?.avatar_url
-          }
+          sender: data ? {
+            id: data.id,
+            name: data.name,
+            avatar: data.avatar_url
+          } : undefined
         };
 
         onNewMessage(fullMessage);

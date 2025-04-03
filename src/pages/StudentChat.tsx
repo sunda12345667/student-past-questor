@@ -1,225 +1,227 @@
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Layout } from '@/components/Layout';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
-import { ChatRoomList } from '@/components/student-chat/ChatRoomList';
+import React, { useEffect, useState } from 'react';
+import { format } from 'date-fns';
+import { useAuth } from '@/hooks/auth';
 import { ChatContainer } from '@/components/student-chat/ChatContainer';
+import { ChatRoomList } from '@/components/student-chat/ChatRoomList';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import Layout from '@/components/Layout';
 import { 
   getUserGroups, 
   getPublicGroups, 
-  getGroupMessages, 
-  sendGroupMessage, 
-  joinChatGroup, 
-  subscribeToGroupMessages, 
-  subscribeToTypingIndicators, 
-  sendTypingIndicator 
+  joinChatGroup,
+  getGroupMessages,
+  sendGroupMessage,
+  subscribeToGroupMessages,
+  subscribeToTypingIndicators,
+  sendTypingIndicator
 } from '@/services/chat';
-import { ChatGroup, ChatMessage } from '@/services/chat/types';
-import { useNavigate } from 'react-router-dom';
 
-const StudentChat = () => {
-  const { currentUser } = useAuth();
+// Interface for the transformed message format expected by ChatContainer
+interface Message {
+  id: string;
+  senderId: string;
+  senderName: string;
+  content: string;
+  timestamp: Date;
+}
+
+// Interface for chat rooms expected by ChatRoomList
+interface ChatRoom {
+  id: string;
+  name: string;
+  participants: number;
+}
+
+const StudentChat: React.FC = () => {
+  const { currentUser, isLoading } = useAuth();
   const navigate = useNavigate();
+  
   const [activeRoom, setActiveRoom] = useState<string | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [activeRoomName, setActiveRoomName] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [userGroups, setUserGroups] = useState<ChatRoom[]>([]);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
-  const [userGroups, setUserGroups] = useState<ChatGroup[]>([]);
-  const [publicGroups, setPublicGroups] = useState<ChatGroup[]>([]);
-  const [loading, setLoading] = useState(true);
-  const messageSubscription = useRef<any>(null);
-  const typingSubscription = useRef<any>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Redirect if not logged in
+  
+  // Redirect to login if not authenticated
   useEffect(() => {
-    if (!currentUser && !loading) {
-      toast.error("Please log in to access the chat");
+    if (!isLoading && !currentUser) {
+      toast.error('Please log in to access chat');
       navigate('/login');
     }
-  }, [currentUser, navigate, loading]);
-  
-  // Load user's groups and public groups
+  }, [currentUser, isLoading, navigate]);
+
+  // Load user's chat groups
   useEffect(() => {
-    const loadGroups = async () => {
-      try {
-        setLoading(true);
-        const [userGroupsData, publicGroupsData] = await Promise.all([
-          getUserGroups(),
-          getPublicGroups()
-        ]);
-        
-        setUserGroups(userGroupsData);
-        setPublicGroups(publicGroupsData);
-      } catch (error) {
-        console.error('Error loading groups:', error);
-        toast.error('Failed to load chat groups');
-      } finally {
-        setLoading(false);
-      }
-    };
-    
     if (currentUser) {
-      loadGroups();
+      loadUserGroups();
     }
   }, [currentUser]);
 
-  // Clean up subscriptions on unmount
+  // Subscribe to messages and typing indicators when active room changes
   useEffect(() => {
+    let messageSubscription: any = null;
+    let typingSubscription: any = null;
+    
+    if (activeRoom && currentUser) {
+      // Load existing messages
+      loadMessages(activeRoom);
+      
+      // Subscribe to new messages
+      messageSubscription = subscribeToGroupMessages(
+        activeRoom,
+        (newMessage) => {
+          setMessages((prevMessages) => [
+            ...prevMessages,
+            transformMessage(newMessage)
+          ]);
+        }
+      );
+      
+      // Subscribe to typing indicators
+      typingSubscription = subscribeToTypingIndicators(
+        activeRoom,
+        (typingUserIds) => {
+          setTypingUsers(typingUserIds);
+        }
+      );
+    }
+    
     return () => {
-      if (messageSubscription.current) {
-        messageSubscription.current.unsubscribe();
+      if (messageSubscription) {
+        supabase.removeChannel(messageSubscription);
       }
-      if (typingSubscription.current) {
-        typingSubscription.current.unsubscribe();
+      if (typingSubscription) {
+        supabase.removeChannel(typingSubscription);
       }
     };
-  }, []);
-
-  // Load messages when active room changes and set up subscriptions
-  useEffect(() => {
-    if (activeRoom && currentUser) {
-      // Clean up previous subscriptions
-      if (messageSubscription.current) {
-        messageSubscription.current.unsubscribe();
-      }
-      if (typingSubscription.current) {
-        typingSubscription.current.unsubscribe();
-      }
-
-      const loadMessages = async () => {
-        try {
-          const roomMessages = await getGroupMessages(activeRoom);
-          setMessages(roomMessages);
-        } catch (error) {
-          toast.error('Failed to load messages');
-          console.error('Error loading messages:', error);
-        }
-      };
-      
-      loadMessages();
-      
-      // Set up real-time subscriptions
-      messageSubscription.current = subscribeToGroupMessages(
-        activeRoom,
-        (newMessage: ChatMessage) => {
-          setMessages(prev => [...prev, newMessage]);
-        }
-      );
-      
-      typingSubscription.current = subscribeToTypingIndicators(
-        activeRoom,
-        (users: string[]) => {
-          setTypingUsers(users);
-        }
-      );
-    } else {
-      setMessages([]);
-      setTypingUsers([]);
-    }
   }, [activeRoom, currentUser]);
-
-  const handleSendMessage = async (content: string) => {
-    if (!content.trim() || !activeRoom || !currentUser) return;
-    
+  
+  const loadUserGroups = async () => {
     try {
-      const newMessage = await sendGroupMessage(
-        activeRoom,
-        content
-      );
+      const groups = await getUserGroups();
       
-      if (newMessage && !messages.some(m => m.id === newMessage.id)) {
-        setMessages(prev => [...prev, newMessage]);
-      }
+      // Transform to ChatRoom format expected by ChatRoomList
+      const chatRooms: ChatRoom[] = groups.map(group => ({
+        id: group.id,
+        name: group.name,
+        participants: group.members
+      }));
       
-      // Clear user from typing list when message is sent
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-        typingTimeoutRef.current = null;
+      setUserGroups(chatRooms);
+      
+      // If no active room is set and we have groups, set the first one as active
+      if (!activeRoom && chatRooms.length > 0) {
+        handleJoinRoom(chatRooms[0].id, chatRooms[0].name);
       }
     } catch (error) {
-      toast.error('Failed to send message');
-      console.error('Error sending message:', error);
+      console.error('Error loading chat groups:', error);
+      toast.error('Failed to load chat groups');
     }
   };
-
-  const handleTyping = () => {
-    if (!currentUser || !activeRoom) return;
-
+  
+  const loadMessages = async (groupId: string) => {
     try {
-      sendTypingIndicator(
-        activeRoom, 
-        currentUser.id, 
-        currentUser.name
+      const chatMessages = await getGroupMessages(groupId);
+      
+      // Transform to Message format expected by ChatContainer
+      const transformedMessages: Message[] = chatMessages.map(transformMessage);
+      
+      setMessages(transformedMessages);
+    } catch (error) {
+      console.error('Error loading messages:', error);
+      toast.error('Failed to load messages');
+    }
+  };
+  
+  // Transform ChatMessage to Message format
+  const transformMessage = (chatMessage: any): Message => {
+    return {
+      id: chatMessage.id,
+      senderId: chatMessage.user_id,
+      senderName: chatMessage.sender?.name || 'Unknown User',
+      content: chatMessage.content,
+      timestamp: new Date(chatMessage.created_at)
+    };
+  };
+  
+  const handleJoinRoom = (roomId: string, roomName: string) => {
+    setActiveRoom(roomId);
+    setActiveRoomName(roomName);
+    loadMessages(roomId);
+  };
+  
+  const handleSendMessage = async (content: string) => {
+    if (!activeRoom || !currentUser) return;
+    
+    try {
+      const newMessage = await sendGroupMessage(activeRoom, content);
+      if (newMessage) {
+        setMessages((prev) => [
+          ...prev,
+          transformMessage(newMessage)
+        ]);
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast.error('Failed to send message');
+    }
+  };
+  
+  const handleTypingIndicator = async () => {
+    if (!activeRoom || !currentUser) return;
+    
+    try {
+      await sendTypingIndicator(
+        activeRoom,
+        currentUser.id,
+        currentUser.displayName || currentUser.email || 'User'
       );
     } catch (error) {
       console.error('Error sending typing indicator:', error);
     }
   };
-
-  const handleJoinRoom = async (roomId: string) => {
-    try {
-      if (!currentUser) {
-        toast.error("Please log in to join a chat room");
-        navigate('/login');
-        return;
-      }
-      
-      await joinChatGroup(roomId);
-      setActiveRoom(roomId);
-      
-      // Refresh groups after joining
-      const userGroupsData = await getUserGroups();
-      setUserGroups(userGroupsData);
-      
-      const publicGroupsData = await getPublicGroups();
-      setPublicGroups(publicGroupsData);
-    } catch (error) {
-      toast.error('Failed to join chat room');
-      console.error('Error joining chat room:', error);
-    }
+  
+  // Format timestamp for display
+  const formatTime = (date: Date): string => {
+    return format(date, 'h:mm a');
   };
-
-  const formatTime = (date: string) => {
-    return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const allGroups = [
-    ...userGroups.map(group => ({ ...group, joined: true })),
-    ...publicGroups.map(group => ({ ...group, joined: false }))
-  ];
-
-  const activeRoomName = activeRoom 
-    ? allGroups.find(group => group.id === activeRoom)?.name 
-    : null;
+  
+  // If loading or not authenticated, show nothing
+  if (isLoading || !currentUser) {
+    return null;
+  }
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 pt-28 pb-16">
-        <h1 className="text-3xl font-bold mb-6">Student Chat</h1>
+      <div className="container mt-8 mb-16">
+        <h1 className="text-2xl font-bold mb-6">Student Chat</h1>
         
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Chat Rooms */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1">
-            <ChatRoomList 
-              chatRooms={allGroups}
+            <ChatRoomList
+              chatRooms={userGroups}
               activeRoom={activeRoom}
-              onJoinRoom={handleJoinRoom}
-              isLoading={loading}
+              onJoinRoom={(roomId) => {
+                const room = userGroups.find(r => r.id === roomId);
+                if (room) {
+                  handleJoinRoom(roomId, room.name);
+                }
+              }}
             />
           </div>
           
-          {/* Chat Messages */}
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-2">
             <ChatContainer
               activeRoom={activeRoom}
               roomName={activeRoomName}
               messages={messages}
-              currentUserId={currentUser?.id}
+              currentUserId={currentUser.id}
               onSendMessage={handleSendMessage}
               formatTime={formatTime}
               typingUsers={typingUsers}
-              onTyping={handleTyping}
+              onTyping={handleTypingIndicator}
             />
           </div>
         </div>

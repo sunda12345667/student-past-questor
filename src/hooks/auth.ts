@@ -4,6 +4,7 @@ import { useAuth as useAuthContext, User } from '@/contexts/AuthContext';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 export const useAuth = useAuthContext;
 
@@ -32,22 +33,104 @@ export const useIsAdmin = () => {
   return { isAdmin: isAdmin(), isAuthenticated: !!currentUser };
 };
 
+// Handle user authentication with Supabase
+export const signInWithEmail = async (email: string, password: string): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    
+    if (error) {
+      toast.error(error.message);
+      return false;
+    }
+    
+    if (data.user) {
+      toast.success('Successfully signed in');
+      return true;
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('Sign in error:', error);
+    toast.error('An error occurred during sign in');
+    return false;
+  }
+};
+
+// Sign up a new user
+export const signUpWithEmail = async (email: string, password: string, name: string): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name,
+        },
+      },
+    });
+    
+    if (error) {
+      toast.error(error.message);
+      return false;
+    }
+    
+    if (data.user) {
+      toast.success('Account created successfully! Please verify your email.');
+      return true;
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('Sign up error:', error);
+    toast.error('An error occurred during sign up');
+    return false;
+  }
+};
+
+// Sign out current user
+export const signOut = async (): Promise<boolean> => {
+  try {
+    const { error } = await supabase.auth.signOut();
+    
+    if (error) {
+      toast.error(error.message);
+      return false;
+    }
+    
+    toast.success('Successfully signed out');
+    return true;
+  } catch (error) {
+    console.error('Sign out error:', error);
+    toast.error('An error occurred during sign out');
+    return false;
+  }
+};
+
 // Hook for profile management
 export const useProfile = () => {
   const { currentUser } = useAuth();
   const [isUpdating, setIsUpdating] = useState(false);
 
   const updateProfile = async (profileData: Partial<User>) => {
-    // Implementation would depend on how profiles are managed
-    // This is a placeholder
+    if (!currentUser) return false;
+    
     setIsUpdating(true);
     try {
-      // Logic to update profile
+      const { error } = await supabase
+        .from('profiles')
+        .update(profileData)
+        .eq('id', currentUser.id);
+
+      if (error) throw error;
+      
       toast.success('Profile updated successfully');
       return true;
     } catch (error) {
-      toast.error('Failed to update profile');
       console.error('Profile update error:', error);
+      toast.error('Failed to update profile');
       return false;
     } finally {
       setIsUpdating(false);

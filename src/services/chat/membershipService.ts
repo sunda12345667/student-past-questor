@@ -68,7 +68,7 @@ export const getGroupMembers = async (groupId: string): Promise<GroupMember[]> =
         user_id,
         joined_at,
         is_admin,
-        user:profiles(id, name, avatar_url)
+        profiles(id, name, avatar_url)
       `)
       .eq("group_id", groupId);
 
@@ -80,10 +80,10 @@ export const getGroupMembers = async (groupId: string): Promise<GroupMember[]> =
       user_id: member.user_id,
       joined_at: member.joined_at,
       is_admin: member.is_admin,
-      user: member.user ? {
-        id: member.user.id,
-        name: member.user.name,
-        avatar_url: member.user.avatar_url
+      user: member.profiles ? {
+        id: member.profiles.id,
+        name: member.profiles.name,
+        avatar_url: member.profiles.avatar_url
       } : undefined
     }));
   } catch (error) {
