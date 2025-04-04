@@ -1,13 +1,6 @@
-
 import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-
-interface TypingUser {
-  id: string;
-  name: string;
-  avatar?: string;
-  isTyping: boolean;
-}
+import { TypingUser } from '@/hooks/chat';
 
 interface TypingIndicatorProps {
   users: TypingUser[];

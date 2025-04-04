@@ -6,7 +6,7 @@ import { ChatRoomList } from '@/components/student-chat/ChatRoomList';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Layout } from '@/components/Layout';
-import { useChat } from '@/hooks/useChat';
+import { useChat } from '@/hooks/chat';
 import { formatTime } from '@/utils/formatTime';
 import { addMessageReaction } from '@/services/chat';
 

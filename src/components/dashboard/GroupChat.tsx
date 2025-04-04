@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/auth';
 import { Card, CardContent } from '@/components/ui/card';
@@ -52,7 +51,7 @@ import {
   sendTypingIndicator
 } from '@/services/chat';
 import { supabase } from '@/integrations/supabase/client';
-import { TypingUser } from '@/hooks/useChat';
+import { TypingUser } from '@/hooks/chat';
 
 const GroupChat = () => {
   const { currentUser } = useAuth();
@@ -74,17 +73,14 @@ const GroupChat = () => {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  // Check for selectedGroupId in sessionStorage on component mount
   useEffect(() => {
     const storedGroupId = sessionStorage.getItem('selectedGroupId');
     if (storedGroupId) {
       setSelectedGroup(storedGroupId);
-      // Clear it after we've used it so subsequent visits don't auto-select
       sessionStorage.removeItem('selectedGroupId');
     }
   }, []);
   
-  // Load user's groups
   useEffect(() => {
     const loadGroups = async () => {
       setLoading(true);
@@ -92,11 +88,9 @@ const GroupChat = () => {
         const userGroups = await getUserGroups();
         setGroups(userGroups);
         
-        // Load public groups too
         const availablePublicGroups = await getPublicGroups();
         setPublicGroups(availablePublicGroups);
         
-        // If there are groups, select the first one only if nothing else was selected
         if (userGroups.length > 0 && !selectedGroup) {
           setSelectedGroup(userGroups[0].id);
         }
@@ -110,21 +104,18 @@ const GroupChat = () => {
     loadGroups();
   }, []);
   
-  // Load messages when selected group changes
   useEffect(() => {
     if (selectedGroup) {
       const loadMessages = async () => {
         const groupMessages = await getGroupMessages(selectedGroup);
         setMessages(groupMessages);
         
-        // Also load group members
         const members = await getGroupMembers(selectedGroup);
         setGroupMembers(members);
       };
       
       loadMessages();
       
-      // Subscribe to real-time updates
       const messageChannel = subscribeToGroupMessages(
         selectedGroup,
         (newMessage) => {
@@ -132,11 +123,9 @@ const GroupChat = () => {
         }
       );
       
-      // Subscribe to typing indicators
       const typingChannel = subscribeToTypingIndicators(
         selectedGroup,
         (typingUsersList) => {
-          // Filter out current user
           const filteredTypingUsers = typingUsersList.filter(
             user => user.id !== currentUser?.id
           );
@@ -145,14 +134,12 @@ const GroupChat = () => {
       );
       
       return () => {
-        // Clean up subscriptions
         supabase.removeChannel(messageChannel);
         supabase.removeChannel(typingChannel);
       };
     }
   }, [selectedGroup, currentUser?.id]);
   
-  // Scroll to bottom when messages change
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
@@ -184,7 +171,6 @@ const GroupChat = () => {
       setSelectedGroup(newGroup.id);
       setIsCreatingGroup(false);
       
-      // Reset form
       setNewGroupName('');
       setNewGroupDescription('');
       setNewGroupIsPrivate(false);
@@ -195,16 +181,10 @@ const GroupChat = () => {
     const success = await joinChatGroup(groupId);
     
     if (success) {
-      // Find the group in public groups
       const joinedGroup = publicGroups.find(g => g.id === groupId);
       if (joinedGroup) {
-        // Remove from public groups
         setPublicGroups(prev => prev.filter(g => g.id !== groupId));
-        
-        // Add to user's groups
         setGroups(prev => [joinedGroup, ...prev]);
-        
-        // Select the group
         setSelectedGroup(groupId);
       }
     }
@@ -215,10 +195,8 @@ const GroupChat = () => {
       const success = await leaveChatGroup(groupId);
       
       if (success) {
-        // Remove from user's groups
         setGroups(prev => prev.filter(g => g.id !== groupId));
         
-        // If the user was viewing this group, clear the selection
         if (selectedGroup === groupId) {
           setSelectedGroup(null);
           setMessages([]);
@@ -262,7 +240,6 @@ const GroupChat = () => {
     }
   };
   
-  // Determine if user is admin of the current group
   const isGroupAdmin = () => {
     if (!selectedGroup || !currentUser) return false;
     const member = groupMembers.find(m => m.user_id === currentUser.id);
@@ -272,7 +249,6 @@ const GroupChat = () => {
   const getTypingIndicator = () => {
     if (typingUsers.length === 0) return null;
     
-    // Get names for user IDs
     const typingNames = typingUsers.map(user => {
       return user.name || 'Someone';
     });
@@ -288,7 +264,6 @@ const GroupChat = () => {
   
   return (
     <div className="h-[calc(100vh-16rem)] flex flex-col md:flex-row gap-4">
-      {/* Groups Sidebar */}
       <div className="w-full md:w-64 flex-shrink-0 border rounded-lg overflow-hidden">
         <div className="p-3 border-b bg-muted/30">
           <div className="flex justify-between items-center">
@@ -398,11 +373,9 @@ const GroupChat = () => {
         </div>
       </div>
       
-      {/* Main Chat Area */}
       <div className="flex-grow flex flex-col border rounded-lg overflow-hidden">
         {selectedGroup ? (
           <>
-            {/* Chat Header */}
             <div className="p-3 border-b flex justify-between items-center bg-muted/30">
               <h3 className="font-medium">
                 {groups.find(g => g.id === selectedGroup)?.name}
@@ -445,7 +418,6 @@ const GroupChat = () => {
               </div>
             </div>
             
-            {/* Messages Area */}
             <div className="flex-grow p-4 overflow-y-auto">
               {messages.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center text-muted-foreground">
@@ -520,7 +492,6 @@ const GroupChat = () => {
               )}
             </div>
             
-            {/* Input Area */}
             <div className="p-3 border-t">
               <div className="flex items-center gap-2">
                 <Input 
@@ -566,7 +537,6 @@ const GroupChat = () => {
         )}
       </div>
       
-      {/* Create Group Modal */}
       <Dialog open={isCreatingGroup} onOpenChange={setIsCreatingGroup}>
         <DialogContent>
           <DialogHeader>
@@ -619,7 +589,6 @@ const GroupChat = () => {
         </DialogContent>
       </Dialog>
       
-      {/* Members Modal */}
       <Dialog open={showMembersModal} onOpenChange={setShowMembersModal}>
         <DialogContent>
           <DialogHeader>
