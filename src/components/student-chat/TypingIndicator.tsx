@@ -1,16 +1,16 @@
 
 import React from 'react';
-import { MessageCircle, Loader } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
-interface User {
+interface TypingUser {
   id: string;
   name: string;
   avatar?: string;
+  isTyping: boolean;
 }
 
 interface TypingIndicatorProps {
-  users: User[];
+  users: TypingUser[];
 }
 
 export const TypingIndicator = ({ users }: TypingIndicatorProps) => {

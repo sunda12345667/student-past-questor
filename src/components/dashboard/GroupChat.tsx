@@ -52,6 +52,7 @@ import {
   sendTypingIndicator
 } from '@/services/chat';
 import { supabase } from '@/integrations/supabase/client';
+import { TypingUser } from '@/hooks/useChat';
 
 const GroupChat = () => {
   const { currentUser } = useAuth();
@@ -69,7 +70,7 @@ const GroupChat = () => {
   const [groupMembers, setGroupMembers] = useState<any[]>([]);
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [activeTab, setActiveTab] = useState('my-groups');
-  const [typingUsers, setTypingUsers] = useState<string[]>([]);
+  const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
@@ -134,10 +135,10 @@ const GroupChat = () => {
       // Subscribe to typing indicators
       const typingChannel = subscribeToTypingIndicators(
         selectedGroup,
-        (typingUserIds) => {
+        (typingUsersList) => {
           // Filter out current user
-          const filteredTypingUsers = typingUserIds.filter(
-            id => id !== currentUser?.id
+          const filteredTypingUsers = typingUsersList.filter(
+            user => user.id !== currentUser?.id
           );
           setTypingUsers(filteredTypingUsers);
         }
@@ -272,9 +273,8 @@ const GroupChat = () => {
     if (typingUsers.length === 0) return null;
     
     // Get names for user IDs
-    const typingNames = typingUsers.map(userId => {
-      const member = groupMembers.find(m => m.user_id === userId);
-      return member ? member.user?.name || 'Someone' : 'Someone';
+    const typingNames = typingUsers.map(user => {
+      return user.name || 'Someone';
     });
     
     if (typingNames.length === 1) {
