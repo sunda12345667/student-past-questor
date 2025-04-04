@@ -1,8 +1,7 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Users } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { ChatRoomItem } from './ChatRoomItem';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -26,38 +25,37 @@ export const ChatRoomList = ({
   isLoading = false
 }: ChatRoomListProps) => {
   return (
-    <Card>
+    <Card className="h-[700px] flex flex-col">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Users size={20} />
-          Chat Rooms
-        </CardTitle>
+        <CardTitle>Chat Rooms</CardTitle>
       </CardHeader>
-      <CardContent>
-        <ScrollArea className="h-[600px]">
+      <CardContent className="flex-grow overflow-y-auto">
+        {isLoading ? (
           <div className="space-y-2">
-            {isLoading ? (
-              <>
-                {Array(4).fill(0).map((_, index) => (
-                  <Skeleton key={index} className="h-[60px] w-full" />
-                ))}
-              </>
-            ) : chatRooms.length > 0 ? (
-              chatRooms.map(room => (
-                <ChatRoomItem
-                  key={room.id}
-                  id={room.id}
-                  name={room.name}
-                  participants={room.participants}
-                  isActive={activeRoom === room.id}
-                  onJoin={onJoinRoom}
-                />
-              ))
-            ) : (
-              <p className="text-center text-muted-foreground">No chat rooms available</p>
-            )}
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
           </div>
-        </ScrollArea>
+        ) : chatRooms.length > 0 ? (
+          <div className="space-y-2">
+            {chatRooms.map(room => (
+              <ChatRoomItem
+                key={room.id}
+                name={room.name}
+                participants={room.participants}
+                isActive={room.id === activeRoom}
+                onClick={() => onJoinRoom(room.id)}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-muted-foreground">
+            <p>No chat rooms available</p>
+            <p className="text-sm mt-2">
+              Join a study group to start chatting
+            </p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
