@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { ChatMessage } from "./types";
 
@@ -94,26 +93,39 @@ export const subscribeToGroupMessages = (
   return channel;
 };
 
+// Interface for typing user
+interface TypingUser {
+  id: string;
+  name: string;
+  avatar?: string;
+  isTyping: boolean;
+}
+
 // Subscribe to typing indicators
 export const subscribeToTypingIndicators = (
   groupId: string,
-  onTypingUpdate: (typingUserIds: string[]) => void
+  onTypingUpdate: (typingUsers: TypingUser[]) => void
 ) => {
   // Use Presence feature for typing indicators
   const channel = supabase.channel(`typing:${groupId}`);
   
-  let typingUsers: string[] = [];
+  let typingUsers: TypingUser[] = [];
   
   channel
     .on('presence', { event: 'sync' }, () => {
       const state = channel.presenceState();
       typingUsers = [];
       
-      // Collect all typing user IDs
+      // Collect all typing user information
       Object.values(state).forEach((presences: any) => {
         presences.forEach((presence: any) => {
-          if (presence.isTyping && !typingUsers.includes(presence.userId)) {
-            typingUsers.push(presence.userId);
+          if (presence.isTyping) {
+            typingUsers.push({
+              id: presence.userId,
+              name: presence.userName || 'Unknown user',
+              avatar: presence.userAvatar,
+              isTyping: true
+            });
           }
         });
       });
@@ -122,17 +134,35 @@ export const subscribeToTypingIndicators = (
     })
     .on('presence', { event: 'join' }, ({ key, newPresences }: any) => {
       newPresences.forEach((presence: any) => {
-        if (presence.isTyping && !typingUsers.includes(presence.userId)) {
-          typingUsers.push(presence.userId);
-          onTypingUpdate(typingUsers);
+        if (presence.isTyping) {
+          const existingUserIndex = typingUsers.findIndex(user => user.id === presence.userId);
+          
+          if (existingUserIndex === -1) {
+            typingUsers.push({
+              id: presence.userId,
+              name: presence.userName || 'Unknown user',
+              avatar: presence.userAvatar,
+              isTyping: true
+            });
+            onTypingUpdate(typingUsers);
+          }
         }
       });
     })
     .on('presence', { event: 'leave' }, ({ key, leftPresences }: any) => {
+      let hasChanged = false;
+      
       leftPresences.forEach((presence: any) => {
-        typingUsers = typingUsers.filter(id => id !== presence.userId);
-        onTypingUpdate(typingUsers);
+        const index = typingUsers.findIndex(user => user.id === presence.userId);
+        if (index !== -1) {
+          typingUsers.splice(index, 1);
+          hasChanged = true;
+        }
       });
+      
+      if (hasChanged) {
+        onTypingUpdate(typingUsers);
+      }
     })
     .subscribe();
     
@@ -143,7 +173,8 @@ export const subscribeToTypingIndicators = (
 export const sendTypingIndicator = async (
   groupId: string,
   userId: string,
-  userName: string
+  userName: string,
+  userAvatar?: string
 ) => {
   try {
     const channel = supabase.channel(`typing:${groupId}`);
@@ -154,6 +185,7 @@ export const sendTypingIndicator = async (
       await channel.track({
         userId,
         userName,
+        userAvatar,
         isTyping: true
       });
       
@@ -162,6 +194,7 @@ export const sendTypingIndicator = async (
         await channel.track({
           userId,
           userName,
+          userAvatar,
           isTyping: false
         });
       }, 3000);

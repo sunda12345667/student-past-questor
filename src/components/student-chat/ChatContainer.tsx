@@ -15,6 +15,13 @@ interface Message {
   reactions?: Record<string, string[]>;
 }
 
+interface TypingUser {
+  id: string;
+  name: string;
+  avatar?: string;
+  isTyping: boolean;
+}
+
 interface ChatContainerProps {
   activeRoom: string | null;
   roomName: string | null;
@@ -22,7 +29,7 @@ interface ChatContainerProps {
   currentUserId?: string;
   onSendMessage: (content: string) => void;
   formatTime: (date: Date) => string;
-  typingUsers?: string[];
+  typingUsers?: TypingUser[];
   onTyping: () => void;
   onReactionToggle?: (messageId: string, emoji: string) => void;
 }

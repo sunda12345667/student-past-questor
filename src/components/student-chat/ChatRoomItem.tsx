@@ -1,33 +1,37 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { MessageCircle } from 'lucide-react';
+import { Users } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-interface ChatRoomItemProps {
-  id: string;
+export interface ChatRoomItemProps {
   name: string;
   participants: number;
   isActive: boolean;
-  onJoin: (roomId: string) => void;
+  onSelect: () => void;
 }
 
 export const ChatRoomItem = ({
-  id,
   name,
   participants,
   isActive,
-  onJoin
+  onSelect
 }: ChatRoomItemProps) => {
   return (
     <Button
-      variant={isActive ? "default" : "outline"}
-      className="w-full justify-start"
-      onClick={() => onJoin(id)}
+      variant="ghost"
+      className={cn(
+        "w-full justify-start h-auto py-3 px-4",
+        isActive && "bg-secondary"
+      )}
+      onClick={onSelect}
     >
-      <MessageCircle className="mr-2 h-4 w-4" />
-      <div className="flex flex-col items-start text-left">
-        <span>{name}</span>
-        <span className="text-xs text-muted-foreground">{participants} students</span>
+      <div className="flex justify-between items-center w-full">
+        <span className="font-medium truncate">{name}</span>
+        <div className="flex items-center text-xs text-muted-foreground">
+          <Users className="h-3 w-3 mr-1" />
+          <span>{participants}</span>
+        </div>
       </div>
     </Button>
   );

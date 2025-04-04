@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,6 +21,14 @@ export interface Message {
   reactions?: Record<string, string[]>;
 }
 
+// Interface for typing users
+export interface TypingUser {
+  id: string;
+  name: string;
+  avatar?: string;
+  isTyping: boolean;
+}
+
 // Interface for chat rooms
 export interface ChatRoom {
   id: string;
@@ -32,8 +41,12 @@ export const useChat = (userId: string | undefined) => {
   const [activeRoomName, setActiveRoomName] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [userGroups, setUserGroups] = useState<ChatRoom[]>([]);
-  const [typingUsers, setTypingUsers] = useState<string[]>([]);
+  const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentUserData, setCurrentUserData] = useState<{
+    name: string;
+    avatar?: string;
+  } | null>(null);
 
   // Transform ChatMessage to Message format
   const transformMessage = (chatMessage: any): Message => {
@@ -45,6 +58,28 @@ export const useChat = (userId: string | undefined) => {
       timestamp: new Date(chatMessage.created_at),
       reactions: chatMessage.reactions || {}
     };
+  };
+
+  // Load current user data
+  const loadCurrentUserData = async () => {
+    if (!userId) return;
+    
+    try {
+      const { data: user } = await supabase
+        .from('profiles')
+        .select('name, avatar_url')
+        .eq('id', userId)
+        .single();
+        
+      if (user) {
+        setCurrentUserData({
+          name: user.name,
+          avatar: user.avatar_url
+        });
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    }
   };
 
   // Load user's chat groups
@@ -118,24 +153,24 @@ export const useChat = (userId: string | undefined) => {
   
   // Send typing indicator to the active room
   const handleTypingIndicator = async () => {
-    if (!activeRoom || !userId) return;
+    if (!activeRoom || !userId || !currentUserData) return;
     
     try {
       await sendTypingIndicator(
         activeRoom,
         userId,
-        // Since we don't have the user's name here, we'll use their ID
-        // The actual name will be resolved on the server
-        'User'
+        currentUserData.name,
+        currentUserData.avatar
       );
     } catch (error) {
       console.error('Error sending typing indicator:', error);
     }
   };
 
-  // Load user groups when userId changes
+  // Load user data when userId changes
   useEffect(() => {
     if (userId) {
+      loadCurrentUserData();
       loadUserGroups();
     }
   }, [userId]);
@@ -163,10 +198,10 @@ export const useChat = (userId: string | undefined) => {
       // Subscribe to typing indicators
       typingSubscription = subscribeToTypingIndicators(
         activeRoom,
-        (typingUserIds) => {
+        (typingUsersList) => {
           // Filter out current user
-          const filteredTypingUsers = typingUserIds.filter(
-            id => id !== userId
+          const filteredTypingUsers = typingUsersList.filter(
+            user => user.id !== userId
           );
           setTypingUsers(filteredTypingUsers);
         }
