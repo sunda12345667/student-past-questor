@@ -12,6 +12,7 @@ interface Message {
   senderName: string;
   content: string;
   timestamp: Date;
+  reactions?: Record<string, string[]>;
 }
 
 interface ChatContainerProps {
@@ -23,6 +24,7 @@ interface ChatContainerProps {
   formatTime: (date: Date) => string;
   typingUsers?: string[];
   onTyping: () => void;
+  onReactionToggle?: (messageId: string, emoji: string) => void;
 }
 
 export const ChatContainer = ({
@@ -33,7 +35,8 @@ export const ChatContainer = ({
   onSendMessage,
   formatTime,
   typingUsers = [],
-  onTyping
+  onTyping,
+  onReactionToggle
 }: ChatContainerProps) => {
   return (
     <Card className="h-[700px] flex flex-col">
@@ -49,6 +52,7 @@ export const ChatContainer = ({
               messages={messages}
               currentUserId={currentUserId}
               formatTime={formatTime}
+              onReactionToggle={onReactionToggle}
             />
             {typingUsers.length > 0 && <TypingIndicator users={typingUsers} />}
             <MessageInput 

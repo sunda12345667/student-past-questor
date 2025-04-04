@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,6 +17,7 @@ export interface Message {
   senderName: string;
   content: string;
   timestamp: Date;
+  reactions?: Record<string, string[]>;
 }
 
 // Interface for chat rooms
@@ -42,7 +42,8 @@ export const useChat = (userId: string | undefined) => {
       senderId: chatMessage.user_id,
       senderName: chatMessage.sender?.name || 'Unknown User',
       content: chatMessage.content,
-      timestamp: new Date(chatMessage.created_at)
+      timestamp: new Date(chatMessage.created_at),
+      reactions: chatMessage.reactions || {}
     };
   };
 

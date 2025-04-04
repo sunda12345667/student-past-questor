@@ -44,7 +44,7 @@ export const ChatRoomList = ({
                 name={room.name}
                 participants={room.participants}
                 isActive={room.id === activeRoom}
-                onClick={() => onJoinRoom(room.id)}
+                onSelect={() => onJoinRoom(room.id)}
               />
             ))}
           </div>

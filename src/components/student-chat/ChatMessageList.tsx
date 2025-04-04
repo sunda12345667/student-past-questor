@@ -9,22 +9,25 @@ interface Message {
   senderName: string;
   content: string;
   timestamp: Date;
+  reactions?: Record<string, string[]>;
 }
 
 interface ChatMessageListProps {
   messages: Message[];
   currentUserId?: string;
   formatTime: (date: Date) => string;
+  onReactionToggle?: (messageId: string, emoji: string) => void;
 }
 
 export const ChatMessageList = ({
   messages,
   currentUserId = 'unknown',
-  formatTime
+  formatTime,
+  onReactionToggle
 }: ChatMessageListProps) => {
   return (
     <ScrollArea className="flex-grow mb-4">
-      <div className="space-y-4">
+      <div className="space-y-4 p-1">
         {messages.map(msg => (
           <ChatMessage
             key={msg.id}
@@ -35,6 +38,8 @@ export const ChatMessageList = ({
             timestamp={msg.timestamp}
             isCurrentUser={msg.senderId === currentUserId}
             formatTime={formatTime}
+            reactions={msg.reactions}
+            onReactionToggle={onReactionToggle}
           />
         ))}
       </div>

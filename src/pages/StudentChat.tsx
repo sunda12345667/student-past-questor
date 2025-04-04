@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { Layout } from '@/components/Layout';
 import { useChat } from '@/hooks/useChat';
 import { formatTime } from '@/utils/formatTime';
+import { addMessageReaction } from '@/services/chat';
 
 const StudentChat: React.FC = () => {
   const { currentUser, isLoading: authLoading } = useAuth();
@@ -32,6 +33,21 @@ const StudentChat: React.FC = () => {
       navigate('/login');
     }
   }, [currentUser, authLoading, navigate]);
+
+  // Handler for message reactions
+  const handleReactionToggle = async (messageId: string, emoji: string) => {
+    if (!currentUser) return;
+    
+    try {
+      const success = await addMessageReaction(messageId, emoji);
+      if (!success) {
+        toast.error('Failed to add reaction');
+      }
+    } catch (error) {
+      console.error('Error toggling reaction:', error);
+      toast.error('Could not update reaction');
+    }
+  };
 
   // If loading or not authenticated, show nothing
   if (authLoading || !currentUser) {
@@ -68,6 +84,7 @@ const StudentChat: React.FC = () => {
               formatTime={formatTime}
               typingUsers={typingUsers}
               onTyping={handleTypingIndicator}
+              onReactionToggle={handleReactionToggle}
             />
           </div>
         </div>

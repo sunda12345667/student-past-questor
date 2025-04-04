@@ -1,6 +1,8 @@
 
 import React from 'react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { MessageReactions } from './MessageReactions';
+import { cn } from '@/lib/utils';
 
 interface MessageProps {
   id: string;
@@ -10,24 +12,30 @@ interface MessageProps {
   timestamp: Date;
   isCurrentUser: boolean;
   formatTime: (date: Date) => string;
+  reactions?: Record<string, string[]>;
+  onReactionToggle?: (messageId: string, emoji: string) => void;
 }
 
 export const ChatMessage = ({
+  id,
   senderId,
   senderName,
   content,
   timestamp,
   isCurrentUser,
-  formatTime
+  formatTime,
+  reactions = {},
+  onReactionToggle
 }: MessageProps) => {
   return (
-    <div className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
+    <div className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} group`}>
       <div
-        className={`max-w-[80%] rounded-lg p-3 ${
+        className={cn(
+          "max-w-[80%] rounded-lg p-3",
           isCurrentUser
-            ? 'bg-primary text-primary-foreground ml-auto'
-            : 'bg-secondary'
-        }`}
+            ? "bg-primary text-primary-foreground ml-auto rounded-br-none"
+            : "bg-secondary rounded-bl-none"
+        )}
       >
         {!isCurrentUser && (
           <div className="flex items-center gap-2 mb-1">
@@ -37,16 +45,25 @@ export const ChatMessage = ({
             <span className="text-xs font-medium">{senderName}</span>
           </div>
         )}
-        <p>{content}</p>
+        <p className="whitespace-pre-wrap break-words">{content}</p>
         <div
-          className={`text-xs mt-1 text-right ${
+          className={cn(
+            "text-xs mt-1 text-right",
             isCurrentUser
-              ? 'text-primary-foreground/80'
-              : 'text-muted-foreground'
-          }`}
+              ? "text-primary-foreground/80"
+              : "text-muted-foreground"
+          )}
         >
           {formatTime(timestamp)}
         </div>
+        
+        {onReactionToggle && (
+          <MessageReactions
+            reactions={reactions}
+            currentUserId={senderId}
+            onReactionToggle={(emoji) => onReactionToggle(id, emoji)}
+          />
+        )}
       </div>
     </div>
   );
