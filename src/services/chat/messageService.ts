@@ -1,8 +1,10 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ChatMessage, MessageReactions } from "./types";
+import { ChatMessage } from "./types";
 import { joinGroupIfNotMember } from "./membershipService";
+import { fetchMessageReactions, updateMessageReaction } from "./reactionService";
+import { fetchMessageSenders } from "./userService";
 
 export const getGroupMessages = async (groupId: string): Promise<ChatMessage[]> => {
   try {
@@ -46,27 +48,18 @@ export const getGroupMessages = async (groupId: string): Promise<ChatMessage[]> 
       return [];
     }
     
+    // Get all unique sender IDs to fetch their profiles
     const senderIds = [...new Set(messages.map(msg => msg.sender_id))];
     
-    const { data: profiles, error: profileError } = await supabase
-      .from("profiles")
-      .select("id, name, avatar_url")
-      .in("id", senderIds);
-      
-    if (profileError) throw profileError;
+    // Fetch profiles for all senders in one query
+    const profiles = await fetchMessageSenders(senderIds);
 
+    // Transform the messages with sender information
     return messages.map(message => {
       const sender = profiles?.find(p => p.id === message.sender_id);
       
-      // Convert JSON reactions to MessageReactions type
-      const reactionsObj: MessageReactions = {};
-      if (message.reactions && typeof message.reactions === 'object') {
-        Object.entries(message.reactions as Record<string, string[]>).forEach(([emoji, userIds]) => {
-          if (Array.isArray(userIds)) {
-            reactionsObj[emoji] = userIds;
-          }
-        });
-      }
+      // Process message reactions
+      const reactionsObj = fetchMessageReactions(message.reactions);
       
       return {
         id: message.id,
@@ -133,16 +126,13 @@ export const sendGroupMessage = async (
 
     if (profileError) throw profileError;
 
-    // Empty reactions object for new message
-    const reactionsObj: MessageReactions = {};
-
     return {
       id: insertedMessage.id,
       group_id: insertedMessage.group_id,
       user_id: insertedMessage.sender_id,
       content: insertedMessage.content,
       created_at: insertedMessage.created_at,
-      reactions: reactionsObj,
+      reactions: {},
       sender: {
         id: profileData.id,
         name: profileData.name,
@@ -167,45 +157,7 @@ export const addMessageReaction = async (
       return false;
     }
 
-    const { data: message, error: fetchError } = await supabase
-      .from("group_messages")
-      .select("reactions")
-      .eq("id", messageId)
-      .single();
-
-    if (fetchError) throw fetchError;
-
-    // Convert database JSON to our MessageReactions type
-    let updatedReactions: MessageReactions = {};
-    if (message?.reactions && typeof message.reactions === 'object') {
-      Object.entries(message.reactions as Record<string, string[]>).forEach(([emoji, userIds]) => {
-        if (Array.isArray(userIds)) {
-          updatedReactions[emoji] = userIds;
-        }
-      });
-    }
-    
-    // Add or remove the reaction
-    if (!updatedReactions[reaction]) {
-      updatedReactions[reaction] = [];
-    }
-    
-    if (!updatedReactions[reaction].includes(user.user.id)) {
-      updatedReactions[reaction] = [...updatedReactions[reaction], user.user.id];
-    } else {
-      updatedReactions[reaction] = updatedReactions[reaction].filter(id => id !== user.user.id);
-      if (updatedReactions[reaction].length === 0) {
-        delete updatedReactions[reaction];
-      }
-    }
-
-    const { error: updateError } = await supabase
-      .from("group_messages")
-      .update({ reactions: updatedReactions })
-      .eq("id", messageId);
-
-    if (updateError) throw updateError;
-    return true;
+    return await updateMessageReaction(messageId, user.user.id, reaction);
   } catch (error) {
     console.error("Error adding reaction:", error);
     toast.error("Failed to add reaction");

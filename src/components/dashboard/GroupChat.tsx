@@ -1,40 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/auth';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { 
-  Send, 
-  File, 
-  Image, 
-  Paperclip, 
-  Users, 
-  Info, 
-  Settings,
-  Plus
-} from 'lucide-react';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
-} from '@/components/ui/dropdown-menu';
-import { Badge } from '@/components/ui/badge';
-import { 
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Separator } from '@/components/ui/separator';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   ChatGroup, 
   ChatMessage, 
@@ -50,8 +17,11 @@ import {
   subscribeToTypingIndicators,
   sendTypingIndicator
 } from '@/services/chat';
-import { supabase } from '@/integrations/supabase/client';
 import { TypingUser } from '@/hooks/chat';
+import GroupList from './chat/GroupList';
+import ChatContainer from './chat/ChatContainer';
+import CreateGroupDialog from './chat/CreateGroupDialog';
+import GroupMembersDialog from './chat/GroupMembersDialog';
 
 const GroupChat = () => {
   const { currentUser } = useAuth();
@@ -70,8 +40,6 @@ const GroupChat = () => {
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [activeTab, setActiveTab] = useState('my-groups');
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
-  
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
     const storedGroupId = sessionStorage.getItem('selectedGroupId');
@@ -140,14 +108,6 @@ const GroupChat = () => {
     }
   }, [selectedGroup, currentUser?.id]);
   
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-  
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-  
   const handleSendMessage = async () => {
     if (!messageInput.trim() || !selectedGroup || !currentUser) return;
     
@@ -190,25 +150,26 @@ const GroupChat = () => {
     }
   };
   
-  const handleLeaveGroup = async (groupId: string) => {
+  const handleLeaveGroup = async () => {
+    if (!selectedGroup) return;
+    
     if (window.confirm("Are you sure you want to leave this group?")) {
-      const success = await leaveChatGroup(groupId);
+      const success = await leaveChatGroup(selectedGroup);
       
       if (success) {
-        setGroups(prev => prev.filter(g => g.id !== groupId));
-        
-        if (selectedGroup === groupId) {
-          setSelectedGroup(null);
-          setMessages([]);
-        }
+        setGroups(prev => prev.filter(g => g.id !== selectedGroup));
+        setSelectedGroup(null);
+        setMessages([]);
       }
     }
   };
   
-  const handleShowMembers = async (groupId: string) => {
+  const handleShowMembers = async () => {
+    if (!selectedGroup) return;
+    
     setMembersLoading(true);
     try {
-      const members = await getGroupMembers(groupId);
+      const members = await getGroupMembers(selectedGroup);
       setGroupMembers(members);
       setShowMembersModal(true);
     } finally {
@@ -262,382 +223,60 @@ const GroupChat = () => {
     }
   };
   
+  const selectedGroupName = groups.find(g => g.id === selectedGroup)?.name;
+  
   return (
     <div className="h-[calc(100vh-16rem)] flex flex-col md:flex-row gap-4">
-      <div className="w-full md:w-64 flex-shrink-0 border rounded-lg overflow-hidden">
-        <div className="p-3 border-b bg-muted/30">
-          <div className="flex justify-between items-center">
-            <h3 className="font-medium flex items-center">
-              <Users className="h-4 w-4 mr-2" />
-              Study Groups
-            </h3>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-8 w-8 p-0" 
-              onClick={() => setIsCreatingGroup(true)}
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-        <div className="p-2">
-          <div className="flex space-x-2 mb-2">
-            <Button
-              variant={activeTab === 'my-groups' ? "default" : "outline"}
-              size="sm"
-              className="w-1/2"
-              onClick={() => setActiveTab('my-groups')}
-            >
-              My Groups
-            </Button>
-            <Button
-              variant={activeTab === 'discover' ? "default" : "outline"}
-              size="sm"
-              className="w-1/2"
-              onClick={() => setActiveTab('discover')}
-            >
-              Discover
-            </Button>
-          </div>
-        </div>
-        <div className="p-2 h-[calc(100%-6rem)] overflow-y-auto">
-          {loading ? (
-            <div className="flex flex-col gap-2">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="h-14 bg-muted animate-pulse rounded-md"></div>
-              ))}
-            </div>
-          ) : (
-            activeTab === 'my-groups' ? (
-              groups.length > 0 ? (
-                groups.map(group => (
-                  <Button
-                    key={group.id}
-                    variant={selectedGroup === group.id ? "default" : "ghost"}
-                    className="w-full justify-start mb-1 relative"
-                    onClick={() => setSelectedGroup(group.id)}
-                  >
-                    <div className="flex items-center w-full overflow-hidden">
-                      <span className="truncate">{group.name}</span>
-                      {group.unread && group.unread > 0 && (
-                        <Badge className="ml-auto bg-red-500 text-white min-w-[1.5rem] flex items-center justify-center">
-                          {group.unread}
-                        </Badge>
-                      )}
-                    </div>
-                  </Button>
-                ))
-              ) : (
-                <div className="text-center py-6 text-muted-foreground">
-                  <p>You haven't joined any groups yet.</p>
-                  <Button 
-                    variant="link" 
-                    onClick={() => setActiveTab('discover')}
-                  >
-                    Discover groups
-                  </Button>
-                </div>
-              )
-            ) : (
-              publicGroups.length > 0 ? (
-                publicGroups.map(group => (
-                  <div key={group.id} className="mb-2 p-2 border rounded-md">
-                    <div className="font-medium">{group.name}</div>
-                    <div className="text-sm text-muted-foreground mb-1">
-                      {group.members} members
-                    </div>
-                    <div className="flex justify-end">
-                      <Button 
-                        size="sm" 
-                        onClick={() => handleJoinGroup(group.id)}
-                      >
-                        Join
-                      </Button>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-6 text-muted-foreground">
-                  <p>No public groups available.</p>
-                  <Button 
-                    variant="link" 
-                    onClick={() => setIsCreatingGroup(true)}
-                  >
-                    Create a group
-                  </Button>
-                </div>
-              )
-            )
-          )}
-        </div>
-      </div>
+      <GroupList 
+        groups={groups}
+        publicGroups={publicGroups}
+        loading={loading}
+        selectedGroup={selectedGroup}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        onSelectGroup={setSelectedGroup}
+        onCreateGroup={() => setIsCreatingGroup(true)}
+        onJoinGroup={handleJoinGroup}
+      />
       
       <div className="flex-grow flex flex-col border rounded-lg overflow-hidden">
-        {selectedGroup ? (
-          <>
-            <div className="p-3 border-b flex justify-between items-center bg-muted/30">
-              <h3 className="font-medium">
-                {groups.find(g => g.id === selectedGroup)?.name}
-              </h3>
-              <div className="flex items-center gap-2">
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={() => handleShowMembers(selectedGroup)}
-                >
-                  <Users className="h-4 w-4" />
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <Settings className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Chat Settings</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem>Mute Notifications</DropdownMenuItem>
-                    <DropdownMenuItem>Pin Chat</DropdownMenuItem>
-                    {isGroupAdmin() && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem>Manage Members</DropdownMenuItem>
-                        <DropdownMenuItem>Group Settings</DropdownMenuItem>
-                      </>
-                    )}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem 
-                      className="text-red-500"
-                      onClick={() => handleLeaveGroup(selectedGroup)}
-                    >
-                      Leave Group
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-            
-            <div className="flex-grow p-4 overflow-y-auto">
-              {messages.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-center text-muted-foreground">
-                  <Users className="h-12 w-12 mb-4" />
-                  <h3 className="text-lg font-medium">No messages yet</h3>
-                  <p>Be the first to start the conversation!</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {messages.map((message) => {
-                    const isCurrentUser = message.user_id === currentUser?.id;
-                    
-                    return (
-                      <div 
-                        key={message.id} 
-                        className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} gap-2`}
-                      >
-                        {!isCurrentUser && (
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={message.sender?.avatar} alt={message.sender?.name} />
-                            <AvatarFallback>
-                              {message.sender?.name?.split(' ').map(n => n[0]).join('')}
-                            </AvatarFallback>
-                          </Avatar>
-                        )}
-                        
-                        <div className={`max-w-[70%]`}>
-                          {!isCurrentUser && (
-                            <p className="text-xs text-muted-foreground mb-1">
-                              {message.sender?.name}
-                            </p>
-                          )}
-                          
-                          <Card className={`${
-                            isCurrentUser ? 'bg-primary text-primary-foreground ml-auto' : 'bg-muted'
-                          }`}>
-                            <CardContent className="p-3 text-sm">
-                              {message.content}
-                            </CardContent>
-                          </Card>
-                          
-                          <p className={`text-xs text-muted-foreground mt-1 ${
-                            isCurrentUser ? 'text-right' : 'text-left'
-                          }`}>
-                            {formatTimestamp(message.created_at)}
-                          </p>
-                        </div>
-                        
-                        {isCurrentUser && (
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={message.sender?.avatar} alt={message.sender?.name} />
-                            <AvatarFallback>
-                              {message.sender?.name?.split(' ').map(n => n[0]).join('')}
-                            </AvatarFallback>
-                          </Avatar>
-                        )}
-                      </div>
-                    );
-                  })}
-                  {typingUsers.length > 0 && (
-                    <div className="flex items-center text-sm text-muted-foreground animate-pulse">
-                      <div className="flex items-center space-x-1 ml-2">
-                        <div className="w-1 h-1 bg-current rounded-full animate-bounce"></div>
-                        <div className="w-1 h-1 bg-current rounded-full animate-bounce delay-75"></div>
-                        <div className="w-1 h-1 bg-current rounded-full animate-bounce delay-150"></div>
-                      </div>
-                      <span className="ml-2">{getTypingIndicator()}</span>
-                    </div>
-                  )}
-                  <div ref={messagesEndRef} />
-                </div>
-              )}
-            </div>
-            
-            <div className="p-3 border-t">
-              <div className="flex items-center gap-2">
-                <Input 
-                  placeholder="Type your message..." 
-                  value={messageInput}
-                  onChange={(e) => {
-                    setMessageInput(e.target.value);
-                    handleTyping();
-                  }}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                />
-                
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="icon">
-                      <Paperclip className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem>
-                      <File className="h-4 w-4 mr-2" />
-                      Document
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Image className="h-4 w-4 mr-2" />
-                      Photo
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                
-                <Button onClick={handleSendMessage}>
-                  <Send className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="h-full flex flex-col items-center justify-center text-center text-muted-foreground p-4">
-            <Users className="h-12 w-12 mb-4" />
-            <h3 className="text-lg font-medium">Select a group to start chatting</h3>
-            <p>Choose a study group from the list on the left.</p>
-          </div>
-        )}
+        <ChatContainer 
+          selectedGroup={selectedGroup}
+          selectedGroupName={selectedGroupName}
+          messages={messages}
+          currentUserId={currentUser?.id}
+          isGroupAdmin={isGroupAdmin()}
+          messageInput={messageInput}
+          setMessageInput={setMessageInput}
+          handleSendMessage={handleSendMessage}
+          formatTimestamp={formatTimestamp}
+          typingUsers={typingUsers}
+          getTypingIndicator={getTypingIndicator}
+          handleTyping={handleTyping}
+          onShowMembers={handleShowMembers}
+          onLeaveGroup={handleLeaveGroup}
+        />
       </div>
       
-      <Dialog open={isCreatingGroup} onOpenChange={setIsCreatingGroup}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create a New Study Group</DialogTitle>
-            <DialogDescription>
-              Create a study group to collaborate with other students.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Group Name</Label>
-              <Input 
-                id="name" 
-                value={newGroupName}
-                onChange={(e) => setNewGroupName(e.target.value)}
-                placeholder="e.g., Physics Study Group" 
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea 
-                id="description" 
-                value={newGroupDescription}
-                onChange={(e) => setNewGroupDescription(e.target.value)}
-                placeholder="What will your group be studying?"
-                rows={3}
-              />
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="private"
-                checked={newGroupIsPrivate}
-                onCheckedChange={setNewGroupIsPrivate}
-              />
-              <Label htmlFor="private">Private Group</Label>
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCreatingGroup(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreateGroup}>
-              Create Group
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CreateGroupDialog 
+        isOpen={isCreatingGroup}
+        onOpenChange={setIsCreatingGroup}
+        newGroupName={newGroupName}
+        setNewGroupName={setNewGroupName}
+        newGroupDescription={newGroupDescription}
+        setNewGroupDescription={setNewGroupDescription}
+        newGroupIsPrivate={newGroupIsPrivate}
+        setNewGroupIsPrivate={setNewGroupIsPrivate}
+        onCreateGroup={handleCreateGroup}
+      />
       
-      <Dialog open={showMembersModal} onOpenChange={setShowMembersModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Group Members</DialogTitle>
-            <DialogDescription>
-              {groups.find(g => g.id === selectedGroup)?.name || "Group"} has {groupMembers.length} members.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="py-4">
-            {membersLoading ? (
-              <div className="space-y-2">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="flex items-center space-x-2">
-                    <div className="w-8 h-8 rounded-full bg-muted animate-pulse" />
-                    <div className="h-4 w-40 bg-muted animate-pulse rounded" />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                {groupMembers.map(member => (
-                  <div key={member.id} className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={member.user?.avatar_url} />
-                        <AvatarFallback>
-                          {member.user?.name?.split(' ').map((n: string) => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span>{member.user?.name}</span>
-                    </div>
-                    
-                    {member.is_admin && (
-                      <Badge variant="outline">Admin</Badge>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          
-          <DialogFooter>
-            <Button onClick={() => setShowMembersModal(false)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <GroupMembersDialog 
+        isOpen={showMembersModal}
+        onOpenChange={setShowMembersModal}
+        groupName={selectedGroupName}
+        membersLoading={membersLoading}
+        groupMembers={groupMembers}
+      />
     </div>
   );
 };

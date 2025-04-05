@@ -1,5 +1,5 @@
 
-import { ChatRoom as ServiceChatRoom } from '@/services/chat';
+import { ChatGroup } from '@/services/chat';
 
 // Interface for the transformed message format
 export interface Message {
