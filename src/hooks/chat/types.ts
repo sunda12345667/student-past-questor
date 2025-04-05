@@ -1,5 +1,5 @@
 
-import { ChatGroup } from '@/services/chat';
+import { ChatGroup, MessageAttachment } from '@/services/chat';
 
 // Interface for the transformed message format
 export interface Message {
@@ -9,6 +9,7 @@ export interface Message {
   content: string;
   timestamp: Date;
   reactions?: Record<string, string[]>;
+  attachments?: MessageAttachment[];
 }
 
 // Interface for typing users
@@ -34,6 +35,6 @@ export interface UseChatResult {
   typingUsers: TypingUser[];
   isLoading: boolean;
   handleJoinRoom: (roomId: string, roomName: string) => void;
-  handleSendMessage: (content: string) => Promise<void>;
+  handleSendMessage: (content: string, attachments?: File[]) => Promise<void>;
   handleTypingIndicator: () => void;
 }

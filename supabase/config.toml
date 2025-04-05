@@ -1,1 +1,6 @@
+
 project_id = "mincssuyfzyrtuwooeyo"
+
+[db_configs]
+[db_configs.setup]
+requires_migrations = true

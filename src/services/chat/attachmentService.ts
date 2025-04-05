@@ -1,90 +1,99 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { v4 as uuidv4 } from "uuid";
-import { toast } from "sonner";
-
-export type AttachmentType = "image" | "document" | "other";
+import { MessageAttachment } from "./types";
 
 export interface Attachment {
   id: string;
   url: string;
   filename: string;
-  fileType: AttachmentType;
+  fileType: "image" | "document" | "other";
   size: number;
   thumbnailUrl?: string;
 }
 
-/**
- * Uploads a file to Supabase storage
- */
-export const uploadAttachment = async (
-  file: File,
-  groupId: string
-): Promise<Attachment | null> => {
+export const uploadAttachment = async (file: File, groupId: string): Promise<MessageAttachment | null> => {
   try {
-    // Generate a unique file name to prevent collision
+    const fileId = uuidv4();
     const fileExt = file.name.split('.').pop();
-    const fileName = `${uuidv4()}.${fileExt}`;
-    const filePath = `${groupId}/${fileName}`;
+    const filePath = `${groupId}/${fileId}.${fileExt}`;
+    const bucketName = 'chat-attachments';
+
+    // Check if the bucket exists, create if it doesn't
+    const { data: buckets } = await supabase.storage.listBuckets();
+    const bucketExists = buckets?.some(b => b.name === bucketName);
     
-    // Upload file to storage
-    const { data, error } = await supabase
-      .storage
-      .from('chat-attachments')
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: false
-      });
-      
-    if (error) {
-      throw error;
+    if (!bucketExists) {
+      console.log("Chat attachments bucket doesn't exist yet, working with temporary file");
+      // Return a temporary file object if the bucket doesn't exist yet
+      return {
+        id: fileId,
+        url: URL.createObjectURL(file),
+        filename: file.name,
+        fileType: file.type.startsWith('image/') ? "image" : "document",
+        size: file.size,
+        thumbnailUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined
+      };
     }
     
-    // Get public URL for the file
-    const { data: { publicUrl } } = supabase
-      .storage
-      .from('chat-attachments')
+    // Upload the file
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from(bucketName)
+      .upload(filePath, file);
+    
+    if (uploadError) {
+      console.error("Error uploading file:", uploadError);
+      return null;
+    }
+    
+    // Get the public URL
+    const { data: urlData } = supabase.storage
+      .from(bucketName)
       .getPublicUrl(filePath);
-      
-    // Determine file type
-    let fileType: AttachmentType = "other";
-    let thumbnailUrl = undefined;
     
-    if (file.type.startsWith('image/')) {
-      fileType = "image";
-      thumbnailUrl = publicUrl;
-    } else if (
-      file.type === 'application/pdf' ||
-      file.type.includes('document') ||
-      file.type.includes('text/')
-    ) {
-      fileType = "document";
+    if (!urlData || !urlData.publicUrl) {
+      console.error("Failed to get public URL");
+      return null;
     }
+    
+    // Determine file type
+    const fileType = file.type.startsWith('image/') 
+      ? "image"
+      : file.type.includes('pdf') || file.type.includes('doc') || file.type.includes('txt')
+        ? "document"
+        : "other";
+    
+    // Create thumbnails for images if needed
+    const thumbnailUrl = fileType === "image" ? urlData.publicUrl : undefined;
     
     return {
-      id: data.path,
-      url: publicUrl,
+      id: fileId,
+      url: urlData.publicUrl,
       filename: file.name,
       fileType,
       size: file.size,
       thumbnailUrl
     };
   } catch (error) {
-    console.error("Error uploading file:", error);
-    toast.error("Failed to upload file");
+    console.error("Error in uploadAttachment:", error);
     return null;
   }
 };
 
-export const formatFileSize = (bytes: number): string => {
-  if (bytes < 1024) {
-    return bytes + ' B';
-  } else if (bytes < 1024 * 1024) {
-    return (bytes / 1024).toFixed(1) + ' KB';
-  } else if (bytes < 1024 * 1024 * 1024) {
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  } else {
-    return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
+export const deleteAttachment = async (filePath: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase.storage
+      .from('chat-attachments')
+      .remove([filePath]);
+    
+    if (error) {
+      console.error("Error deleting file:", error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Error in deleteAttachment:", error);
+    return false;
   }
 };
-

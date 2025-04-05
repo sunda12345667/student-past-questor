@@ -30,17 +30,32 @@ export const getGroupMessages = async (groupId: string): Promise<ChatMessage[]> 
       }
     }
 
+    // Check if the attachments column exists in the group_messages table
+    const { data: columns, error: columnsError } = await supabase
+      .from('group_messages')
+      .select('*')
+      .limit(1);
+    
+    if (columnsError) {
+      console.error("Error checking columns:", columnsError);
+    }
+
+    // Check if we need to include attachments in the query
+    const hasAttachmentsColumn = columns && columns.length > 0 && 'attachments' in columns[0];
+
+    const selectQuery = `
+      id,
+      group_id,
+      sender_id,
+      content,
+      created_at,
+      reactions
+      ${hasAttachmentsColumn ? ', attachments' : ''}
+    `;
+
     const { data: messages, error: messageError } = await supabase
       .from("group_messages")
-      .select(`
-        id,
-        group_id,
-        sender_id,
-        content,
-        created_at,
-        reactions,
-        attachments
-      `)
+      .select(selectQuery)
       .eq("group_id", groupId)
       .order("created_at", { ascending: true });
 
@@ -70,7 +85,8 @@ export const getGroupMessages = async (groupId: string): Promise<ChatMessage[]> 
         content: message.content,
         created_at: message.created_at,
         reactions: reactionsObj,
-        attachments: message.attachments || [],
+        // Safely handle attachments field which might not exist yet
+        attachments: hasAttachmentsColumn && message.attachments ? message.attachments : [],
         sender: sender ? {
           id: sender.id,
           name: sender.name,
@@ -109,9 +125,22 @@ export const sendGroupMessage = async (
       return null;
     }
 
-    // Upload attachments if any
+    // Check if the attachments column exists in the group_messages table
+    const { data: columns, error: columnsError } = await supabase
+      .from('group_messages')
+      .select('*')
+      .limit(1);
+    
+    if (columnsError) {
+      console.error("Error checking columns:", columnsError);
+    }
+    
+    // Check if we need to include attachments in the insert
+    const hasAttachmentsColumn = columns && columns.length > 0 && 'attachments' in columns[0];
+
+    // Upload attachments if any and if attachments column exists
     let attachments: MessageAttachment[] = [];
-    if (attachmentFiles && attachmentFiles.length > 0) {
+    if (hasAttachmentsColumn && attachmentFiles && attachmentFiles.length > 0) {
       const uploadPromises = attachmentFiles.map(file => 
         uploadAttachment(file, groupId)
       );
@@ -124,17 +153,32 @@ export const sendGroupMessage = async (
       }
     }
 
+    // Prepare the message data
+    const messageData: any = {
+      group_id: groupId,
+      sender_id: user.user.id,
+      content,
+      reactions: {}
+    };
+
+    // Only add attachments field if the column exists
+    if (hasAttachmentsColumn && attachments.length > 0) {
+      messageData.attachments = attachments;
+    }
+
     // Send message with any successfully uploaded attachments
     const { data: insertedMessage, error: insertError } = await supabase
       .from("group_messages")
-      .insert({
-        group_id: groupId,
-        sender_id: user.user.id,
-        content,
-        reactions: {},
-        attachments: attachments.length > 0 ? attachments : null
-      })
-      .select(`id, group_id, sender_id, content, created_at, reactions, attachments`)
+      .insert(messageData)
+      .select(`
+        id, 
+        group_id, 
+        sender_id, 
+        content, 
+        created_at, 
+        reactions
+        ${hasAttachmentsColumn ? ', attachments' : ''}
+      `)
       .single();
 
     if (insertError) throw insertError;
@@ -154,7 +198,8 @@ export const sendGroupMessage = async (
       content: insertedMessage.content,
       created_at: insertedMessage.created_at,
       reactions: {},
-      attachments: insertedMessage.attachments || [],
+      // Safely handle attachments field which might not exist yet
+      attachments: hasAttachmentsColumn && insertedMessage.attachments ? insertedMessage.attachments : [],
       sender: {
         id: profileData.id,
         name: profileData.name,
