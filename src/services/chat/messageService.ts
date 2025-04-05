@@ -1,10 +1,11 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ChatMessage } from "./types";
+import { ChatMessage, MessageAttachment } from "./types";
 import { joinGroupIfNotMember } from "./membershipService";
 import { fetchMessageReactions, updateMessageReaction } from "./reactionService";
 import { fetchMessageSenders } from "./userService";
+import { uploadAttachment } from "./attachmentService";
 
 export const getGroupMessages = async (groupId: string): Promise<ChatMessage[]> => {
   try {
@@ -37,7 +38,8 @@ export const getGroupMessages = async (groupId: string): Promise<ChatMessage[]> 
         sender_id,
         content,
         created_at,
-        reactions
+        reactions,
+        attachments
       `)
       .eq("group_id", groupId)
       .order("created_at", { ascending: true });
@@ -68,6 +70,7 @@ export const getGroupMessages = async (groupId: string): Promise<ChatMessage[]> 
         content: message.content,
         created_at: message.created_at,
         reactions: reactionsObj,
+        attachments: message.attachments || [],
         sender: sender ? {
           id: sender.id,
           name: sender.name,
@@ -84,7 +87,8 @@ export const getGroupMessages = async (groupId: string): Promise<ChatMessage[]> 
 
 export const sendGroupMessage = async (
   groupId: string,
-  content: string
+  content: string,
+  attachmentFiles?: File[]
 ): Promise<ChatMessage | null> => {
   try {
     const { data: user } = await supabase.auth.getUser();
@@ -105,15 +109,32 @@ export const sendGroupMessage = async (
       return null;
     }
 
+    // Upload attachments if any
+    let attachments: MessageAttachment[] = [];
+    if (attachmentFiles && attachmentFiles.length > 0) {
+      const uploadPromises = attachmentFiles.map(file => 
+        uploadAttachment(file, groupId)
+      );
+      
+      const results = await Promise.all(uploadPromises);
+      attachments = results.filter(Boolean) as MessageAttachment[];
+      
+      if (attachments.length < attachmentFiles.length) {
+        toast.warning("Some attachments failed to upload");
+      }
+    }
+
+    // Send message with any successfully uploaded attachments
     const { data: insertedMessage, error: insertError } = await supabase
       .from("group_messages")
       .insert({
         group_id: groupId,
         sender_id: user.user.id,
         content,
-        reactions: {}
+        reactions: {},
+        attachments: attachments.length > 0 ? attachments : null
       })
-      .select(`id, group_id, sender_id, content, created_at, reactions`)
+      .select(`id, group_id, sender_id, content, created_at, reactions, attachments`)
       .single();
 
     if (insertError) throw insertError;
@@ -133,6 +154,7 @@ export const sendGroupMessage = async (
       content: insertedMessage.content,
       created_at: insertedMessage.created_at,
       reactions: {},
+      attachments: insertedMessage.attachments || [],
       sender: {
         id: profileData.id,
         name: profileData.name,

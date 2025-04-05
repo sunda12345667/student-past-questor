@@ -3,6 +3,7 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ChatMessage } from '@/services/chat';
+import { AttachmentPreview } from './AttachmentPreview';
 
 interface MessageItemProps {
   message: ChatMessage;
@@ -16,6 +17,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
   formatTimestamp
 }) => {
   const isCurrentUser = message.user_id === currentUserId;
+  const hasAttachments = message.attachments && message.attachments.length > 0;
   
   return (
     <div 
@@ -41,7 +43,19 @@ const MessageItem: React.FC<MessageItemProps> = ({
           isCurrentUser ? 'bg-primary text-primary-foreground ml-auto' : 'bg-muted'
         }`}>
           <CardContent className="p-3 text-sm">
-            {message.content}
+            {message.content && <p className="mb-2">{message.content}</p>}
+            
+            {hasAttachments && (
+              <div className="space-y-2">
+                {message.attachments?.map(attachment => (
+                  <AttachmentPreview
+                    key={attachment.id}
+                    attachment={attachment}
+                    isInMessage={true}
+                  />
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
         

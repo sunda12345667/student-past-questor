@@ -16,6 +16,16 @@ export interface MessageReactions {
   [emoji: string]: string[]; // Map of emoji to array of user IDs who reacted with that emoji
 }
 
+// Attachment interface
+export interface MessageAttachment {
+  id: string;
+  url: string;
+  filename: string;
+  fileType: "image" | "document" | "other";
+  size: number;
+  thumbnailUrl?: string;
+}
+
 // Chat message interface
 export interface ChatMessage {
   id: string;
@@ -24,6 +34,7 @@ export interface ChatMessage {
   content: string;
   created_at: string;
   reactions?: MessageReactions;
+  attachments?: MessageAttachment[];
   sender?: {
     id: string;
     name: string;

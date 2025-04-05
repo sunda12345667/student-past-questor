@@ -18,6 +18,7 @@ import {
   sendTypingIndicator
 } from '@/services/chat';
 import { TypingUser } from '@/hooks/chat';
+import { Attachment } from '@/services/chat/attachmentService';
 import GroupList from './chat/GroupList';
 import ChatContainer from './chat/ChatContainer';
 import CreateGroupDialog from './chat/CreateGroupDialog';
@@ -108,10 +109,31 @@ const GroupChat = () => {
     }
   }, [selectedGroup, currentUser?.id]);
   
-  const handleSendMessage = async () => {
-    if (!messageInput.trim() || !selectedGroup || !currentUser) return;
+  const handleSendMessage = async (content: string, attachments?: Attachment[]) => {
+    if ((!content.trim() && (!attachments || attachments.length === 0)) || !selectedGroup || !currentUser) return;
     
-    const success = await sendGroupMessage(selectedGroup, messageInput);
+    // Convert attachments to Files for upload
+    const files: File[] = [];
+    if (attachments && attachments.length > 0) {
+      for (const attachment of attachments) {
+        try {
+          // Fetch the blob from the URL
+          const response = await fetch(attachment.url);
+          const blob = await response.blob();
+          
+          // Create a File from the Blob
+          const file = new File([blob], attachment.filename, {
+            type: attachment.fileType === 'image' ? 'image/jpeg' : 'application/octet-stream',
+          });
+          
+          files.push(file);
+        } catch (error) {
+          console.error("Error converting attachment to file:", error);
+        }
+      }
+    }
+    
+    const success = await sendGroupMessage(selectedGroup, content, files);
     if (success) {
       setMessageInput('');
     }

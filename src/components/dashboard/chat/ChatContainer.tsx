@@ -6,6 +6,7 @@ import MessageList from './MessageList';
 import MessageInput from './MessageInput';
 import { ChatMessage } from '@/services/chat';
 import { TypingUser } from '@/hooks/chat';
+import { Attachment } from '@/services/chat/attachmentService';
 
 interface ChatContainerProps {
   selectedGroup: string | null;
@@ -15,7 +16,7 @@ interface ChatContainerProps {
   isGroupAdmin: boolean;
   messageInput: string;
   setMessageInput: (value: string) => void;
-  handleSendMessage: () => void;
+  handleSendMessage: (content: string, attachments?: Attachment[]) => void;
   formatTimestamp: (timestamp: string) => string;
   typingUsers: TypingUser[];
   getTypingIndicator: () => string | null;
