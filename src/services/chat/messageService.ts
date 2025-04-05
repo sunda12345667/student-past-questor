@@ -73,10 +73,16 @@ export const getGroupMessages = async (groupId: string): Promise<ChatMessage[]> 
 
     // Transform the messages with sender information
     return messages.map(message => {
+      // Skip invalid messages
+      if (!message || typeof message !== 'object' || !('id' in message)) {
+        console.error("Invalid message format:", message);
+        return null;
+      }
+
       const sender = profiles?.find(p => p.id === message.sender_id);
       
       // Process message reactions
-      const reactionsObj = fetchMessageReactions(message.reactions);
+      const reactionsObj = fetchMessageReactions(message.reactions || {});
       
       return {
         id: message.id,
@@ -93,7 +99,7 @@ export const getGroupMessages = async (groupId: string): Promise<ChatMessage[]> 
           avatar: sender.avatar_url
         } : undefined
       };
-    });
+    }).filter(Boolean) as ChatMessage[]; // Filter out null entries
   } catch (error) {
     console.error("Error fetching group messages:", error);
     toast.error("Failed to load messages");
@@ -182,6 +188,12 @@ export const sendGroupMessage = async (
       .single();
 
     if (insertError) throw insertError;
+    
+    // Make sure insertedMessage is valid
+    if (!insertedMessage || typeof insertedMessage !== 'object') {
+      console.error("Invalid inserted message:", insertedMessage);
+      return null;
+    }
 
     const { data: profileData, error: profileError } = await supabase
       .from("profiles")

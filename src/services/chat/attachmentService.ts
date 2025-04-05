@@ -12,6 +12,19 @@ export interface Attachment {
   thumbnailUrl?: string;
 }
 
+/**
+ * Format file size in bytes to human-readable format
+ */
+export const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 Bytes';
+  
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
 export const uploadAttachment = async (file: File, groupId: string): Promise<MessageAttachment | null> => {
   try {
     const fileId = uuidv4();
