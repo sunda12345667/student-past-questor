@@ -35,7 +35,7 @@ router.post('/pay', async (req, res) => {
   }
 });
 
-// Purchase educational pins (WAEC, JAMB, etc.)
+// Purchase educational pins (WAEC, JAMB, NECO, GCE etc.)
 router.post('/education-pin', async (req, res) => {
   try {
     const { userId, pinType, quantity, email, phone, amount } = req.body;

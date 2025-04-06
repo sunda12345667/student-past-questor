@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,7 +35,7 @@ const BillPayments = () => {
   const [amount, setAmount] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const [educationalPinType, setEducationalPinType] = useState<'waec' | 'jamb' | 'neco'>('waec');
+  const [educationalPinType, setEducationalPinType] = useState<'waec' | 'jamb' | 'neco' | 'gce'>('waec');
   const [pinQuantity, setPinQuantity] = useState('1');
   const [email, setEmail] = useState('');
   const [recipientPhone, setRecipientPhone] = useState('');
@@ -321,7 +322,7 @@ const BillPayments = () => {
                 <Tabs value={activeEducationTab} onValueChange={setActiveEducationTab} className="w-full mb-4">
                   <TabsList className="grid grid-cols-2 w-full">
                     <TabsTrigger value="school-fees">School Fees</TabsTrigger>
-                    <TabsTrigger value="examination-pins">WAEC/JAMB PINs</TabsTrigger>
+                    <TabsTrigger value="examination-pins">Exam PINs</TabsTrigger>
                   </TabsList>
                   
                   <TabsContent value="school-fees">
@@ -369,11 +370,12 @@ const BillPayments = () => {
                           id="pinType" 
                           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                           value={educationalPinType}
-                          onChange={(e) => setEducationalPinType(e.target.value as 'waec' | 'jamb' | 'neco')}
+                          onChange={(e) => setEducationalPinType(e.target.value as 'waec' | 'jamb' | 'neco' | 'gce')}
                         >
                           <option value="waec">WAEC PIN</option>
                           <option value="jamb">JAMB PIN</option>
                           <option value="neco">NECO PIN</option>
+                          <option value="gce">GCE PIN</option>
                         </select>
                       </div>
                       

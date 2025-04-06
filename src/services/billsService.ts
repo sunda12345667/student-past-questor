@@ -20,9 +20,9 @@ export interface ServiceProvider {
   logo?: string;
 }
 
-// Educational pin types for WAEC, JAMB, etc.
+// Educational pin types for WAEC, JAMB, NECO, etc.
 export interface EducationalPin {
-  pinType: 'waec' | 'jamb' | 'neco';
+  pinType: 'waec' | 'jamb' | 'neco' | 'gce';
   quantity: number;
   email: string;
   phone: string;
@@ -64,7 +64,7 @@ export const payBill = async (
 };
 
 export const purchaseEducationalPin = async (
-  pinType: 'waec' | 'jamb' | 'neco',
+  pinType: 'waec' | 'jamb' | 'neco' | 'gce',
   quantity: number,
   email: string,
   phone: string
@@ -89,7 +89,7 @@ export const purchaseEducationalPin = async (
 };
 
 // Helper function to get the price of different educational pins
-export const getPinPrice = (pinType: 'waec' | 'jamb' | 'neco'): number => {
+export const getPinPrice = (pinType: 'waec' | 'jamb' | 'neco' | 'gce'): number => {
   switch (pinType) {
     case 'waec':
       return 7500; // WAEC PIN price in Naira
@@ -97,6 +97,8 @@ export const getPinPrice = (pinType: 'waec' | 'jamb' | 'neco'): number => {
       return 5700; // JAMB PIN price in Naira
     case 'neco':
       return 6500; // NECO PIN price in Naira
+    case 'gce':
+      return 8500; // GCE PIN price in Naira
     default:
       return 0;
   }
