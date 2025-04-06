@@ -105,6 +105,18 @@
   ::-webkit-scrollbar-thumb:hover {
     @apply bg-muted-foreground/50;
   }
+
+  /* Improve accessibility - focus styles */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  /* Mobile touch improvements */
+  @media (max-width: 768px) {
+    button, a, input, select, textarea {
+      @apply min-h-10 min-w-10;
+    }
+  }
 }
 
 @layer components {
@@ -121,23 +133,52 @@
   }
   
   .heading-xl {
-    @apply text-4xl md:text-5xl lg:text-6xl font-semibold;
+    @apply text-3xl md:text-4xl lg:text-5xl font-semibold;
   }
   
   .heading-lg {
-    @apply text-3xl md:text-4xl font-semibold;
-  }
-  
-  .heading-md {
     @apply text-2xl md:text-3xl font-semibold;
   }
   
-  .heading-sm {
+  .heading-md {
     @apply text-xl md:text-2xl font-semibold;
   }
   
+  .heading-sm {
+    @apply text-lg md:text-xl font-semibold;
+  }
+  
   .container-padding {
-    @apply px-4 md:px-6 lg:px-8;
+    @apply px-3 md:px-6 lg:px-8;
+  }
+
+  /* Typing indicator animation */
+  .typing-indicator .dot {
+    @apply inline-block rounded-full;
+    animation: typingDot 1.4s infinite both;
+  }
+  
+  .typing-indicator .dot:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+  
+  .typing-indicator .dot:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+
+  /* Mobile optimized card */
+  .mobile-card {
+    @apply w-full p-3 sm:p-4 rounded-lg border border-border bg-card;
+  }
+
+  /* Responsive container */
+  .responsive-container {
+    @apply w-full px-2 sm:px-4 md:px-6 py-3 sm:py-4 md:py-6;
+  }
+
+  /* Mobile nav */
+  .mobile-nav-item {
+    @apply p-3 flex items-center space-x-3 rounded-md hover:bg-accent transition-colors;
   }
 }
 
@@ -148,5 +189,64 @@
   
   .text-gradient {
     @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-400;
+  }
+
+  /* Responsive grid utilities */
+  .grid-responsive {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4;
+  }
+
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Visually hidden but accessible */
+  .sr-only {
+    @apply absolute w-0 h-0 p-0 -m-px overflow-hidden whitespace-nowrap border-0;
+  }
+
+  /* Toast position for mobile */
+  @media (max-width: 768px) {
+    .responsive-toast {
+      @apply bottom-4 left-4 right-4 top-auto max-w-none;
+    }
+  }
+}
+
+/* Animations */
+@keyframes typingDot {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.6;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+/* For screen readers but visually hidden */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Fix for mobile Safari bottom bar */
+@supports (-webkit-touch-callout: none) {
+  .min-h-screen {
+    min-height: -webkit-fill-available;
   }
 }
