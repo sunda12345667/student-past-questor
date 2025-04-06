@@ -35,6 +35,49 @@ router.post('/pay', async (req, res) => {
   }
 });
 
+// Purchase educational pins (WAEC, JAMB, etc.)
+router.post('/education-pin', async (req, res) => {
+  try {
+    const { userId, pinType, quantity, email, phone, amount } = req.body;
+    
+    // In a real application, you would integrate with the education PIN provider's API
+    // For now, we'll simulate a successful PIN purchase
+    
+    // Generate a mock PIN (in a real app this would come from the provider)
+    const mockPIN = Array(16).fill(0).map(() => Math.floor(Math.random() * 10)).join('');
+    
+    // Create a transaction record
+    const transactionRef = await adminDB.collection('billPayments').add({
+      userId,
+      serviceType: 'education',
+      provider: pinType,
+      accountNumber: email,
+      amount,
+      status: 'completed',
+      date: admin.firestore.FieldValue.serverTimestamp(),
+      reference: `${pinType.toUpperCase()}${Date.now().toString().substring(8)}`,
+      pin: mockPIN,
+      quantity,
+      recipientPhone: phone,
+      pinDetails: {
+        pinType,
+        serialNumber: `${pinType.toUpperCase()}${Date.now()}`,
+        expiresAt: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+      }
+    });
+    
+    res.status(200).json({ 
+      id: transactionRef.id,
+      status: 'completed',
+      message: `Your ${pinType.toUpperCase()} PIN purchase was successful`,
+      reference: `${pinType.toUpperCase()}${Date.now().toString().substring(8)}`,
+    });
+  } catch (error) {
+    console.error('Educational PIN purchase error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get bill payment history for a user
 router.get('/history/:userId', async (req, res) => {
   try {

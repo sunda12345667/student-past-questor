@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,9 +12,10 @@ import {
   Lightbulb,
   GraduationCap,
   Ticket,
-  CheckCircle
+  CheckCircle,
+  BookOpen
 } from 'lucide-react';
-import { payBill, getServiceProviders } from '@/services/billsService';
+import { payBill, getServiceProviders, purchaseEducationalPin, getPinPrice } from '@/services/billsService';
 
 const BillPayments = () => {
   const [activeService, setActiveService] = useState('airtime');
@@ -33,13 +33,18 @@ const BillPayments = () => {
   const [quantity, setQuantity] = useState('1');
   const [amount, setAmount] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const [educationalPinType, setEducationalPinType] = useState<'waec' | 'jamb' | 'neco'>('waec');
+  const [pinQuantity, setPinQuantity] = useState('1');
+  const [email, setEmail] = useState('');
+  const [recipientPhone, setRecipientPhone] = useState('');
+  const [activeEducationTab, setActiveEducationTab] = useState('school-fees');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     
     try {
-      // Get account number based on service type
       let accountNumber = '';
       switch (activeService) {
         case 'airtime':
@@ -53,14 +58,33 @@ const BillPayments = () => {
           accountNumber = meterNumber;
           break;
         case 'education':
-          accountNumber = studentId;
+          if (activeEducationTab === 'school-fees') {
+            accountNumber = studentId;
+          } else {
+            const result = await purchaseEducationalPin(
+              educationalPinType,
+              parseInt(pinQuantity),
+              email,
+              recipientPhone
+            );
+            
+            toast.success(`Your ${educationalPinType.toUpperCase()} PIN purchase was successful`, {
+              description: `Reference: ${result.reference}`,
+              duration: 5000,
+            });
+            
+            setPinQuantity('1');
+            setEmail('');
+            setRecipientPhone('');
+            setIsSubmitting(false);
+            return;
+          }
           break;
         case 'event':
           accountNumber = eventName;
           break;
       }
       
-      // Get provider based on service type
       let provider = '';
       switch (activeService) {
         case 'airtime':
@@ -81,7 +105,6 @@ const BillPayments = () => {
           break;
       }
       
-      // Make API call to pay bill
       const result = await payBill(
         activeService as any,
         provider,
@@ -94,7 +117,6 @@ const BillPayments = () => {
         duration: 5000,
       });
       
-      // Reset form
       setPhoneNumber('');
       setSmartcardNumber('');
       setMeterNumber('');
@@ -296,26 +318,127 @@ const BillPayments = () => {
             
             {activeService === 'education' && (
               <>
-                <div className="space-y-2">
-                  <Label htmlFor="institution">Institution</Label>
-                  <Input 
-                    id="institution" 
-                    placeholder="Enter institution name" 
-                    value={institution}
-                    onChange={(e) => setInstitution(e.target.value)}
-                    required 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="studentId">Student ID/Reference</Label>
-                  <Input 
-                    id="studentId" 
-                    placeholder="Enter Student ID or Reference" 
-                    value={studentId}
-                    onChange={(e) => setStudentId(e.target.value)}
-                    required 
-                  />
-                </div>
+                <Tabs value={activeEducationTab} onValueChange={setActiveEducationTab} className="w-full mb-4">
+                  <TabsList className="grid grid-cols-2 w-full">
+                    <TabsTrigger value="school-fees">School Fees</TabsTrigger>
+                    <TabsTrigger value="examination-pins">WAEC/JAMB PINs</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="school-fees">
+                    <div className="space-y-4 pt-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="institution">Institution</Label>
+                        <Input 
+                          id="institution" 
+                          placeholder="Enter institution name" 
+                          value={institution}
+                          onChange={(e) => setInstitution(e.target.value)}
+                          required 
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="studentId">Student ID/Reference</Label>
+                        <Input 
+                          id="studentId" 
+                          placeholder="Enter Student ID or Reference" 
+                          value={studentId}
+                          onChange={(e) => setStudentId(e.target.value)}
+                          required 
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="amount">Amount</Label>
+                        <Input 
+                          id="amount" 
+                          placeholder="Enter amount" 
+                          type="number" 
+                          min="0" 
+                          value={amount}
+                          onChange={(e) => setAmount(e.target.value)}
+                          required 
+                        />
+                      </div>
+                    </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="examination-pins">
+                    <div className="space-y-4 pt-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="pinType">Examination Type</Label>
+                        <select 
+                          id="pinType" 
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          value={educationalPinType}
+                          onChange={(e) => setEducationalPinType(e.target.value as 'waec' | 'jamb' | 'neco')}
+                        >
+                          <option value="waec">WAEC PIN</option>
+                          <option value="jamb">JAMB PIN</option>
+                          <option value="neco">NECO PIN</option>
+                        </select>
+                      </div>
+                      
+                      <div className="flex items-center justify-between rounded-md border p-3 bg-muted/30">
+                        <div className="flex items-center gap-2">
+                          <BookOpen className="h-5 w-5 text-primary" />
+                          <span className="font-medium">{educationalPinType.toUpperCase()} PIN</span>
+                        </div>
+                        <div className="font-semibold">₦{getPinPrice(educationalPinType).toLocaleString()}</div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="pinQuantity">Quantity</Label>
+                        <Input 
+                          id="pinQuantity" 
+                          type="number" 
+                          min="1" 
+                          max="10"
+                          value={pinQuantity}
+                          onChange={(e) => setPinQuantity(e.target.value)}
+                          required 
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email Address</Label>
+                        <Input 
+                          id="email" 
+                          type="email" 
+                          placeholder="Enter email to receive PIN" 
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          required 
+                        />
+                        <p className="text-xs text-muted-foreground">PINs will be sent to this email address</p>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Phone Number</Label>
+                        <Input 
+                          id="phone" 
+                          placeholder="Enter recipient phone number" 
+                          value={recipientPhone}
+                          onChange={(e) => setRecipientPhone(e.target.value)}
+                          required 
+                        />
+                      </div>
+                      
+                      <div className="rounded-md border p-3 space-y-1 bg-muted/30">
+                        <div className="flex justify-between">
+                          <span className="text-sm text-muted-foreground">PIN Price:</span>
+                          <span>₦{getPinPrice(educationalPinType).toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm text-muted-foreground">Quantity:</span>
+                          <span>{pinQuantity}</span>
+                        </div>
+                        <div className="flex justify-between font-medium pt-1 border-t">
+                          <span>Total Amount:</span>
+                          <span>₦{(getPinPrice(educationalPinType) * parseInt(pinQuantity)).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </TabsContent>
+                </Tabs>
               </>
             )}
             
@@ -358,25 +481,27 @@ const BillPayments = () => {
               </>
             )}
             
-            <div className="space-y-2">
-              <Label htmlFor="amount">Amount</Label>
-              <Input 
-                id="amount" 
-                placeholder="Enter amount" 
-                type="number" 
-                min="0" 
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                required 
-              />
-            </div>
+            {activeService !== 'education' || activeEducationTab !== 'examination-pins' ? (
+              <div className="space-y-2">
+                <Label htmlFor="amount">Amount</Label>
+                <Input 
+                  id="amount" 
+                  placeholder="Enter amount" 
+                  type="number" 
+                  min="0" 
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  required={activeService !== 'education' || activeEducationTab !== 'examination-pins'}
+                />
+              </div>
+            ) : null}
             
             <Button 
               type="submit" 
               className="w-full" 
               disabled={isSubmitting}
             >
-              {isSubmitting ? 'Processing...' : 'Pay Now'}
+              {isSubmitting ? 'Processing...' : activeEducationTab === 'examination-pins' ? 'Purchase PIN' : 'Pay Now'}
             </Button>
           </form>
         </CardContent>
