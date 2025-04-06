@@ -28,6 +28,17 @@ export interface EducationalPin {
   phone: string;
 }
 
+// AI Question Solving types
+export interface AcademicQuestion {
+  id: string;
+  question: string;
+  subject: string;
+  level: 'primary' | 'secondary' | 'university';
+  response?: string;
+  createdAt: string;
+  userId: string;
+}
+
 // API functions
 export const getServiceProviders = async (serviceType: string): Promise<ServiceProvider[]> => {
   try {
@@ -115,3 +126,39 @@ export const getBillHistory = async (): Promise<BillPayment[]> => {
     return [];
   }
 };
+
+// New AI question solving functions
+export const submitAcademicQuestion = async (
+  question: string,
+  subject: string,
+  level: 'primary' | 'secondary' | 'university'
+): Promise<AcademicQuestion> => {
+  try {
+    const userId = JSON.parse(localStorage.getItem('auth_user') || '{}').id;
+    
+    const response = await api.post('/ai/solve-question', {
+      userId,
+      question,
+      subject,
+      level
+    });
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error submitting academic question:', error);
+    throw error;
+  }
+};
+
+export const getQuestionHistory = async (): Promise<AcademicQuestion[]> => {
+  try {
+    const userId = JSON.parse(localStorage.getItem('auth_user') || '{}').id;
+    
+    const response = await api.get(`/ai/question-history/${userId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching question history:', error);
+    return [];
+  }
+};
+

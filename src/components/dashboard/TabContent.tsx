@@ -4,6 +4,7 @@ import { QuestionsTab } from './QuestionsTab';
 import { NotificationsTab } from './NotificationsTab';
 import BillPayments from './BillPayments';
 import ChatbotSupport from './ChatbotSupport';
+import AcademicAI from './AcademicAI';
 import Downloads from './Downloads';
 import LeaderboardTab from './LeaderboardTab';
 import Marketplace from './Marketplace';
@@ -65,6 +66,10 @@ export const TabContent = ({ activeTab }: TabContentProps): ReactNode => {
       return <PaymentMethods />;
     case 'chat':
       return <GroupChat />;
+    case 'support':
+      return <ChatbotSupport />;
+    case 'academic-ai':
+      return <AcademicAI />;
     default:
       return <QuestionsTab />;
   }

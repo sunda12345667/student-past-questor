@@ -23,7 +23,9 @@ import {
   Book,
   HelpCircle,
   Clipboard,
-  Calendar
+  Calendar,
+  GraduationCap,
+  School
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -127,8 +129,34 @@ export const DashboardSidebar = ({ currentUser, activeTab, setActiveTab }: Dashb
                     isActive={activeTab === "downloads"}
                     onClick={() => setActiveTab("downloads")}
                   >
-                    <Download className="w-4 h-4" />
+                    <Download className="w-4 w-4" />
                     <span>My Downloads</span>
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+              </CollapsibleMenuItem>
+              
+              <CollapsibleMenuItem 
+                icon={<GraduationCap className="w-4 h-4" />} 
+                label="AI Learning Tools" 
+                isActive={["academic-ai", "support"].includes(activeTab)}
+                tooltip="AI Learning Tools"
+              >
+                <SidebarMenuSubItem>
+                  <SidebarMenuSubButton 
+                    isActive={activeTab === "academic-ai"}
+                    onClick={() => setActiveTab("academic-ai")}
+                  >
+                    <School className="w-4 h-4" />
+                    <span>Academic Problem Solver</span>
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+                <SidebarMenuSubItem>
+                  <SidebarMenuSubButton 
+                    isActive={activeTab === "support"}
+                    onClick={() => setActiveTab("support")}
+                  >
+                    <HelpCircle className="w-4 h-4" />
+                    <span>Study Assistant</span>
                   </SidebarMenuSubButton>
                 </SidebarMenuSubItem>
               </CollapsibleMenuItem>
