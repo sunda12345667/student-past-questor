@@ -14,6 +14,24 @@ export interface ChatGroup {
   created_at: string;
 }
 
+export interface ChatRoom {
+  id: string;
+  name: string;
+  description?: string;
+  participants: number;
+  lastMessage?: string;
+  lastMessageTime?: string;
+}
+
+export interface MessageAttachment {
+  id: string;
+  filename: string;
+  url: string;
+  fileType: 'image' | 'document';
+  size: number;
+  thumbnailUrl?: string;
+}
+
 export interface Message {
   id: string;
   sender_id: string;

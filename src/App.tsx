@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from 'react-error-boundary';
 import { Toaster } from 'sonner';
@@ -55,73 +55,71 @@ function App() {
         <ThemeProvider>
           <AuthProvider>
             <NotificationProvider>
-              <Router>
-                <div className="min-h-screen bg-background">
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/signup" element={<Signup />} />
-                    <Route 
-                      path="/dashboard" 
-                      element={
-                        <ProtectedRoute>
-                          <Dashboard />
-                        </ProtectedRoute>
-                      } 
-                    />
-                    <Route 
-                      path="/chat" 
-                      element={
-                        <ProtectedRoute>
-                          <StudentChat />
-                        </ProtectedRoute>
-                      } 
-                    />
-                    <Route 
-                      path="/questions/:questionId" 
-                      element={
-                        <ProtectedRoute>
-                          <QuestionView />
-                        </ProtectedRoute>
-                      } 
-                    />
-                    <Route 
-                      path="/exams" 
-                      element={
-                        <ProtectedRoute>
-                          <ExamListing />
-                        </ProtectedRoute>
-                      } 
-                    />
-                    <Route 
-                      path="/payment/callback" 
-                      element={
-                        <ProtectedRoute>
-                          <PaymentCallback />
-                        </ProtectedRoute>
-                      } 
-                    />
-                    <Route 
-                      path="/admin" 
-                      element={
-                        <ProtectedRoute>
-                          <AdminPanel />
-                        </ProtectedRoute>
-                      } 
-                    />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </div>
-                <Toaster 
-                  position="top-right" 
-                  richColors 
-                  closeButton
-                  toastOptions={{
-                    duration: 4000,
-                  }}
-                />
-                <UIToaster />
-              </Router>
+              <div className="min-h-screen bg-background">
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/signup" element={<Signup />} />
+                  <Route 
+                    path="/dashboard" 
+                    element={
+                      <ProtectedRoute>
+                        <Dashboard />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/chat" 
+                    element={
+                      <ProtectedRoute>
+                        <StudentChat />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/questions/:questionId" 
+                    element={
+                      <ProtectedRoute>
+                        <QuestionView />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/exams" 
+                    element={
+                      <ProtectedRoute>
+                        <ExamListing />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/payment/callback" 
+                    element={
+                      <ProtectedRoute>
+                        <PaymentCallback />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/admin" 
+                    element={
+                      <ProtectedRoute>
+                        <AdminPanel />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </div>
+              <Toaster 
+                position="top-right" 
+                richColors 
+                closeButton
+                toastOptions={{
+                  duration: 4000,
+                }}
+              />
+              <UIToaster />
             </NotificationProvider>
           </AuthProvider>
         </ThemeProvider>

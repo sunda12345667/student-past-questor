@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { ChatMessage } from '@/services/chat/types';
+import { MessageAttachment } from './types';
 import { subscribeToGroupMessages } from '@/services/chat/realtimeService';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -32,21 +33,36 @@ export const useMessages = (groupId: string | null) => {
         .order('created_at', { ascending: true });
 
       if (data) {
-        const transformedMessages: ChatMessage[] = data.map(msg => ({
-          id: msg.id,
-          content: msg.content,
-          user_id: msg.sender_id,
-          sender_id: msg.sender_id,
-          group_id: msg.group_id,
-          created_at: msg.created_at,
-          reactions: (typeof msg.reactions === 'object' && msg.reactions !== null) ? msg.reactions as Record<string, string[]> : {},
-          attachments: (Array.isArray(msg.attachments)) ? msg.attachments : [],
-          sender: (msg.sender as any) ? {
-            id: (msg.sender as any).id,
-            name: (msg.sender as any).name,
-            avatar: '/placeholder.svg'
-          } : undefined
-        }));
+        const transformedMessages: ChatMessage[] = data.map(msg => {
+          // Handle attachments - convert from JSON to MessageAttachment[]
+          let attachments: MessageAttachment[] = [];
+          if (msg.attachments && Array.isArray(msg.attachments)) {
+            attachments = msg.attachments.map((att: any) => ({
+              id: att.id || Math.random().toString(36),
+              filename: att.filename || 'Unknown file',
+              url: att.url || '',
+              fileType: att.fileType || 'document',
+              size: att.size || 0,
+              thumbnailUrl: att.thumbnailUrl
+            } as MessageAttachment));
+          }
+
+          return {
+            id: msg.id,
+            content: msg.content,
+            user_id: msg.sender_id,
+            sender_id: msg.sender_id,
+            group_id: msg.group_id,
+            created_at: msg.created_at,
+            reactions: (typeof msg.reactions === 'object' && msg.reactions !== null) ? msg.reactions as Record<string, string[]> : {},
+            attachments,
+            sender: (msg.sender as any) ? {
+              id: (msg.sender as any).id,
+              name: (msg.sender as any).name,
+              avatar: '/placeholder.svg'
+            } : undefined
+          };
+        });
         setMessages(transformedMessages);
       }
     } catch (error) {

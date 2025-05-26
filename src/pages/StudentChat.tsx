@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { useAuth } from '@/hooks/auth';
 import { ChatContainer } from '@/components/student-chat/ChatContainer';
@@ -7,6 +8,33 @@ import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import { useChat } from '@/hooks/chat';
 import { formatTime } from '@/utils/formatTime';
+
+// Type adapters to bridge the difference between chat hook types and component types
+interface ComponentMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  content: string;
+  timestamp: string;
+  reactions?: Record<string, string[]>;
+  attachments?: any[];
+}
+
+interface ComponentTypingUser {
+  id: string;
+  name: string;
+  isTyping: boolean;
+  avatar?: string;
+}
+
+interface ComponentChatRoom {
+  id: string;
+  name: string;
+  description?: string;
+  participants: number;
+  lastMessage?: string;
+  lastMessageTime?: string;
+}
 
 const StudentChat: React.FC = () => {
   const { currentUser, isLoading: authLoading } = useAuth();
@@ -31,6 +59,35 @@ const StudentChat: React.FC = () => {
       navigate('/login');
     }
   }, [currentUser, authLoading, navigate]);
+
+  // Convert chat hook messages to component messages
+  const componentMessages: ComponentMessage[] = messages.map(msg => ({
+    id: msg.id,
+    senderId: msg.sender_id,
+    senderName: msg.sender?.name || 'Unknown User',
+    content: msg.content,
+    timestamp: msg.created_at,
+    reactions: {},
+    attachments: []
+  }));
+
+  // Convert chat hook typing users to component typing users
+  const componentTypingUsers: ComponentTypingUser[] = typingUsers.map(user => ({
+    id: user.id,
+    name: user.name,
+    avatar: user.avatar,
+    isTyping: true
+  }));
+
+  // Convert chat groups to chat rooms
+  const componentChatRooms: ComponentChatRoom[] = userGroups.map(group => ({
+    id: group.id,
+    name: group.name,
+    description: group.description,
+    participants: 0, // Default value since we don't have participant count
+    lastMessage: undefined,
+    lastMessageTime: undefined
+  }));
 
   // Handler for message reactions
   const handleReactionToggle = async (messageId: string, emoji: string) => {
@@ -58,7 +115,7 @@ const StudentChat: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1">
             <ChatRoomList
-              chatRooms={userGroups}
+              chatRooms={componentChatRooms}
               activeRoom={activeRoom}
               onJoinRoom={(roomId) => {
                 const room = userGroups.find(r => r.id === roomId);
@@ -74,11 +131,11 @@ const StudentChat: React.FC = () => {
             <ChatContainer
               activeRoom={activeRoom}
               roomName={activeRoomName}
-              messages={messages}
+              messages={componentMessages}
               currentUserId={currentUser.id}
               onSendMessage={handleSendMessage}
               formatTime={formatTime}
-              typingUsers={typingUsers}
+              typingUsers={componentTypingUsers}
               onTyping={handleTypingIndicator}
               onReactionToggle={handleReactionToggle}
             />
