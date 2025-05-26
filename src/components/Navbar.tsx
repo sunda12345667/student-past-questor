@@ -1,196 +1,230 @@
 
-import { useState, useEffect } from 'react';
-import { Menu, X, User, LogOut } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { ThemeToggle } from './ThemeToggle';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { NotificationBell } from '@/components/NotificationBell';
+import { useAuth } from '@/hooks/auth';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { User, LogOut, Settings, Menu, X } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
-export function Navbar() {
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { currentUser, logout, isAdmin } = useAuth();
+const Navbar = () => {
+  const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
-  }, []);
+  const isMobile = useIsMobile();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
       await logout();
       navigate('/');
     } catch (error) {
-      console.error('Logout failed:', error);
+      console.error('Logout error:', error);
     }
   };
 
-  return (
-    <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled
-          ? 'bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shadow-sm py-3'
-          : 'bg-transparent py-5'
-      }`}
-    >
-      <div className="container mx-auto px-4 flex items-center justify-between">
-        <Link 
-          to="/"
-          className="flex items-center space-x-2 font-bold text-xl"
-        >
-          <span className="text-primary">StudyQuest</span>
-        </Link>
+  const navigationItems = [
+    { href: '/', label: 'Home' },
+    { href: '/exams', label: 'Exams' },
+    { href: '/chat', label: 'Chat' },
+    { href: '/dashboard', label: 'Dashboard' }
+  ];
 
-        {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center space-x-8">
-          <Link to="/" className="text-sm font-medium hover:text-primary transition-colors">
-            Home
-          </Link>
-          <Link to="/#features" className="text-sm font-medium hover:text-primary transition-colors">
-            Features
-          </Link>
-          <Link to="/#questions" className="text-sm font-medium hover:text-primary transition-colors">
-            Questions
-          </Link>
-          <Link to="/#pricing" className="text-sm font-medium hover:text-primary transition-colors">
-            Pricing
-          </Link>
+  const MobileMenu = () => (
+    <div className={`fixed inset-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 ${mobileMenuOpen ? 'block' : 'hidden'}`}>
+      <div className="fixed inset-y-0 right-0 w-full max-w-xs border-l bg-background p-6 shadow-lg">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-lg font-semibold">Menu</h2>
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
+        
+        <nav className="space-y-4">
+          {navigationItems.map((item) => (
+            <Link
+              key={item.href}
+              to={item.href}
+              className="block py-2 text-foreground hover:text-primary transition-colors"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              {item.label}
+            </Link>
+          ))}
         </nav>
-
-        <div className="hidden md:flex items-center space-x-4">
+        
+        <div className="mt-8 pt-6 border-t space-y-4">
           <ThemeToggle />
           
           {currentUser ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative">
-                  <User className="h-5 w-5 mr-2" />
-                  <span className="font-medium truncate max-w-[100px]">
-                    {currentUser.name}
-                  </span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate('/dashboard')}>
-                  Dashboard
-                </DropdownMenuItem>
-                {isAdmin() && (
-                  <DropdownMenuItem onClick={() => navigate('/admin')}>
-                    Admin Panel
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout}>
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Log out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="space-y-2">
+              <Button 
+                variant="ghost" 
+                className="w-full justify-start"
+                onClick={() => {
+                  navigate('/dashboard');
+                  setMobileMenuOpen(false);
+                }}
+              >
+                <User className="mr-2 h-4 w-4" />
+                Profile
+              </Button>
+              
+              <Button 
+                variant="ghost" 
+                className="w-full justify-start"
+                onClick={handleLogout}
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Logout
+              </Button>
+            </div>
           ) : (
-            <>
-              <Button variant="ghost" className="text-sm font-medium" onClick={() => navigate('/login')}>
-                Log in
+            <div className="space-y-2">
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => {
+                  navigate('/login');
+                  setMobileMenuOpen(false);
+                }}
+              >
+                Login
               </Button>
-              <Button className="text-sm font-medium" onClick={() => navigate('/signup')}>
-                Sign up
+              
+              <Button 
+                className="w-full"
+                onClick={() => {
+                  navigate('/signup');
+                  setMobileMenuOpen(false);
+                }}
+              >
+                Sign Up
               </Button>
-            </>
+            </div>
           )}
         </div>
-
-        {/* Mobile Menu Button */}
-        <div className="flex items-center space-x-2 md:hidden">
-          <ThemeToggle />
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            aria-label="Toggle menu"
-            className="focus:outline-none"
-          >
-            {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </Button>
-        </div>
       </div>
+    </div>
+  );
 
-      {/* Mobile Menu */}
-      {isMenuOpen && (
-        <div className="fixed inset-0 bg-white dark:bg-slate-900 z-40 pt-20 md:hidden animate-fade-in">
-          <nav className="flex flex-col items-center p-8 space-y-6 text-center">
-            <Link
-              to="/"
-              className="text-xl font-medium hover:text-primary transition-colors w-full py-2"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Home
+  return (
+    <>
+      <nav className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container mx-auto px-4">
+          <div className="flex h-16 items-center justify-between">
+            {/* Logo */}
+            <Link to="/" className="flex items-center space-x-2">
+              <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
+                <span className="text-primary-foreground font-bold text-sm">E</span>
+              </div>
+              <span className="font-bold text-xl">EduHub</span>
             </Link>
-            <Link
-              to="/#features"
-              className="text-xl font-medium hover:text-primary transition-colors w-full py-2"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Features
-            </Link>
-            <Link
-              to="/#questions"
-              className="text-xl font-medium hover:text-primary transition-colors w-full py-2"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Questions
-            </Link>
-            <Link
-              to="/#pricing"
-              className="text-xl font-medium hover:text-primary transition-colors w-full py-2"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Pricing
-            </Link>
-            <div className="pt-6 flex flex-col w-full space-y-4">
+
+            {/* Desktop Navigation */}
+            {!isMobile && (
+              <div className="hidden md:flex items-center space-x-6">
+                {navigationItems.map((item) => (
+                  <Link
+                    key={item.href}
+                    to={item.href}
+                    className="text-foreground/80 hover:text-foreground transition-colors font-medium"
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+            )}
+
+            {/* Right side items */}
+            <div className="flex items-center space-x-2">
+              <ThemeToggle />
+              
+              {/* Notifications (only when logged in) */}
+              {currentUser && <NotificationBell />}
+              
               {currentUser ? (
-                <>
-                  <Button variant="outline" className="w-full" onClick={() => { navigate('/dashboard'); setIsMenuOpen(false); }}>
-                    Dashboard
-                  </Button>
-                  {isAdmin() && (
-                    <Button variant="outline" className="w-full" onClick={() => { navigate('/admin'); setIsMenuOpen(false); }}>
-                      Admin Panel
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={currentUser.avatar_url} alt={currentUser.name || currentUser.email} />
+                        <AvatarFallback>
+                          {(currentUser.name || currentUser.email || 'U').charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
                     </Button>
-                  )}
-                  <Button className="w-full" onClick={() => { handleLogout(); setIsMenuOpen(false); }}>
-                    Log out
-                  </Button>
-                </>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56" align="end" forceMount>
+                    <div className="flex items-center justify-start gap-2 p-2">
+                      <div className="flex flex-col space-y-1 leading-none">
+                        {currentUser.name && (
+                          <p className="font-medium">{currentUser.name}</p>
+                        )}
+                        <p className="w-[200px] truncate text-sm text-muted-foreground">
+                          {currentUser.email}
+                        </p>
+                      </div>
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                      <User className="mr-2 h-4 w-4" />
+                      Dashboard
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                      <Settings className="mr-2 h-4 w-4" />
+                      Settings
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Log out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               ) : (
-                <>
-                  <Button variant="outline" className="w-full" onClick={() => { navigate('/login'); setIsMenuOpen(false); }}>
-                    Log in
+                <div className="hidden md:flex items-center space-x-2">
+                  <Button variant="ghost" onClick={() => navigate('/login')}>
+                    Login
                   </Button>
-                  <Button className="w-full" onClick={() => { navigate('/signup'); setIsMenuOpen(false); }}>
-                    Sign up
+                  <Button onClick={() => navigate('/signup')}>
+                    Sign Up
                   </Button>
-                </>
+                </div>
+              )}
+              
+              {/* Mobile menu button */}
+              {isMobile && (
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => setMobileMenuOpen(true)}
+                  className="md:hidden"
+                >
+                  <Menu className="h-5 w-5" />
+                </Button>
               )}
             </div>
-          </nav>
+          </div>
         </div>
-      )}
-    </header>
+      </nav>
+      
+      {/* Mobile Menu */}
+      <MobileMenu />
+    </>
   );
-}
+};
+
+export default Navbar;

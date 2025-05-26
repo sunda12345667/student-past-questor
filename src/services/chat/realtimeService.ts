@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { ChatMessage } from "./types";
 
@@ -6,6 +7,8 @@ export const subscribeToGroupMessages = (
   groupId: string,
   onNewMessage: (message: ChatMessage) => void
 ) => {
+  console.log(`Setting up message subscription for group: ${groupId}`);
+  
   // Create a real-time channel for the group messages
   const channel = supabase
     .channel(`group_messages:${groupId}`)
@@ -18,8 +21,15 @@ export const subscribeToGroupMessages = (
         filter: `group_id=eq.${groupId}`
       },
       async (payload) => {
+        console.log('New message received:', payload);
+        
         // Fetch message details with sender info
         const message = payload.new as any;
+        
+        if (!message || !message.id) {
+          console.error('Invalid message payload:', payload);
+          return;
+        }
         
         try {
           const { data: sender } = await supabase
@@ -32,9 +42,10 @@ export const subscribeToGroupMessages = (
             id: message.id,
             group_id: message.group_id,
             user_id: message.sender_id,
-            content: message.content,
+            content: message.content || '',
             created_at: message.created_at,
             reactions: message.reactions || {},
+            attachments: message.attachments || [],
             sender: sender ? {
               id: sender.id,
               name: sender.name,
@@ -57,8 +68,15 @@ export const subscribeToGroupMessages = (
         filter: `group_id=eq.${groupId}`
       },
       async (payload) => {
+        console.log('Message updated:', payload);
+        
         // Handle message updates (like reactions)
         const message = payload.new as any;
+        
+        if (!message || !message.id) {
+          console.error('Invalid message update payload:', payload);
+          return;
+        }
         
         try {
           const { data: sender } = await supabase
@@ -71,9 +89,10 @@ export const subscribeToGroupMessages = (
             id: message.id,
             group_id: message.group_id,
             user_id: message.sender_id,
-            content: message.content,
+            content: message.content || '',
             created_at: message.created_at,
             reactions: message.reactions || {},
+            attachments: message.attachments || [],
             sender: sender ? {
               id: sender.id,
               name: sender.name,
@@ -88,7 +107,9 @@ export const subscribeToGroupMessages = (
         }
       }
     )
-    .subscribe();
+    .subscribe((status) => {
+      console.log(`Message subscription status for group ${groupId}:`, status);
+    });
     
   return channel;
 };
@@ -101,40 +122,55 @@ interface TypingUser {
   isTyping: boolean;
 }
 
-// Subscribe to typing indicators
+// Subscribe to typing indicators with improved reliability
 export const subscribeToTypingIndicators = (
   groupId: string,
   onTypingUpdate: (typingUsers: TypingUser[]) => void
 ) => {
+  console.log(`Setting up typing subscription for group: ${groupId}`);
+  
   // Use Presence feature for typing indicators
-  const channel = supabase.channel(`typing:${groupId}`);
+  const channel = supabase.channel(`typing:${groupId}`, {
+    config: {
+      presence: {
+        key: groupId
+      }
+    }
+  });
   
   let typingUsers: TypingUser[] = [];
   
   channel
     .on('presence', { event: 'sync' }, () => {
+      console.log('Typing presence sync');
       const state = channel.presenceState();
       typingUsers = [];
       
       // Collect all typing user information
       Object.values(state).forEach((presences: any) => {
         presences.forEach((presence: any) => {
-          if (presence.isTyping) {
-            typingUsers.push({
-              id: presence.userId,
-              name: presence.userName || 'Unknown user',
-              avatar: presence.userAvatar,
-              isTyping: true
-            });
+          if (presence.isTyping && presence.userId) {
+            const existingUser = typingUsers.find(user => user.id === presence.userId);
+            if (!existingUser) {
+              typingUsers.push({
+                id: presence.userId,
+                name: presence.userName || 'Unknown user',
+                avatar: presence.userAvatar,
+                isTyping: true
+              });
+            }
           }
         });
       });
       
+      console.log('Typing users after sync:', typingUsers);
       onTypingUpdate(typingUsers);
     })
     .on('presence', { event: 'join' }, ({ key, newPresences }: any) => {
+      console.log('User joined typing:', newPresences);
+      
       newPresences.forEach((presence: any) => {
-        if (presence.isTyping) {
+        if (presence.isTyping && presence.userId) {
           const existingUserIndex = typingUsers.findIndex(user => user.id === presence.userId);
           
           if (existingUserIndex === -1) {
@@ -144,12 +180,14 @@ export const subscribeToTypingIndicators = (
               avatar: presence.userAvatar,
               isTyping: true
             });
-            onTypingUpdate(typingUsers);
+            onTypingUpdate([...typingUsers]);
           }
         }
       });
     })
     .on('presence', { event: 'leave' }, ({ key, leftPresences }: any) => {
+      console.log('User left typing:', leftPresences);
+      
       let hasChanged = false;
       
       leftPresences.forEach((presence: any) => {
@@ -161,15 +199,17 @@ export const subscribeToTypingIndicators = (
       });
       
       if (hasChanged) {
-        onTypingUpdate(typingUsers);
+        onTypingUpdate([...typingUsers]);
       }
     })
-    .subscribe();
+    .subscribe((status) => {
+      console.log(`Typing subscription status for group ${groupId}:`, status);
+    });
     
   return channel;
 };
 
-// Send typing indicator
+// Send typing indicator with better error handling
 export const sendTypingIndicator = async (
   groupId: string,
   userId: string,
@@ -177,29 +217,72 @@ export const sendTypingIndicator = async (
   userAvatar?: string
 ) => {
   try {
-    const channel = supabase.channel(`typing:${groupId}`);
+    console.log(`Sending typing indicator for user ${userId} in group ${groupId}`);
+    
+    const channel = supabase.channel(`typing:${groupId}`, {
+      config: {
+        presence: {
+          key: groupId
+        }
+      }
+    });
     
     await channel.subscribe(async (status) => {
-      if (status !== 'SUBSCRIBED') return;
+      if (status !== 'SUBSCRIBED') {
+        console.log('Typing channel not subscribed yet:', status);
+        return;
+      }
       
-      await channel.track({
-        userId,
-        userName,
-        userAvatar,
-        isTyping: true
-      });
-      
-      // Reset typing status after 3 seconds of inactivity
-      setTimeout(async () => {
+      try {
+        // Track typing status
         await channel.track({
           userId,
           userName,
           userAvatar,
-          isTyping: false
+          isTyping: true,
+          timestamp: Date.now()
         });
-      }, 3000);
+        
+        console.log('Typing indicator sent successfully');
+        
+        // Auto-remove typing status after 3 seconds
+        setTimeout(async () => {
+          try {
+            await channel.untrack();
+            console.log('Typing indicator cleared');
+          } catch (error) {
+            console.error('Error clearing typing indicator:', error);
+          }
+        }, 3000);
+      } catch (error) {
+        console.error('Error tracking typing status:', error);
+      }
     });
   } catch (error) {
     console.error("Error sending typing indicator:", error);
+  }
+};
+
+// Enhanced connection management
+export const createReliableChannel = (channelName: string, config?: any) => {
+  const channel = supabase.channel(channelName, config);
+  
+  // Add connection monitoring
+  channel.on('system', {}, (payload) => {
+    console.log(`Channel ${channelName} system event:`, payload);
+  });
+  
+  return channel;
+};
+
+// Cleanup function for channels
+export const cleanupChannel = (channel: any) => {
+  if (channel) {
+    try {
+      supabase.removeChannel(channel);
+      console.log('Channel cleaned up successfully');
+    } catch (error) {
+      console.error('Error cleaning up channel:', error);
+    }
   }
 };

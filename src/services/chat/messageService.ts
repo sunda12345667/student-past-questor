@@ -74,7 +74,7 @@ export const getGroupMessages = async (groupId: string): Promise<ChatMessage[]> 
     // Transform the messages with sender information
     return messages.map(message => {
       // Skip invalid messages
-      if (!message || typeof message !== 'object' || !('id' in message)) {
+      if (!message || typeof message !== 'object' || !('id' in message) || !message.sender_id) {
         console.error("Invalid message format:", message);
         return null;
       }
@@ -88,7 +88,7 @@ export const getGroupMessages = async (groupId: string): Promise<ChatMessage[]> 
         id: message.id,
         group_id: message.group_id,
         user_id: message.sender_id,
-        content: message.content,
+        content: message.content || '',
         created_at: message.created_at,
         reactions: reactionsObj,
         // Safely handle attachments field which might not exist yet
@@ -207,7 +207,7 @@ export const sendGroupMessage = async (
       id: insertedMessage.id,
       group_id: insertedMessage.group_id,
       user_id: insertedMessage.sender_id,
-      content: insertedMessage.content,
+      content: insertedMessage.content || '',
       created_at: insertedMessage.created_at,
       reactions: {},
       // Safely handle attachments field which might not exist yet
