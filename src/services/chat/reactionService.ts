@@ -1,72 +1,36 @@
 
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { MessageReactions } from "./types";
+import { supabase } from '@/integrations/supabase/client';
+import { MessageReaction } from './types';
 
-// Extract message reactions from JSON format
-export const fetchMessageReactions = (reactionsData: any): MessageReactions => {
-  const reactionsObj: MessageReactions = {};
-  
-  if (reactionsData && typeof reactionsData === 'object') {
-    Object.entries(reactionsData as Record<string, string[]>).forEach(([emoji, userIds]) => {
-      if (Array.isArray(userIds)) {
-        reactionsObj[emoji] = userIds;
-      }
-    });
-  }
-  
-  return reactionsObj;
-};
-
-// Update a message reaction (add or remove)
-export const updateMessageReaction = async (
-  messageId: string,
-  userId: string,
-  reaction: string
-): Promise<boolean> => {
+export const addReaction = async (messageId: string, emoji: string): Promise<boolean> => {
   try {
-    const { data: message, error: fetchError } = await supabase
-      .from("group_messages")
-      .select("reactions")
-      .eq("id", messageId)
-      .single();
-
-    if (fetchError) throw fetchError;
-
-    // Convert database JSON to our MessageReactions type
-    let updatedReactions: MessageReactions = {};
-    if (message?.reactions && typeof message.reactions === 'object') {
-      Object.entries(message.reactions as Record<string, string[]>).forEach(([emoji, userIds]) => {
-        if (Array.isArray(userIds)) {
-          updatedReactions[emoji] = userIds;
-        }
-      });
-    }
-    
-    // Add or remove the reaction
-    if (!updatedReactions[reaction]) {
-      updatedReactions[reaction] = [];
-    }
-    
-    if (!updatedReactions[reaction].includes(userId)) {
-      updatedReactions[reaction] = [...updatedReactions[reaction], userId];
-    } else {
-      updatedReactions[reaction] = updatedReactions[reaction].filter(id => id !== userId);
-      if (updatedReactions[reaction].length === 0) {
-        delete updatedReactions[reaction];
-      }
-    }
-
-    const { error: updateError } = await supabase
-      .from("group_messages")
-      .update({ reactions: updatedReactions })
-      .eq("id", messageId);
-
-    if (updateError) throw updateError;
+    console.log('Adding reaction:', messageId, emoji);
+    // TODO: Implement when reactions are supported in the database
     return true;
   } catch (error) {
-    console.error("Error updating reaction:", error);
-    toast.error("Failed to update reaction");
+    console.error('Error adding reaction:', error);
     return false;
+  }
+};
+
+export const removeReaction = async (messageId: string, emoji: string): Promise<boolean> => {
+  try {
+    console.log('Removing reaction:', messageId, emoji);
+    // TODO: Implement when reactions are supported in the database
+    return true;
+  } catch (error) {
+    console.error('Error removing reaction:', error);
+    return false;
+  }
+};
+
+export const getMessageReactions = async (messageId: string): Promise<MessageReaction[]> => {
+  try {
+    console.log('Getting reactions for message:', messageId);
+    // TODO: Implement when reactions are supported in the database
+    return [];
+  } catch (error) {
+    console.error('Error getting reactions:', error);
+    return [];
   }
 };

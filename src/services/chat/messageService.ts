@@ -1,6 +1,5 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { realTimeService } from './realTimeService';
 import { Message, MessageInput } from './types';
 
 export const sendMessage = async (messageData: MessageInput): Promise<Message | null> => {
@@ -26,8 +25,7 @@ export const sendMessage = async (messageData: MessageInput): Promise<Message | 
         content,
         created_at,
         sender_id,
-        group_id,
-        profiles (name, avatar_url)
+        group_id
       `)
       .single();
 
@@ -35,6 +33,13 @@ export const sendMessage = async (messageData: MessageInput): Promise<Message | 
       console.error('Error sending message:', error);
       throw error;
     }
+
+    // Get sender profile separately
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('name, avatar_url')
+      .eq('id', user.id)
+      .single();
 
     const message: Message = {
       id: data.id,
@@ -45,13 +50,10 @@ export const sendMessage = async (messageData: MessageInput): Promise<Message | 
       sender_id: data.sender_id,
       group_id: data.group_id,
       sender: {
-        name: data.profiles?.name || 'Unknown User',
-        avatar_url: data.profiles?.avatar_url,
+        name: profile?.name || 'Unknown User',
+        avatar_url: profile?.avatar_url,
       },
     };
-
-    // Broadcast the message via real-time
-    realTimeService.broadcastMessage(message);
     
     return message;
   } catch (error) {
@@ -72,8 +74,7 @@ export const getMessages = async (groupId: string, limit: number = 50): Promise<
         content,
         created_at,
         sender_id,
-        group_id,
-        profiles (name, avatar_url)
+        group_id
       `)
       .eq('group_id', groupId)
       .order('created_at', { ascending: true })
@@ -84,19 +85,33 @@ export const getMessages = async (groupId: string, limit: number = 50): Promise<
       throw error;
     }
 
-    return data?.map((item: any): Message => ({
-      id: item.id,
-      content: item.content,
-      created_at: item.created_at,
-      attachment_url: undefined,
-      attachment_type: undefined,
-      sender_id: item.sender_id,
-      group_id: item.group_id,
-      sender: {
-        name: item.profiles?.name || 'Unknown User',
-        avatar_url: item.profiles?.avatar_url,
-      },
-    })) || [];
+    // Get all unique sender IDs
+    const senderIds = [...new Set(data?.map(msg => msg.sender_id) || [])];
+    
+    // Fetch all profiles at once
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, name, avatar_url')
+      .in('id', senderIds);
+
+    const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+
+    return data?.map((item: any): Message => {
+      const profile = profileMap.get(item.sender_id);
+      return {
+        id: item.id,
+        content: item.content,
+        created_at: item.created_at,
+        attachment_url: undefined,
+        attachment_type: undefined,
+        sender_id: item.sender_id,
+        group_id: item.group_id,
+        sender: {
+          name: profile?.name || 'Unknown User',
+          avatar_url: profile?.avatar_url,
+        },
+      };
+    }) || [];
   } catch (error) {
     console.error('Error in getMessages:', error);
     return [];
@@ -125,36 +140,23 @@ export const subscribeToMessages = (
           console.log('New message received:', payload);
           
           // Fetch the complete message with profile data
-          const { data, error } = await supabase
-            .from('group_messages')
-            .select(`
-              id,
-              content,
-              created_at,
-              sender_id,
-              group_id,
-              profiles (name, avatar_url)
-            `)
-            .eq('id', payload.new.id)
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('name, avatar_url')
+            .eq('id', payload.new.sender_id)
             .single();
 
-          if (error) {
-            console.error('Error fetching new message details:', error);
-            onError?.(new Error('Failed to fetch message details'));
-            return;
-          }
-
           const message: Message = {
-            id: data.id,
-            content: data.content,
-            created_at: data.created_at,
+            id: payload.new.id,
+            content: payload.new.content,
+            created_at: payload.new.created_at,
             attachment_url: undefined,
             attachment_type: undefined,
-            sender_id: data.sender_id,
-            group_id: data.group_id,
+            sender_id: payload.new.sender_id,
+            group_id: payload.new.group_id,
             sender: {
-              name: data.profiles?.name || 'Unknown User',
-              avatar_url: data.profiles?.avatar_url,
+              name: profile?.name || 'Unknown User',
+              avatar_url: profile?.avatar_url,
             },
           };
 

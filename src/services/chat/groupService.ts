@@ -1,139 +1,171 @@
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { ChatGroup } from "./types";
 
-// Get all chat groups the current user is a member of
+import { supabase } from '@/integrations/supabase/client';
+import { ChatGroup } from './types';
+
 export const getUserGroups = async (): Promise<ChatGroup[]> => {
   try {
-    const { data: user } = await supabase.auth.getUser();
-    if (!user.user) {
-      return [];
-    }
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
 
     const { data, error } = await supabase
-      .from("group_members")
-      .select("group_id")
-      .eq("user_id", user.user.id);
+      .from('group_members')
+      .select(`
+        group_id,
+        study_groups (
+          id,
+          name,
+          description,
+          is_private,
+          owner_id,
+          created_at
+        )
+      `)
+      .eq('user_id', user.id);
 
-    if (error) throw error;
-
-    if (!data || data.length === 0) {
+    if (error) {
+      console.error('Error fetching user groups:', error);
       return [];
     }
 
-    const groupIds = data.map(member => member.group_id);
-    
-    const { data: groups, error: groupsError } = await supabase
-      .from("study_groups")
-      .select("*, group_members!group_members(count)")
-      .in("id", groupIds);
-
-    if (groupsError) throw groupsError;
-
-    return (groups || []).map(group => ({
-      id: group.id,
-      name: group.name,
-      description: group.description,
-      created_at: group.created_at,
-      owner_id: group.owner_id,
-      is_private: group.is_private,
-      members: group.group_members?.length || 0,
-      unread: 0
-    }));
+    return data
+      ?.filter(item => item.study_groups)
+      .map(item => ({
+        id: item.study_groups.id,
+        name: item.study_groups.name,
+        description: item.study_groups.description,
+        is_private: item.study_groups.is_private,
+        owner_id: item.study_groups.owner_id,
+        created_at: item.study_groups.created_at,
+        members: 0 // Will be populated separately if needed
+      })) || [];
   } catch (error) {
-    console.error("Error fetching user groups:", error);
-    toast.error("Failed to load chat groups");
+    console.error('Error in getUserGroups:', error);
     return [];
   }
 };
 
-// Get all public chat groups
 export const getPublicGroups = async (): Promise<ChatGroup[]> => {
   try {
-    const { data: user } = await supabase.auth.getUser();
-    if (!user.user) {
+    const { data, error } = await supabase
+      .from('study_groups')
+      .select('*')
+      .eq('is_private', false);
+
+    if (error) {
+      console.error('Error fetching public groups:', error);
       return [];
     }
 
-    const { data: memberGroups } = await supabase
-      .from("group_members")
-      .select("group_id")
-      .eq("user_id", user.user.id);
-
-    const memberGroupIds = memberGroups?.map(m => m.group_id) || [];
-
-    const { data: groups, error } = await supabase
-      .from("study_groups")
-      .select("*, group_members!group_members(count)")
-      .eq("is_private", false)
-      .not("id", "in", memberGroupIds.length > 0 ? memberGroupIds : ['']);
-
-    if (error) throw error;
-
-    return (groups || []).map(group => ({
-      id: group.id,
-      name: group.name,
-      description: group.description,
-      created_at: group.created_at,
-      owner_id: group.owner_id,
-      is_private: group.is_private,
-      members: group.group_members?.length || 0
-    }));
+    return data?.map(group => ({
+      ...group,
+      members: 0 // Will be populated separately if needed
+    })) || [];
   } catch (error) {
-    console.error("Error fetching public groups:", error);
-    toast.error("Failed to load public chat groups");
+    console.error('Error in getPublicGroups:', error);
     return [];
   }
 };
 
-// Create a new chat group
 export const createChatGroup = async (
   name: string,
   description: string,
   isPrivate: boolean
 ): Promise<ChatGroup | null> => {
   try {
-    const { data: user } = await supabase.auth.getUser();
-    if (!user.user) {
-      toast.error("You must be logged in to create a group");
-      return null;
-    }
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
 
-    const { data: group, error } = await supabase
-      .from("study_groups")
+    const { data, error } = await supabase
+      .from('study_groups')
       .insert({
         name,
         description,
-        owner_id: user.user.id,
-        is_private: isPrivate
+        is_private: isPrivate,
+        owner_id: user.id
       })
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error creating group:', error);
+      return null;
+    }
 
-    const { error: memberError } = await supabase
-      .from("group_members")
+    // Add creator as member
+    await supabase
+      .from('group_members')
       .insert({
-        group_id: group.id,
-        user_id: user.user.id,
+        group_id: data.id,
+        user_id: user.id,
         is_admin: true
       });
 
-    if (memberError) throw memberError;
-
     return {
-      id: group.id,
-      name: group.name,
-      description: group.description,
-      created_at: group.created_at,
-      owner_id: group.owner_id,
-      is_private: group.is_private,
+      ...data,
       members: 1
     };
   } catch (error) {
-    console.error("Error creating group:", error);
-    toast.error("Failed to create group");
+    console.error('Error in createChatGroup:', error);
+    return null;
+  }
+};
+
+export const joinChatGroup = async (groupId: string): Promise<boolean> => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return false;
+
+    const { error } = await supabase
+      .from('group_members')
+      .insert({
+        group_id: groupId,
+        user_id: user.id,
+        is_admin: false
+      });
+
+    return !error;
+  } catch (error) {
+    console.error('Error in joinChatGroup:', error);
+    return false;
+  }
+};
+
+export const leaveChatGroup = async (groupId: string): Promise<boolean> => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return false;
+
+    const { error } = await supabase
+      .from('group_members')
+      .delete()
+      .eq('group_id', groupId)
+      .eq('user_id', user.id);
+
+    return !error;
+  } catch (error) {
+    console.error('Error in leaveChatGroup:', error);
+    return false;
+  }
+};
+
+export const getGroupMessages = async (groupId: string, limit: number = 50) => {
+  // This is just an alias to the main getMessages function
+  const { getMessages } = await import('./messageService');
+  return getMessages(groupId, limit);
+};
+
+export const sendGroupMessage = async (groupId: string, content: string, files?: File[]) => {
+  try {
+    const { sendMessage } = await import('./messageService');
+    
+    const messageData = {
+      content,
+      group_id: groupId
+    };
+
+    return await sendMessage(messageData);
+  } catch (error) {
+    console.error('Error in sendGroupMessage:', error);
     return null;
   }
 };

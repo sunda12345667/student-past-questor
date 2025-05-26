@@ -1,12 +1,28 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   sendMessage,
   getMessages, 
   subscribeToMessages,
-  realTimeService 
+  sendTypingIndicator,
+  subscribeToTypingIndicators
 } from '@/services/chat';
-import { Message } from '@/services/chat/types';
+import { Message, ChatGroup } from '@/services/chat/types';
+
+interface ChatRoom {
+  id: string;
+  name: string;
+  participants: number;
+}
+
+interface TypingUser {
+  id: string;
+  name: string;
+  avatar?: string;
+  isTyping: boolean;
+}
 
 export const useChat = (userId: string | undefined) => {
   const [activeRoom, setActiveRoom] = useState<string | null>(null);
@@ -24,11 +40,11 @@ export const useChat = (userId: string | undefined) => {
   const transformMessage = (chatMessage: any): Message => {
     return {
       id: chatMessage.id,
-      senderId: chatMessage.user_id,
-      senderName: chatMessage.sender?.name || 'Unknown User',
+      sender_id: chatMessage.user_id || chatMessage.sender_id,
       content: chatMessage.content,
-      timestamp: new Date(chatMessage.created_at),
-      reactions: chatMessage.reactions || {}
+      created_at: chatMessage.created_at,
+      group_id: chatMessage.group_id,
+      sender: chatMessage.sender
     };
   };
 
@@ -60,14 +76,36 @@ export const useChat = (userId: string | undefined) => {
     
     try {
       setIsLoading(true);
-      const groups = await getUserGroups();
       
-      // Transform to ChatRoom format expected by ChatRoomList
-      const chatRooms: ChatRoom[] = groups.map(group => ({
-        id: group.id,
-        name: group.name,
-        participants: group.members
-      }));
+      // Get user's groups through group_members table
+      const { data: memberGroups, error } = await supabase
+        .from('group_members')
+        .select(`
+          group_id,
+          study_groups (
+            id,
+            name,
+            description,
+            is_private,
+            owner_id,
+            created_at
+          )
+        `)
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error('Error loading groups:', error);
+        return;
+      }
+
+      // Transform to ChatRoom format
+      const chatRooms: ChatRoom[] = memberGroups
+        ?.filter(mg => mg.study_groups)
+        .map(mg => ({
+          id: mg.study_groups.id,
+          name: mg.study_groups.name,
+          participants: 0 // Will be populated later if needed
+        })) || [];
       
       setUserGroups(chatRooms);
       
@@ -86,12 +124,8 @@ export const useChat = (userId: string | undefined) => {
   // Load messages for a specific group
   const loadMessages = async (groupId: string) => {
     try {
-      const chatMessages = await getGroupMessages(groupId);
-      
-      // Transform to Message format
-      const transformedMessages: Message[] = chatMessages.map(transformMessage);
-      
-      setMessages(transformedMessages);
+      const chatMessages = await getMessages(groupId);
+      setMessages(chatMessages);
     } catch (error) {
       console.error('Error loading messages:', error);
       toast.error('Failed to load messages');
@@ -169,22 +203,24 @@ export const useChat = (userId: string | undefined) => {
         (newMessage) => {
           setMessages((prevMessages) => [
             ...prevMessages,
-            transformMessage(newMessage)
+            newMessage
           ]);
         }
       );
       
-      // Subscribe to typing indicators
-      typingSubscription = subscribeToTypingIndicators(
-        activeRoom,
-        (typingUsersList) => {
-          // Filter out current user
-          const filteredTypingUsers = typingUsersList.filter(
-            user => user.id !== userId
-          );
-          setTypingUsers(filteredTypingUsers);
-        }
-      );
+      // Subscribe to typing indicators if available
+      if (subscribeToTypingIndicators) {
+        typingSubscription = subscribeToTypingIndicators(
+          activeRoom,
+          (typingUsersList) => {
+            // Filter out current user
+            const filteredTypingUsers = typingUsersList.filter(
+              user => user.id !== userId
+            );
+            setTypingUsers(filteredTypingUsers);
+          }
+        );
+      }
     }
     
     return () => {

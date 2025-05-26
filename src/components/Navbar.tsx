@@ -28,6 +28,11 @@ const Navbar = () => {
     }
   };
 
+  // Get user data from currentUser (which is from profiles table)
+  const userName = currentUser?.name || currentUser?.email || 'User';
+  const userEmail = currentUser?.email || '';
+  const userAvatar = currentUser?.avatar_url || '';
+
   return (
     <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -67,12 +72,9 @@ const Navbar = () => {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage 
-                        src={currentUser.avatar_url || ''} 
-                        alt={currentUser.name || currentUser.email || 'User'} 
-                      />
+                      <AvatarImage src={userAvatar} alt={userName} />
                       <AvatarFallback>
-                        {(currentUser.name || currentUser.email || 'U').charAt(0).toUpperCase()}
+                        {userName.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                   </Button>
@@ -80,11 +82,9 @@ const Navbar = () => {
                 <DropdownMenuContent className="w-56" align="end" forceMount>
                   <div className="flex items-center justify-start gap-2 p-2">
                     <div className="flex flex-col space-y-1 leading-none">
-                      <p className="font-medium text-sm">
-                        {currentUser.name || 'User'}
-                      </p>
+                      <p className="font-medium text-sm">{userName}</p>
                       <p className="w-[200px] truncate text-xs text-muted-foreground">
-                        {currentUser.email}
+                        {userEmail}
                       </p>
                     </div>
                   </div>
