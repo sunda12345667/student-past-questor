@@ -1,22 +1,23 @@
 
-import { ThemeProvider } from '@/contexts/ThemeContext';
-import { Navbar } from './Navbar';
+import React from 'react';
+import { Outlet } from 'react-router-dom';
+import Navbar from './Navbar';
 import { FooterSection } from './FooterSection';
 
 interface LayoutProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }
 
-export function Layout({ children }: LayoutProps) {
+const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
-    <ThemeProvider>
-      <div className="flex flex-col min-h-screen">
-        <Navbar />
-        <main className="flex-grow">
-          {children}
-        </main>
-        <FooterSection />
-      </div>
-    </ThemeProvider>
+    <div className="min-h-screen flex flex-col bg-background">
+      <Navbar />
+      <main className="flex-1">
+        {children || <Outlet />}
+      </main>
+      <FooterSection />
+    </div>
   );
-}
+};
+
+export default Layout;
