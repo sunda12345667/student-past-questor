@@ -58,38 +58,28 @@ export const subscribeToTypingIndicators = (
   groupId: string,
   onTypingUpdate: (typingUsers: TypingUser[]) => void
 ) => {
-  return supabase
-    .channel(`typing_indicators:${groupId}`)
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'typing_indicators',
-        filter: `group_id=eq.${groupId}`
-      },
-      async (payload) => {
-        // Fetch current typing users
-        const { data: typingData } = await supabase
-          .from('typing_indicators')
-          .select(`
-            user_id,
-            profiles:user_id (
-              id,
-              name
-            )
-          `)
-          .eq('group_id', groupId)
-          .eq('is_typing', true);
-        
-        const typingUsers: TypingUser[] = typingData?.map(t => ({
-          id: t.user_id,
-          name: (t.profiles as any)?.name || 'Unknown',
-          avatar: '/placeholder.svg'
-        })) || [];
-        
-        onTypingUpdate(typingUsers);
-      }
-    )
-    .subscribe();
+  // For now, return a mock subscription since typing_indicators table doesn't exist
+  // This can be implemented later when the table is created
+  const channel = supabase.channel(`typing_indicators:${groupId}`);
+  
+  // Mock empty typing users for now
+  setTimeout(() => onTypingUpdate([]), 100);
+  
+  return channel.subscribe();
+};
+
+export const sendTypingIndicator = async (
+  groupId: string,
+  userId: string,
+  userName: string,
+  userAvatar?: string
+) => {
+  // Mock implementation - can be enhanced when typing_indicators table exists
+  console.log('Typing indicator sent:', { groupId, userId, userName });
+};
+
+export const cleanupChannel = (subscription: any) => {
+  if (subscription) {
+    supabase.removeChannel(subscription);
+  }
 };

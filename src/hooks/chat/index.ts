@@ -5,7 +5,7 @@ import { useGroups } from './useGroups';
 import { useMessages } from './useMessages';
 import { useTyping } from './useTyping';
 import { useRealtime } from './useRealtime';
-import { UseChatResult } from './types';
+import { UseChatResult, Message, TypingUser } from './types';
 
 export * from './types';
 
@@ -15,7 +15,7 @@ export const useChat = (userId: string | undefined): UseChatResult => {
   
   const userData = useUserData(userId);
   const { userGroups, isLoading, loadUserGroups } = useGroups();
-  const { messages, loadMessages, handleSendMessage: sendMessage, addMessage } = useMessages(userId);
+  const { messages, loadMessages, handleSendMessage: sendMessage, addMessage } = useMessages(activeRoom);
   const { typingUsers, setTypingUsers, handleTypingIndicator: sendTypingIndicator } = useTyping(userId);
   
   // Load user's chat groups when userId changes
@@ -38,13 +38,6 @@ export const useChat = (userId: string | undefined): UseChatResult => {
     setTypingUsers
   );
   
-  // Load messages when active room changes
-  useEffect(() => {
-    if (activeRoom) {
-      loadMessages(activeRoom);
-    }
-  }, [activeRoom]);
-  
   // Join a chat room
   const handleJoinRoom = (roomId: string, roomName: string) => {
     setActiveRoom(roomId);
@@ -53,7 +46,9 @@ export const useChat = (userId: string | undefined): UseChatResult => {
   
   // Send a message to the active room
   const handleSendMessage = async (content: string) => {
-    await sendMessage(activeRoom, content);
+    if (activeRoom) {
+      await sendMessage(activeRoom, content);
+    }
   };
   
   // Send typing indicator to the active room
@@ -67,10 +62,20 @@ export const useChat = (userId: string | undefined): UseChatResult => {
     );
   };
 
+  // Transform ChatMessage to Message format
+  const transformedMessages: Message[] = messages.map(msg => ({
+    id: msg.id,
+    sender_id: msg.sender_id,
+    content: msg.content,
+    created_at: msg.created_at,
+    group_id: msg.group_id,
+    sender: msg.sender
+  }));
+
   return {
     activeRoom,
     activeRoomName,
-    messages,
+    messages: transformedMessages,
     userGroups,
     typingUsers,
     isLoading,

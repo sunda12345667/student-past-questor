@@ -8,6 +8,7 @@ export interface Attachment {
   url: string;
   fileType: 'image' | 'document';
   size: number;
+  thumbnailUrl?: string;
 }
 
 export const formatFileSize = (bytes: number): string => {

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -117,7 +116,13 @@ export const GroupChat: React.FC<{ groupId: string }> = ({ groupId }) => {
     if (!activeGroup || !currentUser) return;
     
     try {
-      await sendGroupMessage(activeGroup, content);
+      await supabase
+        .from('group_messages')
+        .insert({
+          group_id: activeGroup,
+          content,
+          sender_id: currentUser.id
+        });
     } catch (error) {
       console.error('Error sending message:', error);
       toast.error('Failed to send message');

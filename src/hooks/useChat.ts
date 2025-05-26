@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,7 +20,6 @@ interface TypingUser {
   id: string;
   name: string;
   avatar?: string;
-  isTyping: boolean;
 }
 
 export const useChat = (userId: string | undefined) => {
@@ -124,8 +122,37 @@ export const useChat = (userId: string | undefined) => {
   // Load messages for a specific group
   const loadMessages = async (groupId: string) => {
     try {
-      const chatMessages = await getMessages(groupId);
-      setMessages(chatMessages);
+      const { data } = await supabase
+        .from('group_messages')
+        .select(`
+          id,
+          content,
+          created_at,
+          group_id,
+          sender_id,
+          sender:profiles (
+            id,
+            name
+          )
+        `)
+        .eq('group_id', groupId)
+        .order('created_at', { ascending: true });
+
+      if (data) {
+        const messages: Message[] = data.map(msg => ({
+          id: msg.id,
+          sender_id: msg.sender_id,
+          content: msg.content,
+          created_at: msg.created_at,
+          group_id: msg.group_id,
+          sender: (msg.sender as any) ? {
+            id: (msg.sender as any).id,
+            name: (msg.sender as any).name,
+            avatar: '/placeholder.svg'
+          } : undefined
+        }));
+        setMessages(messages);
+      }
     } catch (error) {
       console.error('Error loading messages:', error);
       toast.error('Failed to load messages');
@@ -147,15 +174,13 @@ export const useChat = (userId: string | undefined) => {
     }
 
     try {
-      const messageData = {
-        content,
-        group_id: activeRoom
-      };
-
-      const newMessage = await sendMessage(messageData);
-      if (!newMessage) {
-        throw new Error('Failed to send message');
-      }
+      await supabase
+        .from('group_messages')
+        .insert({
+          group_id: activeRoom,
+          content,
+          sender_id: userId
+        });
 
       toast.success('Message sent successfully');
     } catch (error) {
@@ -213,7 +238,7 @@ export const useChat = (userId: string | undefined) => {
       if (subscribeToTypingIndicators) {
         typingSubscription = subscribeToTypingIndicators(
           activeRoom,
-          (typingUsersList) => {
+          (typingUsersList: TypingUser[]) => {
             // Filter out current user
             const filteredTypingUsers = typingUsersList.filter(
               user => user.id !== userId

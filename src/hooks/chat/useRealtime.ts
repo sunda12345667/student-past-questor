@@ -56,7 +56,7 @@ export const useRealtime = (
       // Subscribe to typing indicators with error handling
       typingSubscriptionRef.current = subscribeToTypingIndicators(
         activeRoom,
-        (typingUsersList) => {
+        (typingUsersList: TypingUser[]) => {
           console.log('Received typing update:', typingUsersList);
           // Filter out current user
           const filteredTypingUsers = typingUsersList.filter(
@@ -66,34 +66,8 @@ export const useRealtime = (
         }
       );
 
-      // Monitor connection status
-      const connectionStatus = supabase.channel('connection-status');
-      connectionStatus
-        .on('system', {}, (payload) => {
-          console.log('Supabase connection status:', payload);
-          
-          if (payload.status === 'CLOSED' && reconnectAttempts.current < maxReconnectAttempts) {
-            console.log('Connection lost, attempting to reconnect...');
-            reconnectAttempts.current++;
-            
-            reconnectTimeoutRef.current = setTimeout(() => {
-              cleanup();
-              setupSubscriptions();
-            }, Math.pow(2, reconnectAttempts.current) * 1000); // Exponential backoff
-          }
-        })
-        .subscribe();
-
     } catch (error) {
       console.error('Error setting up realtime subscriptions:', error);
-      
-      // Retry with exponential backoff
-      if (reconnectAttempts.current < maxReconnectAttempts) {
-        reconnectAttempts.current++;
-        reconnectTimeoutRef.current = setTimeout(() => {
-          setupSubscriptions();
-        }, Math.pow(2, reconnectAttempts.current) * 1000);
-      }
     }
   };
 
