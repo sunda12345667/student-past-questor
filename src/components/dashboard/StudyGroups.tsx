@@ -1,13 +1,14 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import CreateGroupDialog from './groups/CreateGroupDialog';
 import GroupList from './groups/GroupList';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { joinStudyGroup } from '@/services/groupService';
 
-// Mock data types
 interface StudyGroup {
   id: string;
   name: string;
@@ -28,143 +29,153 @@ interface PublicGroup {
   isPrivate: boolean;
 }
 
-// Mock data for study groups
-const mockGroups = [
-  {
-    id: '1',
-    name: 'JAMB Study Club',
-    description: 'Group focused on preparing for JAMB exams',
-    members: 24,
-    isPrivate: false,
-    isOwner: true,
-    isAdmin: true,
-    lastActivity: '2 hours ago',
-    upcomingSessions: 2
-  },
-  {
-    id: '2',
-    name: 'Physics Masters',
-    description: 'Advanced Physics discussions and problem solving',
-    members: 16,
-    isPrivate: true,
-    isOwner: false,
-    isAdmin: false,
-    lastActivity: 'Yesterday',
-    upcomingSessions: 1
-  },
-  {
-    id: '3',
-    name: 'WAEC Mathematics',
-    description: 'WAEC Mathematics past questions and solutions',
-    members: 32,
-    isPrivate: false,
-    isOwner: false,
-    isAdmin: true,
-    lastActivity: '3 days ago',
-    upcomingSessions: 0
-  }
-];
-
 const StudyGroups = () => {
   const { toast } = useToast();
   const { currentUser } = useAuth();
   const navigate = useNavigate();
   
-  const [myGroups, setMyGroups] = useState<StudyGroup[]>(mockGroups);
-  const [publicGroups, setPublicGroups] = useState<PublicGroup[]>([
-    {
-      id: '4',
-      name: 'Biology Enthusiasts',
-      description: 'Discussions on biology topics and exam preparation',
-      members: 45,
-      isPrivate: false
-    },
-    {
-      id: '5',
-      name: 'Chemistry Lab',
-      description: 'For students passionate about chemistry',
-      members: 29,
-      isPrivate: false
-    }
-  ]);
-  
+  const [myGroups, setMyGroups] = useState<StudyGroup[]>([]);
+  const [publicGroups, setPublicGroups] = useState<PublicGroup[]>([]);
   const [activeTab, setActiveTab] = useState('my-groups');
+  const [isLoading, setIsLoading] = useState(true);
+
+  const loadMyGroups = async () => {
+    if (!currentUser) return;
+
+    try {
+      const { data: memberGroups, error } = await supabase
+        .from('group_members')
+        .select(`
+          group_id,
+          is_admin,
+          study_groups (
+            id,
+            name,
+            description,
+            is_private,
+            owner_id,
+            created_at
+          )
+        `)
+        .eq('user_id', currentUser.id);
+
+      if (error) {
+        console.error('Error loading my groups:', error);
+        return;
+      }
+
+      const groups: StudyGroup[] = memberGroups
+        ?.filter(mg => mg.study_groups)
+        .map(mg => ({
+          id: mg.study_groups.id,
+          name: mg.study_groups.name,
+          description: mg.study_groups.description || '',
+          members: 0, // Will be calculated separately if needed
+          isPrivate: mg.study_groups.is_private,
+          isOwner: mg.study_groups.owner_id === currentUser.id,
+          isAdmin: mg.is_admin,
+          lastActivity: 'Recently',
+          upcomingSessions: 0
+        })) || [];
+
+      setMyGroups(groups);
+    } catch (error) {
+      console.error('Error loading my groups:', error);
+    }
+  };
+
+  const loadPublicGroups = async () => {
+    if (!currentUser) return;
+
+    try {
+      // Get public groups that the user is not already a member of
+      const { data: myGroupIds } = await supabase
+        .from('group_members')
+        .select('group_id')
+        .eq('user_id', currentUser.id);
+
+      const memberGroupIds = myGroupIds?.map(mg => mg.group_id) || [];
+
+      const { data: publicGroupsData, error } = await supabase
+        .from('study_groups')
+        .select('*')
+        .eq('is_private', false)
+        .not('id', 'in', `(${memberGroupIds.join(',') || 'null'})`);
+
+      if (error) {
+        console.error('Error loading public groups:', error);
+        return;
+      }
+
+      const groups: PublicGroup[] = publicGroupsData?.map(group => ({
+        id: group.id,
+        name: group.name,
+        description: group.description || '',
+        members: 0, // Will be calculated separately if needed
+        isPrivate: group.is_private
+      })) || [];
+
+      setPublicGroups(groups);
+    } catch (error) {
+      console.error('Error loading public groups:', error);
+    }
+  };
+
+  const loadData = async () => {
+    setIsLoading(true);
+    await Promise.all([loadMyGroups(), loadPublicGroups()]);
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    if (currentUser) {
+      loadData();
+    }
+  }, [currentUser]);
   
-  const handleCreateGroup = (newGroupData: { name: string; description: string; isPrivate: boolean }) => {
-    // In a real app, we would save this to the database
-    const createdGroup: StudyGroup = {
-      id: Date.now().toString(),
-      name: newGroupData.name,
-      description: newGroupData.description,
-      members: 1,
-      isPrivate: newGroupData.isPrivate,
-      isOwner: true,
-      isAdmin: true,
-      lastActivity: 'Just now',
-      upcomingSessions: 0
-    };
-    
-    setMyGroups(prev => [createdGroup, ...prev]);
-    
-    toast({
-      title: "Group created",
-      description: `Your study group "${createdGroup.name}" has been created successfully.`,
-    });
+  const handleCreateGroup = () => {
+    // Refresh data after group creation
+    loadData();
   };
   
-  const handleJoinGroup = (groupId: string) => {
-    const groupToJoin = publicGroups.find(g => g.id === groupId);
-    if (!groupToJoin) return;
-    
-    // Remove from public groups
-    setPublicGroups(prev => prev.filter(g => g.id !== groupId));
-    
-    // Add to my groups
-    const joinedGroup: StudyGroup = {
-      ...groupToJoin,
-      isOwner: false,
-      isAdmin: false,
-      lastActivity: 'Just now',
-      upcomingSessions: 0,
-      members: groupToJoin.members + 1
-    };
-    
-    setMyGroups(prev => [...prev, joinedGroup]);
-    
-    toast({
-      title: "Group joined",
-      description: `You've successfully joined "${joinedGroup.name}".`,
-    });
+  const handleJoinGroup = async (groupId: string) => {
+    const success = await joinStudyGroup(groupId);
+    if (success) {
+      // Refresh data to move group from public to my groups
+      loadData();
+    }
   };
 
   const handleDiscoverGroups = () => {
     setActiveTab('discover');
-    setTimeout(() => {
-      const discoverTab = document.querySelector('[data-state="inactive"]');
-      if (discoverTab) {
-        (discoverTab as HTMLElement).click();
-      }
-    }, 0);
   };
   
   const handleOpenChat = (groupId: string) => {
-    // Navigate to dashboard chat tab with this group selected
-    navigate(`/dashboard#chat`);
-    // Store the selected group ID in sessionStorage so the chat component can use it
-    sessionStorage.setItem('selectedGroupId', groupId);
+    navigate('/chat');
   };
   
   const handleOpenSessions = (groupId: string) => {
-    navigate(`/dashboard#sessions`);
-    // Store the selected group ID for the sessions tab
+    navigate('/dashboard#sessions');
     sessionStorage.setItem('selectedGroupId', groupId);
   };
+  
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-medium">Study Groups</h2>
+          <CreateGroupDialog onGroupCreated={handleCreateGroup} />
+        </div>
+        <div className="text-center py-8">Loading...</div>
+      </div>
+    );
+  }
   
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-medium">Study Groups</h2>
-        <CreateGroupDialog onCreateGroup={handleCreateGroup} />
+        <CreateGroupDialog onGroupCreated={handleCreateGroup} />
       </div>
       
       <Tabs defaultValue="my-groups" value={activeTab} onValueChange={setActiveTab}>
@@ -188,7 +199,7 @@ const StudyGroups = () => {
             groups={publicGroups} 
             isMyGroups={false}
             onJoinGroup={handleJoinGroup}
-            onCreateGroup={() => document.querySelector('button')?.click()}
+            onCreateGroup={handleCreateGroup}
           />
         </TabsContent>
       </Tabs>

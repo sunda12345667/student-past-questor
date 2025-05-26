@@ -1,106 +1,113 @@
 
-import { useState } from 'react';
-import { useToast } from '@/hooks/use-toast';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger 
-} from '@/components/ui/dialog';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Lock, Plus } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Plus } from 'lucide-react';
+import { createStudyGroup, CreateGroupData } from '@/services/groupService';
 
 interface CreateGroupDialogProps {
-  onCreateGroup: (group: { name: string; description: string; isPrivate: boolean }) => void;
+  onGroupCreated?: () => void;
 }
 
-const CreateGroupDialog = ({ onCreateGroup }: CreateGroupDialogProps) => {
-  const { toast } = useToast();
-  const [isOpen, setIsOpen] = useState(false);
-  const [newGroup, setNewGroup] = useState({
+const CreateGroupDialog: React.FC<CreateGroupDialogProps> = ({ onGroupCreated }) => {
+  const [open, setOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState<CreateGroupData>({
     name: '',
     description: '',
     isPrivate: false
   });
-  
-  const handleCreateGroup = () => {
-    if (!newGroup.name.trim()) {
-      toast({
-        title: "Group name required",
-        description: "Please provide a name for your study group.",
-        variant: "destructive"
-      });
-      return;
-    }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     
-    onCreateGroup(newGroup);
-    setNewGroup({ name: '', description: '', isPrivate: false });
-    setIsOpen(false);
+    if (!formData.name.trim()) return;
+    
+    setIsSubmitting(true);
+    
+    try {
+      const result = await createStudyGroup(formData);
+      
+      if (result) {
+        setOpen(false);
+        setFormData({ name: '', description: '', isPrivate: false });
+        onGroupCreated?.();
+      }
+    } catch (error) {
+      console.error('Error creating group:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
-  
+
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button>
           <Plus className="h-4 w-4 mr-2" />
           Create Group
         </Button>
       </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Create Study Group</DialogTitle>
-          <DialogDescription>
-            Create a new study group to collaborate with other students.
-          </DialogDescription>
-        </DialogHeader>
-        
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="group-name">Group Name</Label>
-            <Input 
-              id="group-name" 
-              placeholder="e.g., JAMB Physics Study Group"
-              value={newGroup.name}
-              onChange={(e) => setNewGroup(prev => ({ ...prev, name: e.target.value }))}
-            />
+      <DialogContent className="sm:max-w-[425px]">
+        <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle>Create Study Group</DialogTitle>
+            <DialogDescription>
+              Create a new study group to collaborate with other students.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Group Name</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Enter group name"
+                required
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Describe your study group"
+                rows={3}
+              />
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="private"
+                checked={formData.isPrivate}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isPrivate: checked }))}
+              />
+              <Label htmlFor="private">Private Group</Label>
+            </div>
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="group-description">Description</Label>
-            <Textarea 
-              id="group-description" 
-              placeholder="Describe the purpose of your group"
-              value={newGroup.description}
-              onChange={(e) => setNewGroup(prev => ({ ...prev, description: e.target.value }))}
-            />
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="private-group" 
-              checked={newGroup.isPrivate}
-              onCheckedChange={(checked) => 
-                setNewGroup(prev => ({ ...prev, isPrivate: checked === true }))
-              }
-            />
-            <Label htmlFor="private-group" className="flex items-center">
-              <Lock className="h-4 w-4 mr-2" />
-              Make this group private (invite only)
-            </Label>
-          </div>
-        </div>
-        
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
-          <Button onClick={handleCreateGroup}>Create Group</Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button type="submit" disabled={isSubmitting || !formData.name.trim()}>
+              {isSubmitting ? 'Creating...' : 'Create Group'}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

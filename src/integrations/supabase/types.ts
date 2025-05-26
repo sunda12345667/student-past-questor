@@ -444,8 +444,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       is_admin: {
         Args: { user_id: string }
+        Returns: boolean
+      }
+      is_group_admin: {
+        Args: { group_id: string }
+        Returns: boolean
+      }
+      is_group_member: {
+        Args: { group_id: string }
         Returns: boolean
       }
     }

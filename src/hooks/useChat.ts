@@ -1,14 +1,8 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  sendMessage,
-  getMessages, 
-  subscribeToMessages,
-  sendTypingIndicator,
-  subscribeToTypingIndicators
-} from '@/services/chat';
-import { Message, ChatGroup } from '@/services/chat/types';
+import { subscribeToGroupMessages } from '@/services/chat/realtimeService';
 
 interface ChatRoom {
   id: string;
@@ -22,6 +16,19 @@ interface TypingUser {
   avatar?: string;
 }
 
+interface Message {
+  id: string;
+  sender_id: string;
+  content: string;
+  created_at: string;
+  group_id: string;
+  sender?: {
+    id: string;
+    name: string;
+    avatar?: string;
+  };
+}
+
 export const useChat = (userId: string | undefined) => {
   const [activeRoom, setActiveRoom] = useState<string | null>(null);
   const [activeRoomName, setActiveRoomName] = useState<string | null>(null);
@@ -29,44 +36,6 @@ export const useChat = (userId: string | undefined) => {
   const [userGroups, setUserGroups] = useState<ChatRoom[]>([]);
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentUserData, setCurrentUserData] = useState<{
-    name: string;
-    avatar?: string;
-  } | null>(null);
-
-  // Transform ChatMessage to Message format
-  const transformMessage = (chatMessage: any): Message => {
-    return {
-      id: chatMessage.id,
-      sender_id: chatMessage.user_id || chatMessage.sender_id,
-      content: chatMessage.content,
-      created_at: chatMessage.created_at,
-      group_id: chatMessage.group_id,
-      sender: chatMessage.sender
-    };
-  };
-
-  // Load current user data
-  const loadCurrentUserData = async () => {
-    if (!userId) return;
-    
-    try {
-      const { data: user } = await supabase
-        .from('profiles')
-        .select('name, avatar_url')
-        .eq('id', userId)
-        .single();
-        
-      if (user) {
-        setCurrentUserData({
-          name: user.name,
-          avatar: user.avatar_url
-        });
-      }
-    } catch (error) {
-      console.error('Error loading user data:', error);
-    }
-  };
 
   // Load user's chat groups
   const loadUserGroups = async () => {
@@ -93,6 +62,7 @@ export const useChat = (userId: string | undefined) => {
 
       if (error) {
         console.error('Error loading groups:', error);
+        toast.error('Failed to load chat groups');
         return;
       }
 
@@ -102,7 +72,7 @@ export const useChat = (userId: string | undefined) => {
         .map(mg => ({
           id: mg.study_groups.id,
           name: mg.study_groups.name,
-          participants: 0 // Will be populated later if needed
+          participants: 0
         })) || [];
       
       setUserGroups(chatRooms);
@@ -174,7 +144,7 @@ export const useChat = (userId: string | undefined) => {
     }
 
     try {
-      await supabase
+      const { error } = await supabase
         .from('group_messages')
         .insert({
           group_id: activeRoom,
@@ -182,79 +152,57 @@ export const useChat = (userId: string | undefined) => {
           sender_id: userId
         });
 
-      toast.success('Message sent successfully');
+      if (error) {
+        console.error('Error sending message:', error);
+        toast.error('Failed to send message');
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       toast.error('Failed to send message');
     }
   }, [activeRoom, userId]);
   
-  // Send typing indicator to the active room
+  // Send typing indicator (placeholder)
   const handleTypingIndicator = async () => {
-    if (!activeRoom || !userId || !currentUserData) return;
-    
-    try {
-      await sendTypingIndicator(
-        activeRoom,
-        userId,
-        currentUserData.name,
-        currentUserData.avatar
-      );
-    } catch (error) {
-      console.error('Error sending typing indicator:', error);
-    }
+    // Placeholder implementation
+    console.log('Typing indicator sent');
   };
 
-  // Load user data when userId changes
+  // Load user groups when userId changes
   useEffect(() => {
     if (userId) {
-      loadCurrentUserData();
       loadUserGroups();
     }
   }, [userId]);
 
-  // Subscribe to messages and typing indicators when active room changes
+  // Subscribe to messages when active room changes
   useEffect(() => {
     let messageSubscription: any = null;
-    let typingSubscription: any = null;
     
     if (activeRoom && userId) {
-      // Load existing messages
-      loadMessages(activeRoom);
-      
       // Subscribe to new messages
-      messageSubscription = subscribeToMessages(
+      messageSubscription = subscribeToGroupMessages(
         activeRoom,
         (newMessage) => {
-          const transformedMessage = transformMessage(newMessage);
+          const transformedMessage: Message = {
+            id: newMessage.id,
+            sender_id: newMessage.sender_id,
+            content: newMessage.content,
+            created_at: newMessage.created_at,
+            group_id: newMessage.group_id,
+            sender: newMessage.sender
+          };
           setMessages((prevMessages) => [
             ...prevMessages,
             transformedMessage
           ]);
         }
       );
-      
-      // Subscribe to typing indicators if available
-      if (subscribeToTypingIndicators) {
-        typingSubscription = subscribeToTypingIndicators(
-          activeRoom,
-          (typingUsersList: TypingUser[]) => {
-            // Filter out current user
-            const filteredTypingUsers = typingUsersList.filter(
-              user => user.id !== userId
-            );
-            setTypingUsers(filteredTypingUsers);
-          }
-        );
-      }
     }
     
     return () => {
       if (messageSubscription) {
         supabase.removeChannel(messageSubscription);
-      }
-      if (typingSubscription) {
-        supabase.removeChannel(typingSubscription);
       }
     };
   }, [activeRoom, userId]);

@@ -6,7 +6,7 @@ import { ChatRoomList } from '@/components/student-chat/ChatRoomList';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
-import { useChat } from '@/hooks/chat';
+import { useChat } from '@/hooks/useChat';
 import { formatTime } from '@/utils/formatTime';
 
 // Type adapters to bridge the difference between chat hook types and component types
@@ -66,7 +66,7 @@ const StudentChat: React.FC = () => {
     senderId: msg.sender_id,
     senderName: msg.sender?.name || 'Unknown User',
     content: msg.content,
-    timestamp: new Date(msg.created_at), // Convert string to Date
+    timestamp: new Date(msg.created_at),
     reactions: {},
     attachments: []
   }));
@@ -83,19 +83,19 @@ const StudentChat: React.FC = () => {
   const componentChatRooms: ComponentChatRoom[] = userGroups.map(group => ({
     id: group.id,
     name: group.name,
-    description: group.description,
-    participants: 0, // Default value since we don't have participant count
+    description: '',
+    participants: group.participants,
     lastMessage: undefined,
     lastMessageTime: undefined
   }));
 
-  // Handler for message reactions
+  // Handler for message reactions (placeholder)
   const handleReactionToggle = async (messageId: string, emoji: string) => {
     if (!currentUser) return;
     
     try {
-      // TODO: Implement reaction toggle functionality
       console.log('Reaction toggle:', messageId, emoji);
+      // TODO: Implement reaction functionality when reactions table is added
     } catch (error) {
       console.error('Error toggling reaction:', error);
       toast.error('Could not update reaction');
