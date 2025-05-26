@@ -14,7 +14,7 @@ export const useMessages = (userId: string | undefined) => {
   const transformMessage = (chatMessage: any): Message => {
     return {
       id: chatMessage.id,
-      senderId: chatMessage.user_id,
+      senderId: chatMessage.user_id || chatMessage.sender_id,
       senderName: chatMessage.sender?.name || 'Unknown User',
       content: chatMessage.content,
       timestamp: new Date(chatMessage.created_at),
@@ -39,11 +39,11 @@ export const useMessages = (userId: string | undefined) => {
   };
   
   // Send a message to the active room
-  const handleSendMessage = async (activeRoom: string | null, content: string, attachmentFiles?: File[]) => {
+  const handleSendMessage = async (activeRoom: string | null, content: string) => {
     if (!activeRoom || !userId) return;
     
     try {
-      const newMessage = await sendGroupMessage(activeRoom, content, attachmentFiles);
+      const newMessage = await sendGroupMessage(activeRoom, content);
       if (newMessage) {
         setMessages((prev) => [
           ...prev,

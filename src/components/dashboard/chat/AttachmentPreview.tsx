@@ -15,7 +15,8 @@ export const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({
   onRemove,
   isInMessage = false
 }) => {
-  const { filename, fileType, size, thumbnailUrl, url } = attachment;
+  const { filename, fileType, size, url } = attachment;
+  const thumbnailUrl = attachment.thumbnailUrl || (fileType === 'image' ? url : undefined);
   
   return (
     <div className="flex items-center gap-2 bg-muted/30 rounded p-2 relative">

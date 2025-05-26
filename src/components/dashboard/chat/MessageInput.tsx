@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -39,18 +38,15 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
   const handleFileSelect = (file: File) => {
     if (file) {
-      // This will be replaced with actual upload logic in GroupChat
-      // We'll just create a temporary object for now
-      const attachment: Attachment = {
-        id: URL.createObjectURL(file),
-        url: URL.createObjectURL(file),
+      const newAttachment: Attachment = {
+        id: Math.random().toString(36),
         filename: file.name,
+        url: URL.createObjectURL(file),
         fileType: file.type.startsWith('image/') ? 'image' : 'document',
-        size: file.size,
-        thumbnailUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined
+        size: file.size
       };
       
-      setAttachments(prev => [...prev, attachment]);
+      setAttachments(prev => [...prev, newAttachment]);
     }
   };
 

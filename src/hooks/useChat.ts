@@ -201,9 +201,10 @@ export const useChat = (userId: string | undefined) => {
       messageSubscription = subscribeToMessages(
         activeRoom,
         (newMessage) => {
+          const transformedMessage = transformMessage(newMessage);
           setMessages((prevMessages) => [
             ...prevMessages,
-            newMessage
+            transformedMessage
           ]);
         }
       );

@@ -11,11 +11,7 @@ export const getGroupMembers = async (groupId: string): Promise<GroupMember[]> =
         group_id,
         user_id,
         is_admin,
-        joined_at,
-        profiles (
-          name,
-          avatar_url
-        )
+        joined_at
       `)
       .eq('group_id', groupId);
 
@@ -24,16 +20,34 @@ export const getGroupMembers = async (groupId: string): Promise<GroupMember[]> =
       return [];
     }
 
+    // Get user profiles separately
+    const userIds = data?.map(member => member.user_id) || [];
+    if (userIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, name, avatar_url')
+        .in('id', userIds);
+
+      return data?.map(member => ({
+        id: member.id,
+        group_id: member.group_id,
+        user_id: member.user_id,
+        is_admin: member.is_admin,
+        joined_at: member.joined_at,
+        user: profiles?.find(p => p.id === member.user_id) ? {
+          name: profiles.find(p => p.id === member.user_id)!.name,
+          avatar_url: profiles.find(p => p.id === member.user_id)!.avatar_url
+        } : undefined
+      })) || [];
+    }
+
     return data?.map(member => ({
       id: member.id,
       group_id: member.group_id,
       user_id: member.user_id,
       is_admin: member.is_admin,
       joined_at: member.joined_at,
-      user: member.profiles ? {
-        name: member.profiles.name,
-        avatar_url: member.profiles.avatar_url
-      } : undefined
+      user: undefined
     })) || [];
   } catch (error) {
     console.error('Error in getGroupMembers:', error);

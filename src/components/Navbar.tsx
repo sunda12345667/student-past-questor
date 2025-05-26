@@ -1,124 +1,86 @@
-
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { ThemeToggle } from '@/components/ThemeToggle';
-import { NotificationBell } from '@/components/NotificationBell';
-import { useAuth } from '@/hooks/auth';
-import { LogOut, User, Settings } from 'lucide-react';
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 
-const Navbar = () => {
+export const Navbar: React.FC = () => {
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
 
-  const handleSignOut = async () => {
+  const handleLogout = async () => {
     try {
       await logout();
-      navigate('/');
+      navigate('/login');
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error('Logout failed:', error);
     }
   };
 
-  // Get user data from currentUser (which is from profiles table)
-  const userName = currentUser?.name || currentUser?.email || 'User';
-  const userEmail = currentUser?.email || '';
-  const userAvatar = currentUser?.avatar_url || '';
-
   return (
-    <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          <div className="flex items-center space-x-4">
-            <Link to="/" className="text-2xl font-bold text-primary">
-              StudySync
-            </Link>
-          </div>
-
-          <div className="flex items-center space-x-4">
-            <nav className="hidden md:flex space-x-4">
-              <Link to="/" className="text-foreground/80 hover:text-foreground transition-colors">
-                Home
-              </Link>
-              {currentUser && (
-                <>
-                  <Link to="/dashboard" className="text-foreground/80 hover:text-foreground transition-colors">
-                    Dashboard
-                  </Link>
-                  <Link to="/chat" className="text-foreground/80 hover:text-foreground transition-colors">
-                    Chat
-                  </Link>
-                  <Link to="/exams" className="text-foreground/80 hover:text-foreground transition-colors">
-                    Exams
-                  </Link>
-                </>
-              )}
-            </nav>
-
-            <ThemeToggle />
-            
-            {currentUser && <NotificationBell />}
-
-            {currentUser ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={userAvatar} alt={userName} />
-                      <AvatarFallback>
-                        {userName.charAt(0).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="end" forceMount>
-                  <div className="flex items-center justify-start gap-2 p-2">
-                    <div className="flex flex-col space-y-1 leading-none">
-                      <p className="font-medium text-sm">{userName}</p>
-                      <p className="w-[200px] truncate text-xs text-muted-foreground">
-                        {userEmail}
-                      </p>
-                    </div>
+    <div className="bg-background border-b">
+      <div className="flex h-16 items-center px-4">
+        <Link to="/" className="font-bold text-2xl">
+          Learnable
+        </Link>
+        <div className="ml-auto flex items-center space-x-4">
+          {currentUser && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage 
+                      src={currentUser.user_metadata?.avatar_url || "/placeholder.svg"} 
+                      alt={currentUser.email || "User"} 
+                    />
+                    <AvatarFallback>
+                      {currentUser.email?.[0]?.toUpperCase() || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">
+                      {currentUser.user_metadata?.name || currentUser.email}
+                    </p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      {currentUser.email}
+                    </p>
                   </div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate('/dashboard')}>
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleSignOut}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <div className="flex space-x-2">
-                <Button variant="ghost" asChild>
-                  <Link to="/login">Login</Link>
-                </Button>
-                <Button asChild>
-                  <Link to="/signup">Sign Up</Link>
-                </Button>
-              </div>
-            )}
-          </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                  Dashboard
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout}>
+                  Log out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          {!currentUser && (
+            <>
+              <Link to="/login">
+                <Button variant="ghost">Log In</Button>
+              </Link>
+              <Link to="/register">
+                <Button>Sign Up</Button>
+              </Link>
+            </>
+          )}
         </div>
       </div>
-    </nav>
+    </div>
   );
 };
-
-export default Navbar;

@@ -1,306 +1,243 @@
-
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/auth';
+import React, { useState, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAuth } from '@/contexts/AuthContext';
+import { subscribeToGroupMessages, sendGroupMessage, subscribeToTypingIndicators } from '@/services/chat';
+import { ChatMessage, MessageAttachment } from '@/services/chat/types';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  ChatGroup, 
-  ChatMessage, 
-  getUserGroups,
-  getPublicGroups,
-  getGroupMessages,
-  sendGroupMessage,
-  createChatGroup,
-  joinChatGroup,
-  leaveChatGroup,
-  getGroupMembers,
-  subscribeToGroupMessages,
-  subscribeToTypingIndicators,
-  sendTypingIndicator
-} from '@/services/chat';
-import { TypingUser } from '@/hooks/chat';
-import { Attachment } from '@/services/chat/attachmentService';
-import GroupList from './chat/GroupList';
-import ChatContainer from './chat/ChatContainer';
-import CreateGroupDialog from './chat/CreateGroupDialog';
-import GroupMembersDialog from './chat/GroupMembersDialog';
+import { MessageReactions } from '@/components/chat/MessageReactions';
+import { AttachmentPreview } from './chat/AttachmentPreview';
+import { FileInput } from '@/components/ui/file-input';
 
-const GroupChat = () => {
-  const { currentUser } = useAuth();
-  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
+interface TypingUser {
+  id: string;
+  name: string;
+  avatar?: string;
+}
+
+const formatDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
+
+export const GroupChat: React.FC<{ groupId: string }> = ({ groupId }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [messageInput, setMessageInput] = useState('');
-  const [groups, setGroups] = useState<ChatGroup[]>([]);
-  const [publicGroups, setPublicGroups] = useState<ChatGroup[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [membersLoading, setMembersLoading] = useState(false);
-  const [isCreatingGroup, setIsCreatingGroup] = useState(false);
-  const [newGroupName, setNewGroupName] = useState('');
-  const [newGroupDescription, setNewGroupDescription] = useState('');
-  const [newGroupIsPrivate, setNewGroupIsPrivate] = useState(false);
-  const [groupMembers, setGroupMembers] = useState<any[]>([]);
-  const [showMembersModal, setShowMembersModal] = useState(false);
-  const [activeTab, setActiveTab] = useState('my-groups');
+  const [newMessage, setNewMessage] = useState('');
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
-  
-  useEffect(() => {
-    const storedGroupId = sessionStorage.getItem('selectedGroupId');
-    if (storedGroupId) {
-      setSelectedGroup(storedGroupId);
-      sessionStorage.removeItem('selectedGroupId');
-    }
-  }, []);
-  
-  useEffect(() => {
-    const loadGroups = async () => {
-      setLoading(true);
-      try {
-        const userGroups = await getUserGroups();
-        setGroups(userGroups);
-        
-        const availablePublicGroups = await getPublicGroups();
-        setPublicGroups(availablePublicGroups);
-        
-        if (userGroups.length > 0 && !selectedGroup) {
-          setSelectedGroup(userGroups[0].id);
-        }
-      } catch (error) {
-        console.error("Error loading groups:", error);
-      } finally {
-        setLoading(false);
-      }
+  const [activeGroup, setActiveGroup] = useState(groupId);
+  const [attachment, setAttachment] = useState<MessageAttachment | null>(null);
+  const { currentUser } = useAuth();
+  let messageSubscription: any = null;
+  const [file, setFile] = useState<File | null>(null);
+
+  // Transform ChatMessage to Message format for consistency
+  const transformMessage = (chatMessage: any): ChatMessage => {
+    return {
+      id: chatMessage.id,
+      content: chatMessage.content,
+      user_id: chatMessage.sender_id || chatMessage.user_id,
+      sender_id: chatMessage.sender_id || chatMessage.user_id,
+      group_id: chatMessage.group_id,
+      created_at: chatMessage.created_at,
+      reactions: chatMessage.reactions || {},
+      attachments: chatMessage.attachments || [],
+      sender: chatMessage.sender
     };
-    
-    loadGroups();
-  }, []);
-  
+  };
+
+  const loadMessages = useCallback(async () => {
+    try {
+      const { data } = await supabase
+        .from('messages')
+        .select(`
+          id,
+          content,
+          created_at,
+          group_id,
+          sender_id,
+          reactions,
+          attachments,
+          sender:profiles (
+            id,
+            name,
+            avatar_url
+          )
+        `)
+        .eq('group_id', activeGroup)
+        .order('created_at', { ascending: true });
+
+      if (data) {
+        // Transform messages to ChatMessage format
+        const transformedMessages = data.map(transformMessage);
+        setMessages(transformedMessages);
+      }
+    } catch (error) {
+      console.error('Error loading messages:', error);
+      toast.error('Failed to load messages');
+    }
+  }, [activeGroup, transformMessage]);
+
   useEffect(() => {
-    if (selectedGroup) {
-      const loadMessages = async () => {
-        const groupMessages = await getGroupMessages(selectedGroup);
-        setMessages(groupMessages);
-        
-        const members = await getGroupMembers(selectedGroup);
-        setGroupMembers(members);
-      };
-      
+    if (activeGroup) {
       loadMessages();
-      
-      const messageChannel = subscribeToGroupMessages(
-        selectedGroup,
+
+      // Subscribe to new messages
+      messageSubscription = subscribeToGroupMessages(
+        activeGroup,
         (newMessage) => {
-          setMessages(prev => [...prev, newMessage]);
+          const transformedMessage = transformMessage(newMessage);
+          setMessages((prevMessages) => [
+            ...prevMessages,
+            transformedMessage
+          ]);
         }
       );
-      
-      const typingChannel = subscribeToTypingIndicators(
-        selectedGroup,
+
+      // Subscribe to typing indicators
+      const typingSubscription = subscribeToTypingIndicators(
+        activeGroup,
         (typingUsersList) => {
+          // Filter out current user
           const filteredTypingUsers = typingUsersList.filter(
             user => user.id !== currentUser?.id
           );
           setTypingUsers(filteredTypingUsers);
         }
       );
-      
+
       return () => {
-        supabase.removeChannel(messageChannel);
-        supabase.removeChannel(typingChannel);
+        supabase.removeChannel(messageSubscription);
+        supabase.removeChannel(typingSubscription);
       };
     }
-  }, [selectedGroup, currentUser?.id]);
-  
-  const handleSendMessage = async (content: string, attachments?: Attachment[]) => {
-    if ((!content.trim() && (!attachments || attachments.length === 0)) || !selectedGroup || !currentUser) return;
+  }, [activeGroup, currentUser, loadMessages, transformMessage]);
+
+  const handleSendMessage = async (content: string) => {
+    if (!activeGroup || !currentUser) return;
     
-    // Convert attachments to Files for upload
-    const files: File[] = [];
-    if (attachments && attachments.length > 0) {
-      for (const attachment of attachments) {
-        try {
-          // Fetch the blob from the URL
-          const response = await fetch(attachment.url);
-          const blob = await response.blob();
-          
-          // Create a File from the Blob
-          const file = new File([blob], attachment.filename, {
-            type: attachment.fileType === 'image' ? 'image/jpeg' : 'application/octet-stream',
-          });
-          
-          files.push(file);
-        } catch (error) {
-          console.error("Error converting attachment to file:", error);
-        }
-      }
-    }
-    
-    const success = await sendGroupMessage(selectedGroup, content, files);
-    if (success) {
-      setMessageInput('');
-    }
-  };
-  
-  const handleCreateGroup = async () => {
-    if (!newGroupName.trim()) return;
-    
-    const newGroup = await createChatGroup(
-      newGroupName,
-      newGroupDescription,
-      newGroupIsPrivate
-    );
-    
-    if (newGroup) {
-      setGroups(prev => [newGroup, ...prev]);
-      setSelectedGroup(newGroup.id);
-      setIsCreatingGroup(false);
-      
-      setNewGroupName('');
-      setNewGroupDescription('');
-      setNewGroupIsPrivate(false);
-    }
-  };
-  
-  const handleJoinGroup = async (groupId: string) => {
-    const success = await joinChatGroup(groupId);
-    
-    if (success) {
-      const joinedGroup = publicGroups.find(g => g.id === groupId);
-      if (joinedGroup) {
-        setPublicGroups(prev => prev.filter(g => g.id !== groupId));
-        setGroups(prev => [joinedGroup, ...prev]);
-        setSelectedGroup(groupId);
-      }
-    }
-  };
-  
-  const handleLeaveGroup = async () => {
-    if (!selectedGroup) return;
-    
-    if (window.confirm("Are you sure you want to leave this group?")) {
-      const success = await leaveChatGroup(selectedGroup);
-      
-      if (success) {
-        setGroups(prev => prev.filter(g => g.id !== selectedGroup));
-        setSelectedGroup(null);
-        setMessages([]);
-      }
-    }
-  };
-  
-  const handleShowMembers = async () => {
-    if (!selectedGroup) return;
-    
-    setMembersLoading(true);
     try {
-      const members = await getGroupMembers(selectedGroup);
-      setGroupMembers(members);
-      setShowMembersModal(true);
-    } finally {
-      setMembersLoading(false);
+      await sendGroupMessage(activeGroup, content);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast.error('Failed to send message');
     }
   };
-  
-  const formatTimestamp = (timestamp: string) => {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+
+  const handleReactionToggle = async (messageId: string, emoji: string) => {
+    if (!currentUser) return;
     
-    if (diffInHours < 24) {
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } else if (diffInHours < 48) {
-      return 'Yesterday';
-    } else {
-      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    try {
+      // TODO: Implement reaction toggle functionality
+      console.log('Reaction toggle:', messageId, emoji);
+    } catch (error) {
+      console.error('Error toggling reaction:', error);
+      toast.error('Could not update reaction');
     }
   };
-  
-  const handleTyping = () => {
-    if (currentUser && selectedGroup) {
-      sendTypingIndicator(
-        selectedGroup,
-        currentUser.id,
-        currentUser.name || 'User'
-      );
-    }
+
+  const handleFileChange = (file: File) => {
+    setFile(file);
   };
-  
-  const isGroupAdmin = () => {
-    if (!selectedGroup || !currentUser) return false;
-    const member = groupMembers.find(m => m.user_id === currentUser.id);
-    return member?.is_admin || false;
+
+  const handleRemoveAttachment = () => {
+    setFile(null);
   };
-  
-  const getTypingIndicator = () => {
-    if (typingUsers.length === 0) return null;
-    
-    const typingNames = typingUsers.map(user => {
-      return user.name || 'Someone';
-    });
-    
-    if (typingNames.length === 1) {
-      return `${typingNames[0]} is typing...`;
-    } else if (typingNames.length === 2) {
-      return `${typingNames[0]} and ${typingNames[1]} are typing...`;
-    } else {
-      return `${typingNames.length} people are typing...`;
-    }
-  };
-  
-  const selectedGroupName = groups.find(g => g.id === selectedGroup)?.name;
-  
+
   return (
-    <div className="h-[calc(100vh-16rem)] flex flex-col md:flex-row gap-4">
-      <GroupList 
-        groups={groups}
-        publicGroups={publicGroups}
-        loading={loading}
-        selectedGroup={selectedGroup}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        onSelectGroup={setSelectedGroup}
-        onCreateGroup={() => setIsCreatingGroup(true)}
-        onJoinGroup={handleJoinGroup}
-      />
-      
-      <div className="flex-grow flex flex-col border rounded-lg overflow-hidden">
-        <ChatContainer 
-          selectedGroup={selectedGroup}
-          selectedGroupName={selectedGroupName}
-          messages={messages}
-          currentUserId={currentUser?.id}
-          isGroupAdmin={isGroupAdmin()}
-          messageInput={messageInput}
-          setMessageInput={setMessageInput}
-          handleSendMessage={handleSendMessage}
-          formatTimestamp={formatTimestamp}
-          typingUsers={typingUsers}
-          getTypingIndicator={getTypingIndicator}
-          handleTyping={handleTyping}
-          onShowMembers={handleShowMembers}
-          onLeaveGroup={handleLeaveGroup}
-        />
-      </div>
-      
-      <CreateGroupDialog 
-        isOpen={isCreatingGroup}
-        onOpenChange={setIsCreatingGroup}
-        newGroupName={newGroupName}
-        setNewGroupName={setNewGroupName}
-        newGroupDescription={newGroupDescription}
-        setNewGroupDescription={setNewGroupDescription}
-        newGroupIsPrivate={newGroupIsPrivate}
-        setNewGroupIsPrivate={setNewGroupIsPrivate}
-        onCreateGroup={handleCreateGroup}
-      />
-      
-      <GroupMembersDialog 
-        isOpen={showMembersModal}
-        onOpenChange={setShowMembersModal}
-        groupName={selectedGroupName}
-        membersLoading={membersLoading}
-        groupMembers={groupMembers}
-      />
-    </div>
+    <Card className="h-full flex flex-col">
+      <CardHeader>
+        <CardTitle>Group Chat</CardTitle>
+      </CardHeader>
+      <CardContent className="overflow-y-auto flex-grow">
+        <ul className="list-none p-0">
+          {messages.map((message) => (
+            <li key={message.id} className="mb-4">
+              <div className="flex items-start space-x-2">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={message.sender?.avatar_url || "/placeholder.svg"} alt={message.sender?.name || "User"} />
+                  <AvatarFallback>{message.sender?.name?.[0] || "U"}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="text-sm font-medium">{message.sender?.name}</div>
+                  <div className="text-xs text-muted-foreground">{formatDate(message.created_at)}</div>
+                  <p className="mt-1">{message.content}</p>
+                  {message.attachments && message.attachments.length > 0 && (
+                    <div className="mt-2">
+                      {message.attachments.map((attachment) => (
+                        <AttachmentPreview 
+                          key={attachment.id}
+                          attachment={attachment}
+                          isInMessage={true}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  <MessageReactions
+                    reactions={message.reactions || {}}
+                    onReactionToggle={(emoji) => handleReactionToggle(message.id, emoji)}
+                    currentUserId={currentUser?.id}
+                  />
+                </div>
+              </div>
+            </li>
+          ))}
+          {typingUsers.length > 0 && (
+            <li className="mb-4">
+              <div className="flex items-center space-x-2">
+                {typingUsers.map((user) => (
+                  <div key={user.id} className="flex items-center space-x-1">
+                    <Avatar className="h-6 w-6">
+                      <AvatarImage src={user.avatar || "/placeholder.svg"} alt={user.name} />
+                      <AvatarFallback>{user.name?.[0] || "U"}</AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm italic">{user.name} is typing...</span>
+                  </div>
+                ))}
+              </div>
+            </li>
+          )}
+        </ul>
+      </CardContent>
+      <CardFooter>
+        {file && (
+          <AttachmentPreview 
+            attachment={{
+              id: 'temp',
+              filename: file.name,
+              url: URL.createObjectURL(file),
+              fileType: file.type.startsWith('image/') ? 'image' : 'document',
+              size: file.size
+            }}
+            onRemove={handleRemoveAttachment}
+          />
+        )}
+        <div className="flex space-x-2 w-full">
+          <Input
+            type="text"
+            placeholder="Enter your message"
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (newMessage.trim()) {
+                  handleSendMessage(newMessage);
+                  setNewMessage('');
+                }
+              }
+            }}
+          />
+          <Button onClick={() => {
+            if (newMessage.trim()) {
+              handleSendMessage(newMessage);
+              setNewMessage('');
+            }
+          }}>Send</Button>
+        </div>
+      </CardFooter>
+    </Card>
   );
 };
-
-export default GroupChat;

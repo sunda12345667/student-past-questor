@@ -35,11 +35,12 @@ export interface MessageReaction {
   created_at: string;
 }
 
-// Additional types needed by components
+// Updated ChatMessage to be consistent with Message
 export interface ChatMessage {
   id: string;
   content: string;
   user_id: string;
+  sender_id: string;
   group_id: string;
   created_at: string;
   reactions?: Record<string, string[]>;
@@ -59,6 +60,7 @@ export interface ChatGroup {
   owner_id: string;
   created_at: string;
   members: number;
+  unread?: number;
 }
 
 export interface GroupMember {
@@ -79,4 +81,5 @@ export interface MessageAttachment {
   url: string;
   fileType: 'image' | 'document';
   size: number;
+  thumbnailUrl?: string;
 }
