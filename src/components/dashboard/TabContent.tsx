@@ -65,7 +65,7 @@ export const TabContent = ({ activeTab }: TabContentProps): ReactNode => {
     case 'payments':
       return <PaymentMethods />;
     case 'chat':
-      return <GroupChat />;
+      return <GroupChat groupId="default" />;
     case 'support':
       return <ChatbotSupport />;
     case 'academic-ai':

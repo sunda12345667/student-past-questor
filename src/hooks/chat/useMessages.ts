@@ -1,74 +1,74 @@
 
-import { useState } from 'react';
-import { toast } from 'sonner';
-import { 
-  getGroupMessages,
-  sendGroupMessage
-} from '@/services/chat';
-import { Message } from './types';
+import { useState, useEffect } from 'react';
+import { ChatMessage } from '@/services/chat/types';
+import { subscribeToGroupMessages } from '@/services/chat/realtimeService';
+import { supabase } from '@/integrations/supabase/client';
 
-export const useMessages = (userId: string | undefined) => {
-  const [messages, setMessages] = useState<Message[]>([]);
+export const useMessages = (groupId: string | null) => {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  // Transform ChatMessage to Message format
-  const transformMessage = (chatMessage: any): Message => {
-    return {
-      id: chatMessage.id,
-      senderId: chatMessage.user_id || chatMessage.sender_id,
-      senderName: chatMessage.sender?.name || 'Unknown User',
-      content: chatMessage.content,
-      timestamp: new Date(chatMessage.created_at),
-      reactions: chatMessage.reactions || {},
-      attachments: chatMessage.attachments || []
-    };
-  };
-  
-  // Load messages for a specific group
-  const loadMessages = async (groupId: string) => {
-    try {
-      const chatMessages = await getGroupMessages(groupId);
-      
-      // Transform to Message format
-      const transformedMessages: Message[] = chatMessages.map(transformMessage);
-      
-      setMessages(transformedMessages);
-    } catch (error) {
-      console.error('Error loading messages:', error);
-      toast.error('Failed to load messages');
-    }
-  };
-  
-  // Send a message to the active room
-  const handleSendMessage = async (activeRoom: string | null, content: string) => {
-    if (!activeRoom || !userId) return;
+  const loadMessages = async () => {
+    if (!groupId) return;
     
+    setLoading(true);
     try {
-      const newMessage = await sendGroupMessage(activeRoom, content);
-      if (newMessage) {
-        setMessages((prev) => [
-          ...prev,
-          transformMessage(newMessage)
-        ]);
+      const { data } = await supabase
+        .from('group_messages')
+        .select(`
+          id,
+          content,
+          created_at,
+          group_id,
+          sender_id,
+          reactions,
+          attachments,
+          sender:profiles (
+            id,
+            name
+          )
+        `)
+        .eq('group_id', groupId)
+        .order('created_at', { ascending: true });
+
+      if (data) {
+        const transformedMessages: ChatMessage[] = data.map(msg => ({
+          id: msg.id,
+          content: msg.content,
+          user_id: msg.sender_id,
+          sender_id: msg.sender_id,
+          group_id: msg.group_id,
+          created_at: msg.created_at,
+          reactions: msg.reactions || {},
+          attachments: msg.attachments || [],
+          sender: (msg.sender as any) ? {
+            id: (msg.sender as any).id,
+            name: (msg.sender as any).name,
+            avatar: '/placeholder.svg'
+          } : undefined
+        }));
+        setMessages(transformedMessages);
       }
     } catch (error) {
-      console.error('Error sending message:', error);
-      toast.error('Failed to send message');
+      console.error('Error loading messages:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Add a new message to the list
-  const addMessage = (newMessage: any) => {
-    setMessages((prevMessages) => [
-      ...prevMessages,
-      transformMessage(newMessage)
-    ]);
-  };
+  useEffect(() => {
+    if (groupId) {
+      loadMessages();
+      
+      const subscription = subscribeToGroupMessages(groupId, (newMessage) => {
+        setMessages(prev => [...prev, newMessage]);
+      });
 
-  return {
-    messages,
-    loadMessages,
-    handleSendMessage,
-    addMessage,
-    transformMessage
-  };
+      return () => {
+        supabase.removeChannel(subscription);
+      };
+    }
+  }, [groupId]);
+
+  return { messages, loading, loadMessages };
 };

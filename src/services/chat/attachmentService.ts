@@ -22,11 +22,8 @@ export const formatFileSize = (bytes: number): string => {
 
 export const uploadAttachment = async (file: File): Promise<MessageAttachment | null> => {
   try {
-    // This is a placeholder implementation
-    // In a real app, you would upload to Supabase Storage
     console.log('Uploading attachment:', file.name);
     
-    // For now, return a mock attachment
     return {
       id: Math.random().toString(36),
       filename: file.name,

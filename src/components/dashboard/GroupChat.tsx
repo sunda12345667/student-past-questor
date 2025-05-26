@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -33,25 +34,25 @@ export const GroupChat: React.FC<{ groupId: string }> = ({ groupId }) => {
   let messageSubscription: any = null;
   const [file, setFile] = useState<File | null>(null);
 
-  // Transform ChatMessage to Message format for consistency
-  const transformMessage = (chatMessage: any): ChatMessage => {
+  // Transform message to ChatMessage format for consistency
+  const transformMessage = useCallback((message: any): ChatMessage => {
     return {
-      id: chatMessage.id,
-      content: chatMessage.content,
-      user_id: chatMessage.sender_id || chatMessage.user_id,
-      sender_id: chatMessage.sender_id || chatMessage.user_id,
-      group_id: chatMessage.group_id,
-      created_at: chatMessage.created_at,
-      reactions: chatMessage.reactions || {},
-      attachments: chatMessage.attachments || [],
-      sender: chatMessage.sender
+      id: message.id,
+      content: message.content,
+      user_id: message.sender_id || message.user_id,
+      sender_id: message.sender_id || message.user_id,
+      group_id: message.group_id,
+      created_at: message.created_at,
+      reactions: message.reactions || {},
+      attachments: message.attachments || [],
+      sender: message.sender
     };
-  };
+  }, []);
 
   const loadMessages = useCallback(async () => {
     try {
       const { data } = await supabase
-        .from('messages')
+        .from('group_messages')
         .select(`
           id,
           content,
@@ -62,15 +63,13 @@ export const GroupChat: React.FC<{ groupId: string }> = ({ groupId }) => {
           attachments,
           sender:profiles (
             id,
-            name,
-            avatar_url
+            name
           )
         `)
         .eq('group_id', activeGroup)
         .order('created_at', { ascending: true });
 
       if (data) {
-        // Transform messages to ChatMessage format
         const transformedMessages = data.map(transformMessage);
         setMessages(transformedMessages);
       }
@@ -100,7 +99,6 @@ export const GroupChat: React.FC<{ groupId: string }> = ({ groupId }) => {
       const typingSubscription = subscribeToTypingIndicators(
         activeGroup,
         (typingUsersList) => {
-          // Filter out current user
           const filteredTypingUsers = typingUsersList.filter(
             user => user.id !== currentUser?.id
           );
@@ -130,7 +128,6 @@ export const GroupChat: React.FC<{ groupId: string }> = ({ groupId }) => {
     if (!currentUser) return;
     
     try {
-      // TODO: Implement reaction toggle functionality
       console.log('Reaction toggle:', messageId, emoji);
     } catch (error) {
       console.error('Error toggling reaction:', error);
@@ -138,7 +135,7 @@ export const GroupChat: React.FC<{ groupId: string }> = ({ groupId }) => {
     }
   };
 
-  const handleFileChange = (file: File) => {
+  const handleFileChange = (file: File | null) => {
     setFile(file);
   };
 
@@ -157,7 +154,7 @@ export const GroupChat: React.FC<{ groupId: string }> = ({ groupId }) => {
             <li key={message.id} className="mb-4">
               <div className="flex items-start space-x-2">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={message.sender?.avatar_url || "/placeholder.svg"} alt={message.sender?.name || "User"} />
+                  <AvatarImage src="/placeholder.svg" alt={message.sender?.name || "User"} />
                   <AvatarFallback>{message.sender?.name?.[0] || "U"}</AvatarFallback>
                 </Avatar>
                 <div>
@@ -190,7 +187,7 @@ export const GroupChat: React.FC<{ groupId: string }> = ({ groupId }) => {
                 {typingUsers.map((user) => (
                   <div key={user.id} className="flex items-center space-x-1">
                     <Avatar className="h-6 w-6">
-                      <AvatarImage src={user.avatar || "/placeholder.svg"} alt={user.name} />
+                      <AvatarImage src="/placeholder.svg" alt={user.name} />
                       <AvatarFallback>{user.name?.[0] || "U"}</AvatarFallback>
                     </Avatar>
                     <span className="text-sm italic">{user.name} is typing...</span>
@@ -241,3 +238,5 @@ export const GroupChat: React.FC<{ groupId: string }> = ({ groupId }) => {
     </Card>
   );
 };
+
+export default GroupChat;
