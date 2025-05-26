@@ -15,7 +15,7 @@ interface ComponentMessage {
   senderId: string;
   senderName: string;
   content: string;
-  timestamp: string;
+  timestamp: Date;
   reactions?: Record<string, string[]>;
   attachments?: any[];
 }
@@ -60,13 +60,13 @@ const StudentChat: React.FC = () => {
     }
   }, [currentUser, authLoading, navigate]);
 
-  // Convert chat hook messages to component messages
+  // Convert chat hook messages to component messages with proper Date type
   const componentMessages: ComponentMessage[] = messages.map(msg => ({
     id: msg.id,
     senderId: msg.sender_id,
     senderName: msg.sender?.name || 'Unknown User',
     content: msg.content,
-    timestamp: msg.created_at,
+    timestamp: new Date(msg.created_at), // Convert string to Date
     reactions: {},
     attachments: []
   }));
