@@ -1,40 +1,12 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
 import { 
-  getUserGroups,
-  getGroupMessages,
-  sendGroupMessage,
-  subscribeToGroupMessages,
-  subscribeToTypingIndicators,
-  sendTypingIndicator
+  sendMessage,
+  getMessages, 
+  subscribeToMessages,
+  realTimeService 
 } from '@/services/chat';
-
-// Interface for the transformed message format
-export interface Message {
-  id: string;
-  senderId: string;
-  senderName: string;
-  content: string;
-  timestamp: Date;
-  reactions?: Record<string, string[]>;
-}
-
-// Interface for typing users
-export interface TypingUser {
-  id: string;
-  name: string;
-  avatar?: string;
-  isTyping: boolean;
-}
-
-// Interface for chat rooms
-export interface ChatRoom {
-  id: string;
-  name: string;
-  participants: number;
-}
+import { Message } from '@/services/chat/types';
 
 export const useChat = (userId: string | undefined) => {
   const [activeRoom, setActiveRoom] = useState<string | null>(null);
@@ -134,22 +106,29 @@ export const useChat = (userId: string | undefined) => {
   };
   
   // Send a message to the active room
-  const handleSendMessage = async (content: string) => {
-    if (!activeRoom || !userId) return;
-    
+  const handleSendMessage = useCallback(async (content: string) => {
+    if (!activeRoom || !userId) {
+      toast.error('Cannot send message: not connected to a room');
+      return;
+    }
+
     try {
-      const newMessage = await sendGroupMessage(activeRoom, content);
-      if (newMessage) {
-        setMessages((prev) => [
-          ...prev,
-          transformMessage(newMessage)
-        ]);
+      const messageData = {
+        content,
+        group_id: activeRoom
+      };
+
+      const newMessage = await sendMessage(messageData);
+      if (!newMessage) {
+        throw new Error('Failed to send message');
       }
+
+      toast.success('Message sent successfully');
     } catch (error) {
       console.error('Error sending message:', error);
       toast.error('Failed to send message');
     }
-  };
+  }, [activeRoom, userId]);
   
   // Send typing indicator to the active room
   const handleTypingIndicator = async () => {
@@ -185,7 +164,7 @@ export const useChat = (userId: string | undefined) => {
       loadMessages(activeRoom);
       
       // Subscribe to new messages
-      messageSubscription = subscribeToGroupMessages(
+      messageSubscription = subscribeToMessages(
         activeRoom,
         (newMessage) => {
           setMessages((prevMessages) => [

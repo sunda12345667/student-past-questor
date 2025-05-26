@@ -1,14 +1,12 @@
-
 import React, { useEffect } from 'react';
 import { useAuth } from '@/hooks/auth';
 import { ChatContainer } from '@/components/student-chat/ChatContainer';
 import { ChatRoomList } from '@/components/student-chat/ChatRoomList';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Layout } from '@/components/Layout';
+import Layout from '@/components/Layout';
 import { useChat } from '@/hooks/chat';
 import { formatTime } from '@/utils/formatTime';
-import { addMessageReaction } from '@/services/chat';
 
 const StudentChat: React.FC = () => {
   const { currentUser, isLoading: authLoading } = useAuth();
@@ -39,10 +37,8 @@ const StudentChat: React.FC = () => {
     if (!currentUser) return;
     
     try {
-      const success = await addMessageReaction(messageId, emoji);
-      if (!success) {
-        toast.error('Failed to add reaction');
-      }
+      // TODO: Implement reaction toggle functionality
+      console.log('Reaction toggle:', messageId, emoji);
     } catch (error) {
       console.error('Error toggling reaction:', error);
       toast.error('Could not update reaction');

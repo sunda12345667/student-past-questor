@@ -1,239 +1,209 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { realTimeService } from './realTimeService';
 import { Message, MessageInput } from './types';
 
-export const sendMessage = async (messageInput: MessageInput): Promise<Message | null> => {
+export const sendMessage = async (messageData: MessageInput): Promise<Message | null> => {
   try {
-    const { data: message, error } = await supabase
+    console.log('Sending message:', messageData);
+    
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    const { data, error } = await supabase
       .from('group_messages')
       .insert({
-        group_id: messageInput.groupId,
-        content: messageInput.content,
-        sender_id: messageInput.senderId,
-        attachment_url: messageInput.attachmentUrl,
-        attachment_type: messageInput.attachmentType,
+        content: messageData.content,
+        group_id: messageData.group_id,
+        sender_id: user.id,
+        attachment_url: messageData.attachment_url,
+        attachment_type: messageData.attachment_type,
       })
       .select(`
         id,
         content,
         created_at,
-        attachment_url,
-        attachment_type,
         sender_id,
         group_id,
-        profiles:sender_id (
-          id,
-          name,
-          avatar_url
-        )
+        profiles (name, avatar_url)
       `)
       .single();
 
     if (error) {
       console.error('Error sending message:', error);
-      throw new Error(`Failed to send message: ${error.message}`);
+      throw error;
     }
 
-    if (!message) {
-      throw new Error('No message data returned');
-    }
-
-    // Transform the response to match our Message interface
-    return {
-      id: message.id,
-      content: message.content,
-      created_at: message.created_at,
-      attachment_url: message.attachment_url,
-      attachment_type: message.attachment_type,
-      sender_id: message.sender_id,
-      group_id: message.group_id,
+    const message: Message = {
+      id: data.id,
+      content: data.content,
+      created_at: data.created_at,
+      attachment_url: undefined,
+      attachment_type: undefined,
+      sender_id: data.sender_id,
+      group_id: data.group_id,
       sender: {
-        id: message.sender_id,
-        name: (message.profiles as any)?.name || 'Unknown User',
-        avatar_url: (message.profiles as any)?.avatar_url || null
-      }
+        name: data.profiles?.name || 'Unknown User',
+        avatar_url: data.profiles?.avatar_url,
+      },
     };
+
+    // Broadcast the message via real-time
+    realTimeService.broadcastMessage(message);
+    
+    return message;
   } catch (error) {
     console.error('Error in sendMessage:', error);
-    throw error;
+    return null;
   }
 };
 
-export const getGroupMessages = async (groupId: string): Promise<Message[]> => {
+// Alias for compatibility
+export const sendGroupMessage = sendMessage;
+
+export const getMessages = async (groupId: string, limit: number = 50): Promise<Message[]> => {
   try {
-    const { data: messages, error } = await supabase
+    const { data, error } = await supabase
       .from('group_messages')
       .select(`
         id,
         content,
         created_at,
-        attachment_url,
-        attachment_type,
         sender_id,
         group_id,
-        profiles:sender_id (
-          id,
-          name,
-          avatar_url
-        )
+        profiles (name, avatar_url)
       `)
       .eq('group_id', groupId)
-      .order('created_at', { ascending: true });
+      .order('created_at', { ascending: true })
+      .limit(limit);
 
     if (error) {
       console.error('Error fetching messages:', error);
-      throw new Error(`Failed to fetch messages: ${error.message}`);
+      throw error;
     }
 
-    if (!messages) {
-      return [];
-    }
-
-    // Transform the response to match our Message interface
-    return messages.map(message => ({
-      id: message.id,
-      content: message.content,
-      created_at: message.created_at,
-      attachment_url: message.attachment_url,
-      attachment_type: message.attachment_type,
-      sender_id: message.sender_id,
-      group_id: message.group_id,
+    return data?.map((item: any): Message => ({
+      id: item.id,
+      content: item.content,
+      created_at: item.created_at,
+      attachment_url: undefined,
+      attachment_type: undefined,
+      sender_id: item.sender_id,
+      group_id: item.group_id,
       sender: {
-        id: message.sender_id,
-        name: (message.profiles as any)?.name || 'Unknown User',
-        avatar_url: (message.profiles as any)?.avatar_url || null
-      }
-    }));
+        name: item.profiles?.name || 'Unknown User',
+        avatar_url: item.profiles?.avatar_url,
+      },
+    })) || [];
   } catch (error) {
-    console.error('Error in getGroupMessages:', error);
-    throw error;
+    console.error('Error in getMessages:', error);
+    return [];
   }
 };
 
-export const uploadAttachment = async (file: File): Promise<string> => {
+export const subscribeToMessages = (
+  groupId: string,
+  onMessage: (message: Message) => void,
+  onError?: (error: Error) => void
+) => {
   try {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random()}.${fileExt}`;
-    const filePath = `attachments/${fileName}`;
+    console.log('Subscribing to messages for group:', groupId);
+    
+    const channel = supabase
+      .channel(`group_messages:${groupId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'group_messages',
+          filter: `group_id=eq.${groupId}`,
+        },
+        async (payload) => {
+          console.log('New message received:', payload);
+          
+          // Fetch the complete message with profile data
+          const { data, error } = await supabase
+            .from('group_messages')
+            .select(`
+              id,
+              content,
+              created_at,
+              sender_id,
+              group_id,
+              profiles (name, avatar_url)
+            `)
+            .eq('id', payload.new.id)
+            .single();
 
-    const { error: uploadError } = await supabase.storage
-      .from('attachments')
-      .upload(filePath, file);
+          if (error) {
+            console.error('Error fetching new message details:', error);
+            onError?.(new Error('Failed to fetch message details'));
+            return;
+          }
 
-    if (uploadError) {
-      throw new Error(`Failed to upload attachment: ${uploadError.message}`);
-    }
+          const message: Message = {
+            id: data.id,
+            content: data.content,
+            created_at: data.created_at,
+            attachment_url: undefined,
+            attachment_type: undefined,
+            sender_id: data.sender_id,
+            group_id: data.group_id,
+            sender: {
+              name: data.profiles?.name || 'Unknown User',
+              avatar_url: data.profiles?.avatar_url,
+            },
+          };
 
-    const { data } = supabase.storage
-      .from('attachments')
-      .getPublicUrl(filePath);
+          onMessage(message);
+        }
+      )
+      .subscribe();
 
-    return data.publicUrl;
-  } catch (error) {
-    console.error('Error uploading attachment:', error);
-    throw error;
-  }
-};
-
-export const deleteMessage = async (messageId: string): Promise<void> => {
-  try {
-    const { error } = await supabase
-      .from('group_messages')
-      .delete()
-      .eq('id', messageId);
-
-    if (error) {
-      throw new Error(`Failed to delete message: ${error.message}`);
-    }
-  } catch (error) {
-    console.error('Error deleting message:', error);
-    throw error;
-  }
-};
-
-export const editMessage = async (messageId: string, newContent: string): Promise<void> => {
-  try {
-    const { error } = await supabase
-      .from('group_messages')
-      .update({ content: newContent })
-      .eq('id', messageId);
-
-    if (error) {
-      throw new Error(`Failed to edit message: ${error.message}`);
-    }
-  } catch (error) {
-    console.error('Error editing message:', error);
-    throw error;
-  }
-};
-
-// Enhanced message sending with better error handling and validation
-export const sendMessageWithValidation = async (messageInput: MessageInput): Promise<Message> => {
-  // Validate input
-  if (!messageInput.content?.trim() && !messageInput.attachmentUrl) {
-    throw new Error('Message content or attachment is required');
-  }
-
-  if (!messageInput.groupId) {
-    throw new Error('Group ID is required');
-  }
-
-  if (!messageInput.senderId) {
-    throw new Error('Sender ID is required');
-  }
-
-  try {
-    const { data: insertedMessage, error } = await supabase
-      .from('group_messages')
-      .insert({
-        group_id: messageInput.groupId,
-        content: messageInput.content || '',
-        sender_id: messageInput.senderId,
-        attachment_url: messageInput.attachmentUrl,
-        attachment_type: messageInput.attachmentType,
-      })
-      .select(`
-        id,
-        content,
-        created_at,
-        attachment_url,
-        attachment_type,
-        sender_id,
-        group_id,
-        profiles:sender_id (
-          id,
-          name,
-          avatar_url
-        )
-      `)
-      .single();
-
-    if (error) {
-      console.error('Database error sending message:', error);
-      throw new Error(`Failed to send message: ${error.message}`);
-    }
-
-    if (!insertedMessage) {
-      throw new Error('No message data returned from database');
-    }
-
-    // Transform and return the message
-    return {
-      id: insertedMessage.id,
-      content: insertedMessage.content,
-      created_at: insertedMessage.created_at,
-      attachment_url: insertedMessage.attachment_url,
-      attachment_type: insertedMessage.attachment_type,
-      sender_id: insertedMessage.sender_id,
-      group_id: insertedMessage.group_id,
-      sender: {
-        id: insertedMessage.sender_id,
-        name: (insertedMessage.profiles as any)?.name || 'Unknown User',
-        avatar_url: (insertedMessage.profiles as any)?.avatar_url || null
-      }
+    return () => {
+      console.log('Unsubscribing from messages');
+      supabase.removeChannel(channel);
     };
   } catch (error) {
-    console.error('Error in sendMessageWithValidation:', error);
-    throw error;
+    console.error('Error subscribing to messages:', error);
+    onError?.(error instanceof Error ? error : new Error('Failed to subscribe to messages'));
+    return () => {};
+  }
+};
+
+// Placeholder for message reactions
+export const addMessageReaction = async (messageId: string, emoji: string): Promise<boolean> => {
+  try {
+    console.log('Adding reaction:', messageId, emoji);
+    // TODO: Implement when reactions table is available
+    return true;
+  } catch (error) {
+    console.error('Error adding reaction:', error);
+    return false;
+  }
+};
+
+export const removeMessageReaction = async (messageId: string, emoji: string): Promise<boolean> => {
+  try {
+    console.log('Removing reaction:', messageId, emoji);
+    // TODO: Implement when reactions table is available
+    return true;
+  } catch (error) {
+    console.error('Error removing reaction:', error);
+    return false;
+  }
+};
+
+export const markMessageAsRead = async (messageId: string): Promise<boolean> => {
+  try {
+    console.log('Marking message as read:', messageId);
+    // TODO: Implement when read receipts table is available
+    return true;
+  } catch (error) {
+    console.error('Error marking message as read:', error);
+    return false;
   }
 };
