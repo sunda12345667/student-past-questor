@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SearchIcon, BookOpen, FileText, Download, ShoppingCart, Smartphone, Tv, Lightbulb, GraduationCap } from "lucide-react";
+import { SearchIcon, BookOpen, FileText, Download, ShoppingCart } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { initializePayment, verifyPayment, checkPurchaseStatus } from "@/services/paystackService";
@@ -129,57 +129,11 @@ export default function Marketplace() {
     }, 2000);
   };
 
-  const handleUtilityPaymentNavigation = () => {
-    // Show a message for now since bill payments functionality would need backend implementation
-    toast.info('Bill payment functionality coming soon! Currently focusing on study materials marketplace.');
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col space-y-4">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Study Materials Marketplace</h2>
-        
-        {/* Utility Payments Banner - Fixed with proper contrast and styling */}
-        <Card className="bg-gradient-to-r from-blue-600 to-purple-600 border-none shadow-lg">
-          <CardContent className="p-6">
-            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-              <div className="flex-1">
-                <h3 className="text-xl font-bold text-white mb-3 flex items-center gap-2">
-                  <Smartphone className="h-6 w-6" />
-                  Utility Payments & Services 📲
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                  <div className="flex items-center gap-3 text-white/90 bg-white/10 rounded-lg p-3">
-                    <Smartphone className="h-5 w-5 text-green-300 flex-shrink-0" />
-                    <span className="font-medium">Buy Airtime & Data</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-white/90 bg-white/10 rounded-lg p-3">
-                    <Lightbulb className="h-5 w-5 text-amber-300 flex-shrink-0" />
-                    <span className="font-medium">Pay Electricity Bills</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-white/90 bg-white/10 rounded-lg p-3">
-                    <Tv className="h-5 w-5 text-blue-300 flex-shrink-0" />
-                    <span className="font-medium">TV Subscriptions</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-white/90 bg-white/10 rounded-lg p-3">
-                    <GraduationCap className="h-5 w-5 text-purple-300 flex-shrink-0" />
-                    <span className="font-medium">Education Payments</span>
-                  </div>
-                </div>
-                <p className="text-white/80 text-sm mt-3">
-                  MTN, Glo, Airtel, 9mobile • PHCN, Eko, Ikeja • DStv, GOtv • WAEC, NECO, JAMB
-                </p>
-              </div>
-              <Button 
-                className="w-full lg:w-auto whitespace-nowrap bg-white text-blue-600 hover:bg-gray-100 font-semibold px-6 py-3 text-base shadow-lg" 
-                size="lg"
-                onClick={handleUtilityPaymentNavigation}
-              >
-                Pay Bills Now
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <p className="text-muted-foreground">Browse and purchase educational materials</p>
         
         {/* Search Bar */}
         <div className="relative">

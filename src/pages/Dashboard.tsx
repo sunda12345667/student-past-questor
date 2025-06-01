@@ -5,9 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/auth';
-import { BookOpen, Download, ShoppingCart, User } from 'lucide-react';
+import { BookOpen, Download, ShoppingCart, User, CreditCard } from 'lucide-react';
 import Marketplace from '@/components/dashboard/Marketplace';
 import Downloads from '@/components/dashboard/Downloads';
+import BillPayments from '@/components/dashboard/BillPayments';
 import { QuestionsTab } from '@/components/dashboard/QuestionsTab';
 
 const Dashboard = () => {
@@ -17,7 +18,7 @@ const Dashboard = () => {
   useEffect(() => {
     // Check URL hash to set active tab
     const hash = window.location.hash.replace('#', '');
-    if (hash && ['marketplace', 'questions', 'downloads', 'profile'].includes(hash)) {
+    if (hash && ['marketplace', 'questions', 'downloads', 'bills', 'profile'].includes(hash)) {
       setActiveTab(hash);
     }
   }, []);
@@ -42,16 +43,19 @@ const Dashboard = () => {
     );
   }
 
+  // Get the display name - prioritize the name field, fallback to email username
+  const displayName = currentUser.name || currentUser.email?.split('@')[0] || 'Student';
+
   return (
     <Layout>
       <div className="container mx-auto px-4 pt-28 pb-16">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Welcome back, {currentUser.email}!</h1>
+          <h1 className="text-3xl font-bold mb-2">Welcome back, {displayName}!</h1>
           <p className="text-muted-foreground">Manage your study materials and explore our marketplace</p>
         </div>
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="marketplace" className="flex items-center gap-2">
               <ShoppingCart className="h-4 w-4" />
               Marketplace
@@ -63,6 +67,10 @@ const Dashboard = () => {
             <TabsTrigger value="downloads" className="flex items-center gap-2">
               <Download className="h-4 w-4" />
               Downloads
+            </TabsTrigger>
+            <TabsTrigger value="bills" className="flex items-center gap-2">
+              <CreditCard className="h-4 w-4" />
+              Bill Payments
             </TabsTrigger>
             <TabsTrigger value="profile" className="flex items-center gap-2">
               <User className="h-4 w-4" />
@@ -82,6 +90,10 @@ const Dashboard = () => {
             <Downloads />
           </TabsContent>
 
+          <TabsContent value="bills" className="space-y-6">
+            <BillPayments />
+          </TabsContent>
+
           <TabsContent value="profile" className="space-y-6">
             <Card>
               <CardHeader>
@@ -92,6 +104,10 @@ const Dashboard = () => {
                 <CardDescription>Manage your account information</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">Name</label>
+                  <p className="text-sm text-muted-foreground">{displayName}</p>
+                </div>
                 <div>
                   <label className="text-sm font-medium">Email</label>
                   <p className="text-sm text-muted-foreground">{currentUser.email}</p>

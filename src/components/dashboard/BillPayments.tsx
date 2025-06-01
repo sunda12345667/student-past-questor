@@ -1,515 +1,469 @@
 
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
+import { Smartphone, Lightbulb, Tv, GraduationCap, CreditCard } from "lucide-react";
 import { toast } from "sonner";
-import { 
-  Smartphone, 
-  Wifi, 
-  Tv, 
-  Lightbulb,
-  GraduationCap,
-  Ticket,
-  CheckCircle,
-  BookOpen
-} from 'lucide-react';
-import { payBill, getServiceProviders, purchaseEducationalPin, getPinPrice } from '@/services/billsService';
+import { useAuth } from "@/contexts/AuthContext";
+import { payBill, purchaseEducationalPin, getPinPrice } from "@/services/billsService";
 
-const BillPayments = () => {
-  const [activeService, setActiveService] = useState('airtime');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [network, setNetwork] = useState('mtn');
-  const [smartcardNumber, setSmartcardNumber] = useState('');
-  const [tvProvider, setTvProvider] = useState('dstv');
-  const [meterNumber, setMeterNumber] = useState('');
-  const [meterType, setMeterType] = useState('prepaid');
-  const [distributor, setDistributor] = useState('ikeja');
-  const [institution, setInstitution] = useState('');
-  const [studentId, setStudentId] = useState('');
-  const [eventName, setEventName] = useState('');
-  const [ticketType, setTicketType] = useState('regular');
-  const [quantity, setQuantity] = useState('1');
-  const [amount, setAmount] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+export default function BillPayments() {
+  const { currentUser } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
   
-  const [educationalPinType, setEducationalPinType] = useState<'waec' | 'jamb' | 'neco' | 'gce'>('waec');
-  const [pinQuantity, setPinQuantity] = useState('1');
-  const [email, setEmail] = useState('');
-  const [recipientPhone, setRecipientPhone] = useState('');
-  const [activeEducationTab, setActiveEducationTab] = useState('school-fees');
+  // Airtime/Data form state
+  const [airtimeForm, setAirtimeForm] = useState({
+    provider: '',
+    phoneNumber: '',
+    amount: '',
+    serviceType: 'airtime'
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    
+  // Electricity form state
+  const [electricityForm, setElectricityForm] = useState({
+    provider: '',
+    meterNumber: '',
+    amount: ''
+  });
+
+  // TV subscription form state
+  const [tvForm, setTvForm] = useState({
+    provider: '',
+    smartCardNumber: '',
+    package: '',
+    amount: ''
+  });
+
+  // Education PIN form state
+  const [educationForm, setEducationForm] = useState({
+    pinType: '',
+    quantity: '1',
+    email: currentUser?.email || '',
+    phone: ''
+  });
+
+  const handleAirtimePayment = async () => {
+    if (!airtimeForm.provider || !airtimeForm.phoneNumber || !airtimeForm.amount) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    setIsLoading(true);
     try {
-      let accountNumber = '';
-      switch (activeService) {
-        case 'airtime':
-        case 'data':
-          accountNumber = phoneNumber;
-          break;
-        case 'tv':
-          accountNumber = smartcardNumber;
-          break;
-        case 'electricity':
-          accountNumber = meterNumber;
-          break;
-        case 'education':
-          if (activeEducationTab === 'school-fees') {
-            accountNumber = studentId;
-          } else {
-            const result = await purchaseEducationalPin(
-              educationalPinType,
-              parseInt(pinQuantity),
-              email,
-              recipientPhone
-            );
-            
-            toast.success(`Your ${educationalPinType.toUpperCase()} PIN purchase was successful`, {
-              description: `Reference: ${result.reference}`,
-              duration: 5000,
-            });
-            
-            setPinQuantity('1');
-            setEmail('');
-            setRecipientPhone('');
-            setIsSubmitting(false);
-            return;
-          }
-          break;
-        case 'event':
-          accountNumber = eventName;
-          break;
-      }
-      
-      let provider = '';
-      switch (activeService) {
-        case 'airtime':
-        case 'data':
-          provider = network;
-          break;
-        case 'tv':
-          provider = tvProvider;
-          break;
-        case 'electricity':
-          provider = distributor;
-          break;
-        case 'education':
-          provider = institution;
-          break;
-        case 'event':
-          provider = ticketType;
-          break;
-      }
-      
-      const result = await payBill(
-        activeService as any,
-        provider,
-        accountNumber,
-        parseFloat(amount)
+      await payBill(
+        airtimeForm.serviceType as 'airtime' | 'data',
+        airtimeForm.provider,
+        airtimeForm.phoneNumber,
+        parseInt(airtimeForm.amount)
       );
       
-      toast.success(`Your ${getServiceName(activeService)} payment was successful`, {
-        description: `Reference: ${result.reference}`,
-        duration: 5000,
-      });
-      
-      setPhoneNumber('');
-      setSmartcardNumber('');
-      setMeterNumber('');
-      setStudentId('');
-      setEventName('');
-      setAmount('');
-      
+      toast.success(`${airtimeForm.serviceType === 'airtime' ? 'Airtime' : 'Data'} purchase successful!`);
+      setAirtimeForm({ provider: '', phoneNumber: '', amount: '', serviceType: 'airtime' });
     } catch (error) {
-      console.error('Payment error:', error);
-      toast.error('Payment failed', {
-        description: 'Please try again later',
-      });
+      toast.error('Payment failed. Please try again.');
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
   };
 
-  const getServiceName = (service: string): string => {
-    switch (service) {
-      case 'airtime': return 'Airtime';
-      case 'data': return 'Internet Data';
-      case 'tv': return 'TV Subscription';
-      case 'electricity': return 'Electricity Bill';
-      case 'education': return 'Education Payment';
-      case 'event': return 'Event Ticket';
-      default: return 'service';
+  const handleElectricityPayment = async () => {
+    if (!electricityForm.provider || !electricityForm.meterNumber || !electricityForm.amount) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await payBill('electricity', electricityForm.provider, electricityForm.meterNumber, parseInt(electricityForm.amount));
+      toast.success('Electricity bill payment successful!');
+      setElectricityForm({ provider: '', meterNumber: '', amount: '' });
+    } catch (error) {
+      toast.error('Payment failed. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const renderServiceIcon = (service: string, className = "h-8 w-8 mb-2 text-primary") => {
-    switch (service) {
-      case 'airtime': return <Smartphone className={className} />;
-      case 'data': return <Wifi className={className} />;
-      case 'tv': return <Tv className={className} />;
-      case 'electricity': return <Lightbulb className={className} />;
-      case 'education': return <GraduationCap className={className} />;
-      case 'event': return <Ticket className={className} />;
-      default: return <Smartphone className={className} />;
+  const handleTVPayment = async () => {
+    if (!tvForm.provider || !tvForm.smartCardNumber || !tvForm.amount) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await payBill('tv', tvForm.provider, tvForm.smartCardNumber, parseInt(tvForm.amount));
+      toast.success('TV subscription payment successful!');
+      setTvForm({ provider: '', smartCardNumber: '', package: '', amount: '' });
+    } catch (error) {
+      toast.error('Payment failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEducationPinPurchase = async () => {
+    if (!educationForm.pinType || !educationForm.email || !educationForm.phone) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await purchaseEducationalPin(
+        educationForm.pinType as 'waec' | 'jamb' | 'neco' | 'gce',
+        parseInt(educationForm.quantity),
+        educationForm.email,
+        educationForm.phone
+      );
+      
+      toast.success(`${educationForm.pinType.toUpperCase()} PIN purchase successful!`);
+      setEducationForm({ pinType: '', quantity: '1', email: currentUser?.email || '', phone: '' });
+    } catch (error) {
+      toast.error('PIN purchase failed. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-medium">Bill Payments</h2>
-        <Card className="bg-green-50 border-green-200 p-2">
-          <div className="flex items-center text-green-700 text-sm">
-            <CheckCircle className="h-4 w-4 mr-2" />
-            Commission on every transaction!
-          </div>
-        </Card>
+      <div className="flex flex-col space-y-4">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Utility Payments & Services</h2>
+        <p className="text-muted-foreground">Pay your bills quickly and securely</p>
       </div>
       
-      <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-100 mb-6">
-        <CardContent className="p-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-            <div className="flex items-center gap-1">
-              <Smartphone className="h-4 w-4 text-green-600" />
-              <span>Buy Airtime & Data</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Lightbulb className="h-4 w-4 text-amber-600" />
-              <span>Pay Electricity Bills</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Tv className="h-4 w-4 text-blue-600" />
-              <span>Pay TV Subscriptions</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <GraduationCap className="h-4 w-4 text-purple-600" />
-              <span>Education Payments</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      
-      <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
-        {['airtime', 'data', 'tv', 'electricity', 'education', 'event'].map((service) => (
-          <Card 
-            key={service}
-            className={`cursor-pointer hover:border-primary transition-all ${activeService === service ? 'border-primary bg-primary/5' : ''}`}
-            onClick={() => setActiveService(service)}
-          >
-            <CardContent className="p-4 flex flex-col items-center justify-center text-center">
-              {renderServiceIcon(service)}
-              <h3 className="font-medium text-sm">{getServiceName(service)}</h3>
+      <Tabs defaultValue="airtime" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="airtime" className="flex items-center gap-2">
+            <Smartphone className="h-4 w-4" />
+            Airtime & Data
+          </TabsTrigger>
+          <TabsTrigger value="electricity" className="flex items-center gap-2">
+            <Lightbulb className="h-4 w-4" />
+            Electricity
+          </TabsTrigger>
+          <TabsTrigger value="tv" className="flex items-center gap-2">
+            <Tv className="h-4 w-4" />
+            TV Subscription
+          </TabsTrigger>
+          <TabsTrigger value="education" className="flex items-center gap-2">
+            <GraduationCap className="h-4 w-4" />
+            Education
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="airtime">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Smartphone className="h-5 w-5" />
+                Buy Airtime & Data
+              </CardTitle>
+              <CardDescription>Purchase airtime and data for all Nigerian networks</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="service-type">Service Type</Label>
+                  <Select 
+                    value={airtimeForm.serviceType} 
+                    onValueChange={(value) => setAirtimeForm(prev => ({ ...prev, serviceType: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select service type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="airtime">Airtime</SelectItem>
+                      <SelectItem value="data">Data Bundle</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="provider">Network Provider</Label>
+                  <Select 
+                    value={airtimeForm.provider} 
+                    onValueChange={(value) => setAirtimeForm(prev => ({ ...prev, provider: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select provider" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="mtn">MTN</SelectItem>
+                      <SelectItem value="glo">Glo</SelectItem>
+                      <SelectItem value="airtel">Airtel</SelectItem>
+                      <SelectItem value="9mobile">9mobile</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone Number</Label>
+                  <Input
+                    id="phone"
+                    placeholder="08012345678"
+                    value={airtimeForm.phoneNumber}
+                    onChange={(e) => setAirtimeForm(prev => ({ ...prev, phoneNumber: e.target.value }))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="amount">Amount (₦)</Label>
+                  <Input
+                    id="amount"
+                    type="number"
+                    placeholder="100"
+                    value={airtimeForm.amount}
+                    onChange={(e) => setAirtimeForm(prev => ({ ...prev, amount: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <Button onClick={handleAirtimePayment} disabled={isLoading} className="w-full">
+                <CreditCard className="mr-2 h-4 w-4" />
+                {isLoading ? 'Processing...' : `Pay ₦${airtimeForm.amount || '0'}`}
+              </Button>
             </CardContent>
           </Card>
-        ))}
-      </div>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            {renderServiceIcon(activeService, "h-5 w-5 text-primary")}
-            {getServiceName(activeService)}
-          </CardTitle>
-          <CardDescription>Complete your payment details below</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {(activeService === 'airtime' || activeService === 'data') && (
-              <>
+        </TabsContent>
+
+        <TabsContent value="electricity">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Lightbulb className="h-5 w-5" />
+                Pay Electricity Bills
+              </CardTitle>
+              <CardDescription>Pay for electricity across Nigeria</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="phoneNumber">Phone Number</Label>
-                  <Input 
-                    id="phoneNumber" 
-                    placeholder="Enter phone number" 
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    required 
+                  <Label htmlFor="disco">Distribution Company</Label>
+                  <Select 
+                    value={electricityForm.provider} 
+                    onValueChange={(value) => setElectricityForm(prev => ({ ...prev, provider: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select DISCO" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="eko">Eko Electric (EKEDC)</SelectItem>
+                      <SelectItem value="ikeja">Ikeja Electric (IE)</SelectItem>
+                      <SelectItem value="abuja">Abuja Electric (AEDC)</SelectItem>
+                      <SelectItem value="phcn">Port Harcourt Electric (PHEDC)</SelectItem>
+                      <SelectItem value="kano">Kano Electric (KEDCO)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="meter">Meter Number</Label>
+                  <Input
+                    id="meter"
+                    placeholder="Enter meter number"
+                    value={electricityForm.meterNumber}
+                    onChange={(e) => setElectricityForm(prev => ({ ...prev, meterNumber: e.target.value }))}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="network">Network Provider</Label>
-                  <select 
-                    id="network" 
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    value={network}
-                    onChange={(e) => setNetwork(e.target.value)}
-                  >
-                    <option value="mtn">MTN</option>
-                    <option value="airtel">Airtel</option>
-                    <option value="glo">Glo</option>
-                    <option value="9mobile">9Mobile</option>
-                  </select>
-                </div>
-              </>
-            )}
-            
-            {activeService === 'tv' && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="tvProvider">TV Provider</Label>
-                  <select 
-                    id="tvProvider" 
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    value={tvProvider}
-                    onChange={(e) => setTvProvider(e.target.value)}
-                  >
-                    <option value="dstv">DSTV</option>
-                    <option value="gotv">GoTV</option>
-                    <option value="startimes">StarTimes</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="smartcardNumber">Smartcard/IUC Number</Label>
-                  <Input 
-                    id="smartcardNumber" 
-                    placeholder="Enter Smartcard/IUC Number" 
-                    value={smartcardNumber}
-                    onChange={(e) => setSmartcardNumber(e.target.value)}
-                    required 
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="amount">Amount (₦)</Label>
+                  <Input
+                    id="amount"
+                    type="number"
+                    placeholder="1000"
+                    value={electricityForm.amount}
+                    onChange={(e) => setElectricityForm(prev => ({ ...prev, amount: e.target.value }))}
                   />
                 </div>
-              </>
-            )}
-            
-            {activeService === 'electricity' && (
-              <>
+              </div>
+
+              <Button onClick={handleElectricityPayment} disabled={isLoading} className="w-full">
+                <CreditCard className="mr-2 h-4 w-4" />
+                {isLoading ? 'Processing...' : `Pay ₦${electricityForm.amount || '0'}`}
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="tv">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Tv className="h-5 w-5" />
+                Pay TV Subscriptions
+              </CardTitle>
+              <CardDescription>Subscribe to your favorite TV packages</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="meterType">Meter Type</Label>
-                  <select 
-                    id="meterType" 
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    value={meterType}
-                    onChange={(e) => setMeterType(e.target.value)}
+                  <Label htmlFor="tv-provider">TV Provider</Label>
+                  <Select 
+                    value={tvForm.provider} 
+                    onValueChange={(value) => setTvForm(prev => ({ ...prev, provider: value }))}
                   >
-                    <option value="prepaid">Prepaid</option>
-                    <option value="postpaid">Postpaid</option>
-                  </select>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select TV provider" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="dstv">DStv</SelectItem>
+                      <SelectItem value="gotv">GOtv</SelectItem>
+                      <SelectItem value="startimes">StarTimes</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="meterNumber">Meter Number</Label>
-                  <Input 
-                    id="meterNumber" 
-                    placeholder="Enter Meter Number" 
-                    value={meterNumber}
-                    onChange={(e) => setMeterNumber(e.target.value)}
-                    required 
+                  <Label htmlFor="smartcard">Smart Card Number</Label>
+                  <Input
+                    id="smartcard"
+                    placeholder="Enter smart card number"
+                    value={tvForm.smartCardNumber}
+                    onChange={(e) => setTvForm(prev => ({ ...prev, smartCardNumber: e.target.value }))}
                   />
                 </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="distributor">Distribution Company</Label>
-                  <select 
-                    id="distributor" 
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    value={distributor}
-                    onChange={(e) => setDistributor(e.target.value)}
+                  <Label htmlFor="package">Package</Label>
+                  <Select 
+                    value={tvForm.package} 
+                    onValueChange={(value) => setTvForm(prev => ({ ...prev, package: value, amount: getPackagePrice(value) }))}
                   >
-                    <option value="ikeja">Ikeja Electric</option>
-                    <option value="eko">Eko Electric</option>
-                    <option value="abuja">Abuja Electric</option>
-                    <option value="ibadan">Ibadan Electric</option>
-                  </select>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select package" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="compact">Compact - ₦9,000</SelectItem>
+                      <SelectItem value="premium">Premium - ₦21,000</SelectItem>
+                      <SelectItem value="family">Family - ₦4,000</SelectItem>
+                      <SelectItem value="access">Access - ₦2,500</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-              </>
-            )}
-            
-            {activeService === 'education' && (
-              <>
-                <Tabs value={activeEducationTab} onValueChange={setActiveEducationTab} className="w-full mb-4">
-                  <TabsList className="grid grid-cols-2 w-full">
-                    <TabsTrigger value="school-fees">School Fees</TabsTrigger>
-                    <TabsTrigger value="examination-pins">Exam PINs</TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="school-fees">
-                    <div className="space-y-4 pt-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="institution">Institution</Label>
-                        <Input 
-                          id="institution" 
-                          placeholder="Enter institution name" 
-                          value={institution}
-                          onChange={(e) => setInstitution(e.target.value)}
-                          required 
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="studentId">Student ID/Reference</Label>
-                        <Input 
-                          id="studentId" 
-                          placeholder="Enter Student ID or Reference" 
-                          value={studentId}
-                          onChange={(e) => setStudentId(e.target.value)}
-                          required 
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="amount">Amount</Label>
-                        <Input 
-                          id="amount" 
-                          placeholder="Enter amount" 
-                          type="number" 
-                          min="0" 
-                          value={amount}
-                          onChange={(e) => setAmount(e.target.value)}
-                          required 
-                        />
-                      </div>
-                    </div>
-                  </TabsContent>
-                  
-                  <TabsContent value="examination-pins">
-                    <div className="space-y-4 pt-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="pinType">Examination Type</Label>
-                        <select 
-                          id="pinType" 
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                          value={educationalPinType}
-                          onChange={(e) => setEducationalPinType(e.target.value as 'waec' | 'jamb' | 'neco' | 'gce')}
-                        >
-                          <option value="waec">WAEC PIN</option>
-                          <option value="jamb">JAMB PIN</option>
-                          <option value="neco">NECO PIN</option>
-                          <option value="gce">GCE PIN</option>
-                        </select>
-                      </div>
-                      
-                      <div className="flex items-center justify-between rounded-md border p-3 bg-muted/30">
-                        <div className="flex items-center gap-2">
-                          <BookOpen className="h-5 w-5 text-primary" />
-                          <span className="font-medium">{educationalPinType.toUpperCase()} PIN</span>
-                        </div>
-                        <div className="font-semibold">₦{getPinPrice(educationalPinType).toLocaleString()}</div>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="pinQuantity">Quantity</Label>
-                        <Input 
-                          id="pinQuantity" 
-                          type="number" 
-                          min="1" 
-                          max="10"
-                          value={pinQuantity}
-                          onChange={(e) => setPinQuantity(e.target.value)}
-                          required 
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email Address</Label>
-                        <Input 
-                          id="email" 
-                          type="email" 
-                          placeholder="Enter email to receive PIN" 
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          required 
-                        />
-                        <p className="text-xs text-muted-foreground">PINs will be sent to this email address</p>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="phone">Phone Number</Label>
-                        <Input 
-                          id="phone" 
-                          placeholder="Enter recipient phone number" 
-                          value={recipientPhone}
-                          onChange={(e) => setRecipientPhone(e.target.value)}
-                          required 
-                        />
-                      </div>
-                      
-                      <div className="rounded-md border p-3 space-y-1 bg-muted/30">
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">PIN Price:</span>
-                          <span>₦{getPinPrice(educationalPinType).toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Quantity:</span>
-                          <span>{pinQuantity}</span>
-                        </div>
-                        <div className="flex justify-between font-medium pt-1 border-t">
-                          <span>Total Amount:</span>
-                          <span>₦{(getPinPrice(educationalPinType) * parseInt(pinQuantity)).toLocaleString()}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </>
-            )}
-            
-            {activeService === 'event' && (
-              <>
+
                 <div className="space-y-2">
-                  <Label htmlFor="eventName">Event Name</Label>
-                  <Input 
-                    id="eventName" 
-                    placeholder="Enter event name" 
-                    value={eventName}
-                    onChange={(e) => setEventName(e.target.value)}
-                    required 
+                  <Label htmlFor="amount">Amount (₦)</Label>
+                  <Input
+                    id="amount"
+                    type="number"
+                    value={tvForm.amount}
+                    onChange={(e) => setTvForm(prev => ({ ...prev, amount: e.target.value }))}
+                    readOnly
                   />
                 </div>
+              </div>
+
+              <Button onClick={handleTVPayment} disabled={isLoading} className="w-full">
+                <CreditCard className="mr-2 h-4 w-4" />
+                {isLoading ? 'Processing...' : `Pay ₦${tvForm.amount || '0'}`}
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="education">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <GraduationCap className="h-5 w-5" />
+                Education Payments
+              </CardTitle>
+              <CardDescription>Purchase education PINs for exams</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="ticketType">Ticket Type</Label>
-                  <select 
-                    id="ticketType" 
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    value={ticketType}
-                    onChange={(e) => setTicketType(e.target.value)}
+                  <Label htmlFor="pin-type">Exam Type</Label>
+                  <Select 
+                    value={educationForm.pinType} 
+                    onValueChange={(value) => setEducationForm(prev => ({ ...prev, pinType: value }))}
                   >
-                    <option value="regular">Regular</option>
-                    <option value="vip">VIP</option>
-                    <option value="vvip">VVIP</option>
-                  </select>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select exam type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="waec">WAEC - ₦7,500</SelectItem>
+                      <SelectItem value="jamb">JAMB - ₦5,700</SelectItem>
+                      <SelectItem value="neco">NECO - ₦6,500</SelectItem>
+                      <SelectItem value="gce">GCE - ₦8,500</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="quantity">Quantity</Label>
-                  <Input 
-                    id="quantity" 
-                    type="number" 
-                    min="1" 
-                    value={quantity}
-                    onChange={(e) => setQuantity(e.target.value)}
-                    required 
+                  <Select 
+                    value={educationForm.quantity} 
+                    onValueChange={(value) => setEducationForm(prev => ({ ...prev, quantity: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select quantity" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1</SelectItem>
+                      <SelectItem value="2">2</SelectItem>
+                      <SelectItem value="3">3</SelectItem>
+                      <SelectItem value="4">4</SelectItem>
+                      <SelectItem value="5">5</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email Address</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={educationForm.email}
+                    onChange={(e) => setEducationForm(prev => ({ ...prev, email: e.target.value }))}
                   />
                 </div>
-              </>
-            )}
-            
-            {activeService !== 'education' || activeEducationTab !== 'examination-pins' ? (
-              <div className="space-y-2">
-                <Label htmlFor="amount">Amount</Label>
-                <Input 
-                  id="amount" 
-                  placeholder="Enter amount" 
-                  type="number" 
-                  min="0" 
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  required={activeService !== 'education' || activeEducationTab !== 'examination-pins'}
-                />
+
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone Number</Label>
+                  <Input
+                    id="phone"
+                    placeholder="08012345678"
+                    value={educationForm.phone}
+                    onChange={(e) => setEducationForm(prev => ({ ...prev, phone: e.target.value }))}
+                  />
+                </div>
               </div>
-            ) : null}
-            
-            <Button 
-              type="submit" 
-              className="w-full" 
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? 'Processing...' : activeEducationTab === 'examination-pins' ? 'Purchase PIN' : 'Pay Now'}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+
+              {educationForm.pinType && (
+                <div className="p-4 bg-muted rounded-lg">
+                  <p className="text-sm">
+                    <strong>Total Amount:</strong> ₦{(getPinPrice(educationForm.pinType as any) * parseInt(educationForm.quantity)).toLocaleString()}
+                  </p>
+                </div>
+              )}
+
+              <Button onClick={handleEducationPinPurchase} disabled={isLoading} className="w-full">
+                <CreditCard className="mr-2 h-4 w-4" />
+                {isLoading ? 'Processing...' : 'Purchase PIN'}
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
-};
+}
 
-export default BillPayments;
+// Helper function to get package prices
+function getPackagePrice(packageType: string): string {
+  switch (packageType) {
+    case 'compact': return '9000';
+    case 'premium': return '21000';
+    case 'family': return '4000';
+    case 'access': return '2500';
+    default: return '';
+  }
+}
