@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/auth';
-import { BookOpen, Download, ShoppingCart, User, CreditCard } from 'lucide-react';
+import { BookOpen, Download, ShoppingCart, User } from 'lucide-react';
 import Marketplace from '@/components/dashboard/Marketplace';
 import Downloads from '@/components/dashboard/Downloads';
 import { QuestionsTab } from '@/components/dashboard/QuestionsTab';
@@ -103,7 +103,7 @@ const Dashboard = () => {
                 <div>
                   <label className="text-sm font-medium">Member Since</label>
                   <p className="text-sm text-muted-foreground">
-                    {new Date(currentUser.created_at || '').toLocaleDateString()}
+                    {new Date().toLocaleDateString()}
                   </p>
                 </div>
               </CardContent>

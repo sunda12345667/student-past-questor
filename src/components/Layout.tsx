@@ -2,18 +2,18 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Menu, X, BookOpen, ShoppingCart, User, LogOut } from 'lucide-react';
+import { Menu, X, BookOpen, User, LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/auth';
 import { toast } from 'sonner';
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { currentUser, signOut } = useAuth();
+  const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
     try {
-      await signOut();
+      await logout();
       toast.success('Signed out successfully');
       navigate('/');
     } catch (error) {

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -143,47 +142,49 @@ export default function Marketplace() {
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <h2 className="text-2xl font-bold mb-6">Study Materials Marketplace</h2>
-      
-      {/* Utility Payments Banner */}
-      <Card className="mb-8 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
-        <CardContent className="p-6">
-          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between">
-            <div>
-              <h3 className="text-xl font-bold text-primary mb-2">
-                Sell Airtime, Data & Utility Payments 📲
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-4">
-                <div className="flex items-center gap-2">
-                  <Smartphone className="h-4 w-4 text-green-600" />
-                  <span className="text-sm">Buy Airtime & Data (MTN, Glo, Airtel, 9mobile)</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Lightbulb className="h-4 w-4 text-amber-600" />
-                  <span className="text-sm">Pay Electricity Bills (PHCN, Eko, Ikeja, Abuja, etc.)</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Tv className="h-4 w-4 text-blue-600" />
-                  <span className="text-sm">Pay TV Subscriptions (DStv, GOtv, StarTimes)</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <GraduationCap className="h-4 w-4 text-purple-600" />
-                  <span className="text-sm">Education Payments (WAEC, NECO, JAMB, School Fees)</span>
+    <div className="space-y-6">
+      <div className="flex flex-col space-y-4">
+        <h2 className="text-2xl font-bold">Study Materials Marketplace</h2>
+        
+        {/* Utility Payments Banner - Fixed layout */}
+        <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200 shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+              <div className="flex-1">
+                <h3 className="text-xl font-bold text-primary mb-3">
+                  Sell Airtime, Data & Utility Payments 📲
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Smartphone className="h-4 w-4 text-green-600 flex-shrink-0" />
+                    <span>Buy Airtime & Data (MTN, Glo, Airtel, 9mobile)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Lightbulb className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                    <span>Pay Electricity Bills (PHCN, Eko, Ikeja, Abuja, etc.)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Tv className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                    <span>Pay TV Subscriptions (DStv, GOtv, StarTimes)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <GraduationCap className="h-4 w-4 text-purple-600 flex-shrink-0" />
+                    <span>Education Payments (WAEC, NECO, JAMB, School Fees)</span>
+                  </div>
                 </div>
               </div>
+              <Button 
+                className="w-full lg:w-auto whitespace-nowrap" 
+                size="lg"
+                onClick={handleUtilityPaymentNavigation}
+              >
+                Pay Bills Now
+              </Button>
             </div>
-            <Button 
-              className="mt-3 lg:mt-0" 
-              onClick={handleUtilityPaymentNavigation}
-            >
-              Pay Bills Now
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-      
-      <div className="mb-6">
+          </CardContent>
+        </Card>
+        
+        {/* Search Bar */}
         <div className="relative">
           <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           <Input
@@ -203,6 +204,8 @@ export default function Marketplace() {
           <TabsTrigger value="past-questions">Past Questions</TabsTrigger>
           <TabsTrigger value="purchased">My Purchased Items</TabsTrigger>
         </TabsList>
+        
+        
         
         <TabsContent value="all">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -486,6 +489,7 @@ export default function Marketplace() {
                   You haven't purchased any study materials yet
                 </p>
                 <Button variant="outline" className="mt-4" onClick={() => document.querySelector('[data-value="all"]')?.dispatchEvent(new Event('click', { bubbles: true }))}>
+                  Explore Marketplace
                 </Button>
               </div>
             )}
