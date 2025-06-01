@@ -130,51 +130,48 @@ export default function Marketplace() {
   };
 
   const handleUtilityPaymentNavigation = () => {
-    navigate('/dashboard');
-    // Wait for navigation to complete, then set the active tab
-    setTimeout(() => {
-      const tabSetter = window.localStorage.getItem('setActiveTab');
-      if (tabSetter) {
-        const setActiveTab = JSON.parse(tabSetter);
-        setActiveTab('bills');
-      }
-    }, 100);
+    // Show a message for now since bill payments functionality would need backend implementation
+    toast.info('Bill payment functionality coming soon! Currently focusing on study materials marketplace.');
   };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col space-y-4">
-        <h2 className="text-2xl font-bold">Study Materials Marketplace</h2>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Study Materials Marketplace</h2>
         
-        {/* Utility Payments Banner - Fixed layout */}
-        <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200 shadow-sm">
+        {/* Utility Payments Banner - Fixed with proper contrast and styling */}
+        <Card className="bg-gradient-to-r from-blue-600 to-purple-600 border-none shadow-lg">
           <CardContent className="p-6">
             <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
               <div className="flex-1">
-                <h3 className="text-xl font-bold text-primary mb-3">
-                  Sell Airtime, Data & Utility Payments 📲
+                <h3 className="text-xl font-bold text-white mb-3 flex items-center gap-2">
+                  <Smartphone className="h-6 w-6" />
+                  Utility Payments & Services 📲
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                  <div className="flex items-center gap-2">
-                    <Smartphone className="h-4 w-4 text-green-600 flex-shrink-0" />
-                    <span>Buy Airtime & Data (MTN, Glo, Airtel, 9mobile)</span>
+                  <div className="flex items-center gap-3 text-white/90 bg-white/10 rounded-lg p-3">
+                    <Smartphone className="h-5 w-5 text-green-300 flex-shrink-0" />
+                    <span className="font-medium">Buy Airtime & Data</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Lightbulb className="h-4 w-4 text-amber-600 flex-shrink-0" />
-                    <span>Pay Electricity Bills (PHCN, Eko, Ikeja, Abuja, etc.)</span>
+                  <div className="flex items-center gap-3 text-white/90 bg-white/10 rounded-lg p-3">
+                    <Lightbulb className="h-5 w-5 text-amber-300 flex-shrink-0" />
+                    <span className="font-medium">Pay Electricity Bills</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Tv className="h-4 w-4 text-blue-600 flex-shrink-0" />
-                    <span>Pay TV Subscriptions (DStv, GOtv, StarTimes)</span>
+                  <div className="flex items-center gap-3 text-white/90 bg-white/10 rounded-lg p-3">
+                    <Tv className="h-5 w-5 text-blue-300 flex-shrink-0" />
+                    <span className="font-medium">TV Subscriptions</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <GraduationCap className="h-4 w-4 text-purple-600 flex-shrink-0" />
-                    <span>Education Payments (WAEC, NECO, JAMB, School Fees)</span>
+                  <div className="flex items-center gap-3 text-white/90 bg-white/10 rounded-lg p-3">
+                    <GraduationCap className="h-5 w-5 text-purple-300 flex-shrink-0" />
+                    <span className="font-medium">Education Payments</span>
                   </div>
                 </div>
+                <p className="text-white/80 text-sm mt-3">
+                  MTN, Glo, Airtel, 9mobile • PHCN, Eko, Ikeja • DStv, GOtv • WAEC, NECO, JAMB
+                </p>
               </div>
               <Button 
-                className="w-full lg:w-auto whitespace-nowrap" 
+                className="w-full lg:w-auto whitespace-nowrap bg-white text-blue-600 hover:bg-gray-100 font-semibold px-6 py-3 text-base shadow-lg" 
                 size="lg"
                 onClick={handleUtilityPaymentNavigation}
               >
@@ -205,8 +202,6 @@ export default function Marketplace() {
           <TabsTrigger value="purchased">My Purchased Items</TabsTrigger>
         </TabsList>
         
-        
-        
         <TabsContent value="all">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {loading ? (
@@ -228,7 +223,7 @@ export default function Marketplace() {
               ))
             ) : filteredMaterials.length > 0 ? (
               filteredMaterials.map((material) => (
-                <Card key={material.id} className="overflow-hidden">
+                <Card key={material.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                   <CardHeader className="pb-2">
                     <div className="flex justify-between items-start">
                       <div>
@@ -260,14 +255,14 @@ export default function Marketplace() {
                     </div>
                   </CardContent>
                   <CardFooter className="flex justify-between items-center">
-                    <p className="font-semibold">₦{material.price.toLocaleString()}</p>
+                    <p className="font-semibold text-lg">₦{material.price.toLocaleString()}</p>
                     {material.purchased ? (
                       <Button variant="outline" onClick={() => handleDownload(material)}>
                         <Download className="mr-2 h-4 w-4" />
                         Download
                       </Button>
                     ) : (
-                      <Button onClick={() => handleBuyNow(material)}>
+                      <Button onClick={() => handleBuyNow(material)} className="bg-primary hover:bg-primary/90">
                         <ShoppingCart className="mr-2 h-4 w-4" />
                         Buy Now
                       </Button>
@@ -303,7 +298,7 @@ export default function Marketplace() {
               filteredMaterials
                 .filter(material => material.type === 'ebook')
                 .map((material) => (
-                  <Card key={material.id} className="overflow-hidden">
+                  <Card key={material.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                     <CardHeader className="pb-2">
                       <div className="flex justify-between items-start">
                         <div>
@@ -329,14 +324,14 @@ export default function Marketplace() {
                       </div>
                     </CardContent>
                     <CardFooter className="flex justify-between items-center">
-                      <p className="font-semibold">₦{material.price.toLocaleString()}</p>
+                      <p className="font-semibold text-lg">₦{material.price.toLocaleString()}</p>
                       {material.purchased ? (
                         <Button variant="outline" onClick={() => handleDownload(material)}>
                           <Download className="mr-2 h-4 w-4" />
                           Download
                         </Button>
                       ) : (
-                        <Button onClick={() => handleBuyNow(material)}>
+                        <Button onClick={() => handleBuyNow(material)} className="bg-primary hover:bg-primary/90">
                           <ShoppingCart className="mr-2 h-4 w-4" />
                           Buy Now
                         </Button>
@@ -372,7 +367,7 @@ export default function Marketplace() {
               filteredMaterials
                 .filter(material => material.type === 'past-question')
                 .map((material) => (
-                  <Card key={material.id} className="overflow-hidden">
+                  <Card key={material.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                     <CardHeader className="pb-2">
                       <div className="flex justify-between items-start">
                         <div>
@@ -398,14 +393,14 @@ export default function Marketplace() {
                       </div>
                     </CardContent>
                     <CardFooter className="flex justify-between items-center">
-                      <p className="font-semibold">₦{material.price.toLocaleString()}</p>
+                      <p className="font-semibold text-lg">₦{material.price.toLocaleString()}</p>
                       {material.purchased ? (
                         <Button variant="outline" onClick={() => handleDownload(material)}>
                           <Download className="mr-2 h-4 w-4" />
                           Download
                         </Button>
                       ) : (
-                        <Button onClick={() => handleBuyNow(material)}>
+                        <Button onClick={() => handleBuyNow(material)} className="bg-primary hover:bg-primary/90">
                           <ShoppingCart className="mr-2 h-4 w-4" />
                           Buy Now
                         </Button>
@@ -441,7 +436,7 @@ export default function Marketplace() {
               filteredMaterials
                 .filter(material => material.purchased)
                 .map((material) => (
-                  <Card key={material.id} className="overflow-hidden">
+                  <Card key={material.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                     <CardHeader className="pb-2">
                       <div className="flex justify-between items-start">
                         <div>
