@@ -1,86 +1,117 @@
 
 import { useState, useEffect } from 'react';
-import { DashboardLayout } from '@/components/DashboardLayout';
-import { useAuth } from '@/contexts/AuthContext';
-import { SidebarProvider } from '@/components/ui/sidebar';
-import { DashboardContent } from '@/components/dashboard/DashboardContent';
-import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { toast } from 'sonner';
+import Layout from '@/components/Layout';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/hooks/auth';
+import { BookOpen, Download, ShoppingCart, User, CreditCard } from 'lucide-react';
+import Marketplace from '@/components/dashboard/Marketplace';
+import Downloads from '@/components/dashboard/Downloads';
+import { QuestionsTab } from '@/components/dashboard/QuestionsTab';
 
 const Dashboard = () => {
-  const { currentUser, isLoading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState('questions');
-  const [isContentLoading, setIsContentLoading] = useState(true);
-  const location = useLocation();
-  const navigate = useNavigate();
-  const isMobile = useIsMobile();
-  
-  // Extract tab from URL or set default
-  useEffect(() => {
-    const tabFromUrl = location.hash.replace('#', '');
-    if (tabFromUrl && ['questions', 'notifications', 'downloads', 'profile', 'bills', 
-                       'marketplace', 'groups', 'sessions', 'search', 'leaderboard', 
-                       'rewards', 'referrals', 'payments', 'chat', 'academic-ai'].includes(tabFromUrl)) {
-      setActiveTab(tabFromUrl);
-    }
-    
-    // Simulate content loading
-    setIsContentLoading(true);
-    const timer = setTimeout(() => setIsContentLoading(false), 800);
-    
-    return () => clearTimeout(timer);
-  }, [location]);
+  const { currentUser } = useAuth();
+  const [activeTab, setActiveTab] = useState('marketplace');
 
-  // Update URL when tab changes
-  const handleTabChange = (tab: string) => {
-    try {
-      setActiveTab(tab);
-      navigate(`/dashboard#${tab}`, { replace: true });
-    } catch (error) {
-      console.error("Navigation error:", error);
-      toast.error("Failed to navigate to the selected tab. Please try again.");
+  useEffect(() => {
+    // Check URL hash to set active tab
+    const hash = window.location.hash.replace('#', '');
+    if (hash && ['marketplace', 'questions', 'downloads', 'profile'].includes(hash)) {
+      setActiveTab(hash);
     }
+  }, []);
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    window.history.replaceState(null, '', `#${value}`);
   };
 
-  if (authLoading) {
+  if (!currentUser) {
     return (
-      <DashboardLayout>
-        <div className="container mx-auto px-4 py-8 animate-fade-in">
-          <div className="flex gap-4">
-            <Skeleton className="h-screen w-1/4" />
-            <Skeleton className="h-screen w-3/4" />
+      <Layout>
+        <div className="container mx-auto px-4 pt-28 pb-16">
+          <div className="text-center">
+            <h1 className="text-3xl font-bold mb-4">Please log in to access your dashboard</h1>
+            <Button onClick={() => window.location.href = '/login'}>
+              Go to Login
+            </Button>
           </div>
         </div>
-      </DashboardLayout>
+      </Layout>
     );
   }
-  
+
   return (
-    <DashboardLayout>
-      <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
-        <SidebarProvider>
-          <div className="flex min-h-[calc(100vh-8rem)] w-full flex-col sm:flex-row gap-4">
-            <DashboardSidebar 
-              currentUser={currentUser} 
-              activeTab={activeTab} 
-              setActiveTab={handleTabChange} 
-            />
-            <div className={`w-full ${isMobile ? 'mt-4' : ''}`}>
-              {isContentLoading ? (
-                <div className="glass-panel p-6 rounded-xl animate-pulse">
-                  <Skeleton className="h-[80vh] w-full" />
+    <Layout>
+      <div className="container mx-auto px-4 pt-28 pb-16">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2">Welcome back, {currentUser.email}!</h1>
+          <p className="text-muted-foreground">Manage your study materials and explore our marketplace</p>
+        </div>
+
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="marketplace" className="flex items-center gap-2">
+              <ShoppingCart className="h-4 w-4" />
+              Marketplace
+            </TabsTrigger>
+            <TabsTrigger value="questions" className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4" />
+              My Questions
+            </TabsTrigger>
+            <TabsTrigger value="downloads" className="flex items-center gap-2">
+              <Download className="h-4 w-4" />
+              Downloads
+            </TabsTrigger>
+            <TabsTrigger value="profile" className="flex items-center gap-2">
+              <User className="h-4 w-4" />
+              Profile
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="marketplace" className="space-y-6">
+            <Marketplace />
+          </TabsContent>
+
+          <TabsContent value="questions" className="space-y-6">
+            <QuestionsTab />
+          </TabsContent>
+
+          <TabsContent value="downloads" className="space-y-6">
+            <Downloads />
+          </TabsContent>
+
+          <TabsContent value="profile" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  Profile Settings
+                </CardTitle>
+                <CardDescription>Manage your account information</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">Email</label>
+                  <p className="text-sm text-muted-foreground">{currentUser.email}</p>
                 </div>
-              ) : (
-                <DashboardContent activeTab={activeTab} />
-              )}
-            </div>
-          </div>
-        </SidebarProvider>
+                <div>
+                  <label className="text-sm font-medium">Account Type</label>
+                  <p className="text-sm text-muted-foreground">Student</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Member Since</label>
+                  <p className="text-sm text-muted-foreground">
+                    {new Date(currentUser.created_at || '').toLocaleDateString()}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
-    </DashboardLayout>
+    </Layout>
   );
 };
 

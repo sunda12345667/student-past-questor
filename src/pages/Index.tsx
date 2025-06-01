@@ -1,3 +1,4 @@
+
 import Layout from '@/components/Layout';
 import { Hero } from '@/components/Hero';
 import { Features } from '@/components/Features';
@@ -31,16 +32,11 @@ const Index = () => {
 
   const handleSignUpFree = () => {
     navigate('/signup');
-    toast.success('Starting your free journey with StudyQuest!');
+    toast.success('Starting your journey with StudyQuest!');
   };
 
   const handleExploreQuestions = () => {
     navigate('/exams');
-  };
-
-  const handleLearnMore = (service: string) => {
-    // In a real app, we would navigate to the service page
-    toast.info(`${service} service will be available soon!`);
   };
 
   return (
@@ -50,50 +46,47 @@ const Index = () => {
       <SampleQuestions />
       <PricingPlans />
       
-      {/* Additional Services Section */}
+      {/* Marketplace Features Section */}
       <section className="py-20">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="heading-lg mb-4">More than just past questions</h2>
+            <h2 className="heading-lg mb-4">Your Complete Study Marketplace</h2>
             <p className="text-lg text-muted-foreground">
-              We offer additional services to make student life easier.
+              Access thousands of past questions and study materials from trusted sources.
             </p>
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
-              "Buy Phone Airtime",
-              "Buy Internet Data",
-              "Pay TV Subscription",
-              "Pay Electricity Bill",
-              "Education Payment",
-              "Buy Event Ticket"
-            ].map((service, index) => (
+              {
+                title: "Past Questions Library",
+                description: "Comprehensive collection of past questions from WAEC, JAMB, NECO, and more.",
+                action: "Browse Questions"
+              },
+              {
+                title: "Study Materials",
+                description: "High-quality textbooks, guides, and reference materials for all subjects.",
+                action: "View Materials"
+              },
+              {
+                title: "Instant Downloads",
+                description: "Get immediate access to your purchased materials with secure downloads.",
+                action: "Start Shopping"
+              }
+            ].map((feature, index) => (
               <div 
                 key={index}
                 className="glass-panel rounded-xl p-6 card-hover text-center"
               >
-                <h3 className="text-xl font-medium mb-4">{service}</h3>
+                <h3 className="text-xl font-medium mb-4">{feature.title}</h3>
                 <p className="text-muted-foreground mb-4">
-                  Fast, secure, and convenient {service.toLowerCase()} services at your fingertips.
+                  {feature.description}
                 </p>
                 <Button 
                   variant="outline"
-                  onClick={() => {
-                    if (service === "Buy Phone Airtime" || 
-                        service === "Buy Internet Data" || 
-                        service === "Pay TV Subscription" || 
-                        service === "Pay Electricity Bill" || 
-                        service === "Education Payment" || 
-                        service === "Buy Event Ticket") {
-                      navigate('/login');
-                      toast.info(`Sign in to access ${service.toLowerCase()} services`);
-                    } else {
-                      handleLearnMore(service);
-                    }
-                  }}
+                  onClick={handleExploreQuestions}
                 >
-                  Learn More
+                  {feature.action}
                 </Button>
               </div>
             ))}
@@ -107,7 +100,7 @@ const Index = () => {
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="heading-lg mb-6">Ready to ace your exams?</h2>
             <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Join thousands of students who are already preparing smarter with StudyQuest's comprehensive past question platform.
+              Join thousands of students who are already preparing smarter with StudyQuest's comprehensive past question marketplace.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
               <Button 

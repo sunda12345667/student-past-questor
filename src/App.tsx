@@ -13,11 +13,9 @@ import Index from '@/pages/Index';
 import Login from '@/pages/Login';
 import Signup from '@/pages/Signup';
 import Dashboard from '@/pages/Dashboard';
-import StudentChat from '@/pages/StudentChat';
 import QuestionView from '@/pages/QuestionView';
 import ExamListing from '@/pages/ExamListing';
 import PaymentCallback from '@/pages/PaymentCallback';
-import AdminPanel from '@/pages/AdminPanel';
 import NotFound from '@/pages/NotFound';
 import '@/index.css';
 
@@ -69,14 +67,6 @@ function App() {
                     } 
                   />
                   <Route 
-                    path="/chat" 
-                    element={
-                      <ProtectedRoute>
-                        <StudentChat />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
                     path="/questions/:questionId" 
                     element={
                       <ProtectedRoute>
@@ -86,25 +76,13 @@ function App() {
                   />
                   <Route 
                     path="/exams" 
-                    element={
-                      <ProtectedRoute>
-                        <ExamListing />
-                      </ProtectedRoute>
-                    } 
+                    element={<ExamListing />}
                   />
                   <Route 
                     path="/payment/callback" 
                     element={
                       <ProtectedRoute>
                         <PaymentCallback />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/admin" 
-                    element={
-                      <ProtectedRoute>
-                        <AdminPanel />
                       </ProtectedRoute>
                     } 
                   />
