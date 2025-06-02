@@ -19,6 +19,7 @@ import PaymentCallback from '@/pages/PaymentCallback';
 import NotFound from '@/pages/NotFound';
 import Blog from '@/pages/Blog';
 import AdminPanel from '@/pages/AdminPanel';
+import StudentChat from '@/pages/StudentChat';
 import '@/index.css';
 
 const queryClient = new QueryClient({
@@ -60,6 +61,16 @@ function App() {
                   <Route path="/" element={<Index />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/signup" element={<Signup />} />
+                  <Route path="/blog" element={<Blog />} />
+                  <Route path="/admin" element={<AdminPanel />} />
+                  <Route 
+                    path="/chat" 
+                    element={
+                      <ProtectedRoute>
+                        <StudentChat />
+                      </ProtectedRoute>
+                    } 
+                  />
                   <Route 
                     path="/dashboard" 
                     element={
