@@ -64,18 +64,30 @@ const MaterialUpload = () => {
     }
   ]);
 
-  const [newMaterial, setNewMaterial] = useState({
+  const [newMaterial, setNewMaterial] = useState<{
+    title: string;
+    description: string;
+    type: 'past-question' | 'video' | 'ebook';
+    examType: string;
+    subject: string;
+    year: number;
+    price: number;
+    file: File | null;
+    duration: string;
+    pages: number;
+    status: 'active' | 'draft' | 'archived';
+  }>({
     title: '',
     description: '',
-    type: 'past-question' as const,
+    type: 'past-question',
     examType: '',
     subject: '',
     year: new Date().getFullYear(),
     price: 0,
-    file: null as File | null,
+    file: null,
     duration: '',
     pages: 0,
-    status: 'active' as const
+    status: 'active'
   });
 
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
@@ -283,7 +295,8 @@ const MaterialUpload = () => {
             />
           )}
 
-          {(editingMaterial?.type !== 'video' || newMaterial.type !== 'video') && (
+          {(editingMaterial?.type === 'past-question' || editingMaterial?.type === 'ebook' || 
+            newMaterial.type === 'past-question' || newMaterial.type === 'ebook') && (
             <Input
               type="number"
               placeholder="Number of pages"
