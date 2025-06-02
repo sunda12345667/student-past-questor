@@ -1,10 +1,11 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, BookOpen, Star, Video, Play } from 'lucide-react';
+import { Search, BookOpen, Star, Video, Play, FileText, Download, ShoppingCart } from 'lucide-react';
 import { toast } from 'sonner';
 
 const Marketplace = () => {
@@ -12,120 +13,144 @@ const Marketplace = () => {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedType, setSelectedType] = useState('All');
 
-  const questionPacks = [
+  // Enhanced materials with all types
+  const allMaterials = [
+    // Past Questions
     {
       id: 1,
-      title: 'WAEC 2020 Past Questions',
-      description: 'Comprehensive WAEC past questions for all subjects in 2020.',
+      title: 'WAEC Mathematics 2023',
+      description: 'Complete WAEC Mathematics past questions with detailed solutions and marking scheme.',
       price: '₦1,500',
       category: 'WAEC',
-      year: 2020,
-      questions: 500,
-      pages: 120
+      type: 'past-question',
+      year: 2023,
+      subject: 'Mathematics',
+      questions: 60,
+      pages: 45,
+      rating: 4.8,
+      downloads: 156
     },
     {
       id: 2,
-      title: 'JAMB 2021 Past Questions',
-      description: 'Detailed JAMB past questions for all subjects in 2021.',
-      price: '₦1,800',
+      title: 'JAMB English Language 2022',
+      description: 'Comprehensive JAMB English past questions covering all topics with explanations.',
+      price: '₦1,200',
       category: 'JAMB',
-      year: 2021,
-      questions: 600,
-      pages: 150
+      type: 'past-question',
+      year: 2022,
+      subject: 'English Language',
+      questions: 80,
+      pages: 52,
+      rating: 4.9,
+      downloads: 203
     },
+    // Video Courses
     {
       id: 3,
-      title: 'NECO 2019 Past Questions',
-      description: 'Complete NECO past questions for all subjects in 2019.',
-      price: '₦1,200',
-      category: 'NECO',
-      year: 2019,
-      questions: 450,
-      pages: 110
-    },
-    {
-      id: 4,
-      title: 'GCE 2022 Past Questions',
-      description: 'Extensive GCE past questions for all subjects in 2022.',
-      price: '₦2,000',
-      category: 'GCE',
-      year: 2022,
-      questions: 700,
-      pages: 180
-    }
-  ];
-
-  const videoMaterials = [
-    {
-      id: 1,
-      title: 'Mathematics WAEC Complete Video Course',
-      description: 'Comprehensive video tutorials covering all WAEC Mathematics topics with solved examples.',
-      price: '₦3,500',
-      category: 'WAEC',
+      title: 'Physics JAMB Complete Course',
+      description: 'Comprehensive video course covering all JAMB Physics topics with practical examples.',
+      price: '₦4,500',
+      category: 'JAMB',
+      type: 'video',
+      subject: 'Physics',
       duration: '8 hours',
       lessons: 24,
-      rating: 4.8,
-      instructor: 'Dr. John Adebayo'
-    },
-    {
-      id: 2,
-      title: 'English Language JAMB Preparation Videos',
-      description: 'Complete English Language preparation course for JAMB with grammar, comprehension, and essay writing.',
-      price: '₦4,000',
-      category: 'JAMB',
-      duration: '6 hours',
-      lessons: 18,
-      rating: 4.9,
-      instructor: 'Prof. Sarah Johnson'
-    },
-    {
-      id: 3,
-      title: 'Physics NECO Video Tutorials',
-      description: 'In-depth Physics video course covering mechanics, electricity, and modern physics for NECO.',
-      price: '₦4,500',
-      category: 'NECO',
-      duration: '10 hours',
-      lessons: 30,
       rating: 4.7,
-      instructor: 'Dr. Michael Okafor'
+      instructor: 'Dr. Michael Okafor',
+      downloads: 89
     },
     {
       id: 4,
-      title: 'Chemistry GCE Video Course',
-      description: 'Complete Chemistry course with practical demonstrations and theory explanations.',
-      price: '₦4,200',
-      category: 'GCE',
-      duration: '9 hours',
-      lessons: 27,
+      title: 'Chemistry WAEC Video Tutorials',
+      description: 'Step-by-step chemistry tutorials with lab demonstrations and theory explanations.',
+      price: '₦3,800',
+      category: 'WAEC',
+      type: 'video',
+      subject: 'Chemistry',
+      duration: '6.5 hours',
+      lessons: 18,
       rating: 4.6,
-      instructor: 'Dr. Fatima Ahmed'
+      instructor: 'Prof. Sarah Adebayo',
+      downloads: 67
+    },
+    // E-books
+    {
+      id: 5,
+      title: 'Complete WAEC Mathematics Guide',
+      description: 'Comprehensive e-book covering all WAEC Mathematics topics with solved examples.',
+      price: '₦2,200',
+      category: 'WAEC',
+      type: 'ebook',
+      subject: 'Mathematics',
+      pages: 180,
+      rating: 4.5,
+      author: 'Mathematics Academy',
+      downloads: 234
+    },
+    {
+      id: 6,
+      title: 'JAMB Government Handbook',
+      description: 'Complete guide to JAMB Government with current affairs and practice questions.',
+      price: '₦1,800',
+      category: 'JAMB',
+      type: 'ebook',
+      subject: 'Government',
+      pages: 156,
+      rating: 4.4,
+      author: 'Political Science Dept.',
+      downloads: 178
     }
   ];
 
   const categories = ['All', 'WAEC', 'JAMB', 'NECO', 'GCE'];
 
-  const filteredQuestionPacks = questionPacks.filter(pack => {
-    const matchesSearch = pack.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'All' || pack.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+  const filteredMaterials = allMaterials.filter(material => {
+    const matchesSearch = material.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         material.subject.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === 'All' || material.category === selectedCategory;
+    const matchesType = selectedType === 'All' || 
+                       (selectedType === 'Questions' && material.type === 'past-question') ||
+                       (selectedType === 'Videos' && material.type === 'video') ||
+                       (selectedType === 'Ebooks' && material.type === 'ebook');
+    return matchesSearch && matchesCategory && matchesType;
   });
 
-  const filteredVideoMaterials = videoMaterials.filter(video => {
-    const matchesSearch = video.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'All' || video.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
-
-  const handlePurchase = (item: any, type: string) => {
+  const handlePurchase = (item: any) => {
     toast.success(`Added ${item.title} to cart! Redirecting to payment...`);
-    // In a real app, this would integrate with the payment system
+  };
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'past-question': return <FileText className="h-4 w-4" />;
+      case 'video': return <Video className="h-4 w-4" />;
+      case 'ebook': return <BookOpen className="h-4 w-4" />;
+      default: return <FileText className="h-4 w-4" />;
+    }
+  };
+
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case 'past-question': return 'bg-blue-100 text-blue-800';
+      case 'video': return 'bg-red-100 text-red-800';
+      case 'ebook': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getTypeName = (type: string) => {
+    switch (type) {
+      case 'past-question': return 'Past Question';
+      case 'video': return 'Video Course';
+      case 'ebook': return 'E-Book';
+      default: return type;
+    }
   };
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold mb-2">Marketplace</h2>
-        <p className="text-muted-foreground">Browse and purchase study materials and video courses</p>
+        <h2 className="text-2xl font-bold mb-2">Educational Marketplace</h2>
+        <p className="text-muted-foreground">Browse and purchase past questions, video courses, and e-books</p>
       </div>
 
       {/* Search and Filters */}
@@ -157,106 +182,115 @@ const Marketplace = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="All">All Types</SelectItem>
-            <SelectItem value="Questions">Question Packs</SelectItem>
+            <SelectItem value="Questions">Past Questions</SelectItem>
             <SelectItem value="Videos">Video Courses</SelectItem>
+            <SelectItem value="Ebooks">E-Books</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
-      {/* Content based on selected type */}
-      {(selectedType === 'All' || selectedType === 'Videos') && (
-        <div>
-          <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-            <Video className="h-5 w-5" />
-            Video Courses
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {filteredVideoMaterials.map((video) => (
-              <Card key={video.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                <div className="aspect-video bg-gradient-to-r from-primary/10 to-primary/5 flex items-center justify-center">
-                  <Play className="h-12 w-12 text-primary" />
+      {/* Materials Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredMaterials.map((material) => (
+          <Card key={material.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+            {material.type === 'video' && (
+              <div className="aspect-video bg-gradient-to-r from-primary/10 to-primary/5 flex items-center justify-center">
+                <Play className="h-12 w-12 text-primary" />
+              </div>
+            )}
+            
+            <CardHeader>
+              <div className="flex justify-between items-start mb-2">
+                <Badge className={`${getTypeColor(material.type)} flex items-center gap-1`}>
+                  {getTypeIcon(material.type)}
+                  {getTypeName(material.type)}
+                </Badge>
+                <div className="flex items-center gap-1">
+                  <Star className="h-4 w-4 fill-current text-yellow-500" />
+                  <span className="text-sm">{material.rating}</span>
                 </div>
-                <CardHeader>
-                  <div className="flex justify-between items-start mb-2">
-                    <Badge variant="outline">{video.category}</Badge>
-                    <div className="flex items-center gap-1">
-                      <Star className="h-4 w-4 fill-current text-yellow-500" />
-                      <span className="text-sm">{video.rating}</span>
+              </div>
+              
+              <div className="flex gap-2 mb-2">
+                <Badge variant="outline">{material.category}</Badge>
+                <Badge variant="secondary">{material.subject}</Badge>
+                {material.year && <Badge variant="outline">{material.year}</Badge>}
+              </div>
+              
+              <CardTitle className="text-lg line-clamp-2">{material.title}</CardTitle>
+            </CardHeader>
+            
+            <CardContent>
+              <p className="text-muted-foreground mb-4 line-clamp-2">{material.description}</p>
+              
+              <div className="space-y-2 mb-4 text-sm text-muted-foreground">
+                {material.type === 'past-question' && (
+                  <>
+                    <div className="flex justify-between">
+                      <span>Questions:</span>
+                      <span>{material.questions}</span>
                     </div>
-                  </div>
-                  <CardTitle className="text-lg line-clamp-2">{video.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground mb-4 line-clamp-2">{video.description}</p>
-                  <div className="space-y-2 mb-4">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Duration:</span>
-                      <span>{video.duration}</span>
+                    <div className="flex justify-between">
+                      <span>Pages:</span>
+                      <span>{material.pages}</span>
                     </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Lessons:</span>
-                      <span>{video.lessons}</span>
+                  </>
+                )}
+                
+                {material.type === 'video' && (
+                  <>
+                    <div className="flex justify-between">
+                      <span>Duration:</span>
+                      <span>{material.duration}</span>
                     </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Instructor:</span>
-                      <span>{video.instructor}</span>
+                    <div className="flex justify-between">
+                      <span>Lessons:</span>
+                      <span>{material.lessons}</span>
                     </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-2xl font-bold text-primary">{video.price}</span>
-                    <Button onClick={() => handlePurchase(video, 'video')}>
-                      Purchase
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
+                    <div className="flex justify-between">
+                      <span>Instructor:</span>
+                      <span className="text-right">{material.instructor}</span>
+                    </div>
+                  </>
+                )}
+                
+                {material.type === 'ebook' && (
+                  <>
+                    <div className="flex justify-between">
+                      <span>Pages:</span>
+                      <span>{material.pages}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Author:</span>
+                      <span className="text-right">{material.author}</span>
+                    </div>
+                  </>
+                )}
+                
+                <div className="flex justify-between">
+                  <span>Downloads:</span>
+                  <span>{material.downloads}</span>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <span className="text-2xl font-bold text-primary">{material.price}</span>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm">
+                    <Download className="h-4 w-4" />
+                  </Button>
+                  <Button onClick={() => handlePurchase(material)} size="sm">
+                    <ShoppingCart className="h-4 w-4 mr-1" />
+                    Buy
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
-      {(selectedType === 'All' || selectedType === 'Questions') && (
-        <div>
-          <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-            <BookOpen className="h-5 w-5" />
-            Question Packs
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredQuestionPacks.map((pack) => (
-              <Card key={pack.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex justify-between items-start mb-2">
-                    <Badge variant="outline">{pack.category}</Badge>
-                    <span className="text-sm text-muted-foreground">{pack.year}</span>
-                  </div>
-                  <CardTitle className="text-lg">{pack.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground mb-4">{pack.description}</p>
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-sm text-muted-foreground">
-                      {pack.questions} questions
-                    </span>
-                    <span className="text-sm text-muted-foreground">
-                      {pack.pages} pages
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-2xl font-bold text-primary">{pack.price}</span>
-                    <Button onClick={() => handlePurchase(pack, 'questions')}>
-                      Purchase
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {((selectedType === 'Questions' && filteredQuestionPacks.length === 0) || 
-        (selectedType === 'Videos' && filteredVideoMaterials.length === 0) ||
-        (selectedType === 'All' && filteredQuestionPacks.length === 0 && filteredVideoMaterials.length === 0)) && (
+      {filteredMaterials.length === 0 && (
         <div className="text-center py-8">
           <p className="text-muted-foreground">No materials found matching your search criteria.</p>
         </div>

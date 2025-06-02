@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,8 +7,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit, Trash2, Users, FileText, Video, DollarSign, Upload, Save } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, FileText, Video, DollarSign, Upload, Save, BookOpen } from 'lucide-react';
 import { toast } from 'sonner';
+import MaterialUpload from '@/components/admin/MaterialUpload';
 
 const AdminPanel = () => {
   const [users, setUsers] = useState([
@@ -153,15 +153,16 @@ const AdminPanel = () => {
       <div className="container mx-auto px-4 pt-28 pb-16">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
-          <p className="text-muted-foreground">Manage users, content, and platform settings</p>
+          <p className="text-muted-foreground">Manage users, content, materials, and platform settings</p>
         </div>
 
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="dashboard">Overview</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
-            <TabsTrigger value="blog">Blog Management</TabsTrigger>
-            <TabsTrigger value="videos">Video Materials</TabsTrigger>
+            <TabsTrigger value="materials">Materials</TabsTrigger>
+            <TabsTrigger value="blog">Blog</TabsTrigger>
+            <TabsTrigger value="videos">Videos</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
 
@@ -282,6 +283,10 @@ const AdminPanel = () => {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="materials" className="space-y-6">
+            <MaterialUpload />
           </TabsContent>
 
           <TabsContent value="blog" className="space-y-6">

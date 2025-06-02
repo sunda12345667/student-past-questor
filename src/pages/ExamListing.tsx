@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import Layout from '@/components/Layout';
@@ -8,80 +9,156 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Book, Search, Filter, Bookmark, ShoppingCart, Download, FileText } from 'lucide-react';
-import { fetchQuestionPacks, QuestionPack, purchaseQuestionPack } from '@/services/questionsService';
-import { processQuestionPackPurchase } from '@/services/paystackService';
-import { useAuth } from '@/hooks/auth';
+import { Book, Search, Filter, Bookmark, ShoppingCart, Download, FileText, Video, BookOpen, Star } from 'lucide-react';
 
 const ExamListing = () => {
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
-  const [questionPacks, setQuestionPacks] = useState<QuestionPack[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [loading, setLoading] = useState(true);
   const [selectedExamType, setSelectedExamType] = useState<string>('all');
+  const [selectedMaterialType, setSelectedMaterialType] = useState<string>('all');
   
-  useEffect(() => {
-    const loadQuestionPacks = async () => {
-      try {
-        setLoading(true);
-        const packs = await fetchQuestionPacks();
-        setQuestionPacks(packs);
-      } catch (error) {
-        console.error('Error fetching question packs:', error);
-        toast.error('Failed to load question packs');
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadQuestionPacks();
-  }, []);
-  
-  // Purchase mutation
-  const purchaseMutation = useMutation({
-    mutationFn: (packId: string) => purchaseQuestionPack(packId),
-    onSuccess: () => {
-      toast.success('Purchase successful!');
-      navigate('/dashboard#downloads');
+  // Combined materials data
+  const materials = [
+    // Past Questions
+    {
+      id: 1,
+      title: 'WAEC Mathematics 2023 Past Questions',
+      description: 'Complete WAEC Mathematics past questions with detailed solutions and marking scheme.',
+      type: 'past-question',
+      examType: 'WAEC',
+      subject: 'Mathematics',
+      year: 2023,
+      price: 1500,
+      questionCount: 60,
+      pages: 45,
+      rating: 4.8,
+      downloads: 156
     },
-    onError: (error) => {
-      console.error('Purchase error:', error);
-      toast.error('Failed to complete purchase');
+    {
+      id: 2,
+      title: 'JAMB English Language Past Questions',
+      description: 'Comprehensive JAMB English past questions covering all topics with explanations.',
+      type: 'past-question',
+      examType: 'JAMB',
+      subject: 'English Language',
+      year: 2022,
+      price: 1200,
+      questionCount: 80,
+      pages: 52,
+      rating: 4.9,
+      downloads: 203
+    },
+    // Video Courses
+    {
+      id: 3,
+      title: 'Physics JAMB Complete Video Course',
+      description: 'Comprehensive video course covering all JAMB Physics topics with practical examples.',
+      type: 'video',
+      examType: 'JAMB',
+      subject: 'Physics',
+      price: 4500,
+      duration: '8 hours',
+      lessons: 24,
+      rating: 4.7,
+      instructor: 'Dr. Michael Okafor',
+      downloads: 89
+    },
+    {
+      id: 4,
+      title: 'Chemistry WAEC Video Tutorials',
+      description: 'Step-by-step chemistry tutorials with lab demonstrations and theory explanations.',
+      type: 'video',
+      examType: 'WAEC',
+      subject: 'Chemistry',
+      price: 3800,
+      duration: '6.5 hours',
+      lessons: 18,
+      rating: 4.6,
+      instructor: 'Prof. Sarah Adebayo',
+      downloads: 67
+    },
+    // E-books
+    {
+      id: 5,
+      title: 'Complete WAEC Mathematics Study Guide',
+      description: 'Comprehensive e-book covering all WAEC Mathematics topics with solved examples.',
+      type: 'ebook',
+      examType: 'WAEC',
+      subject: 'Mathematics',
+      price: 2200,
+      pages: 180,
+      rating: 4.5,
+      author: 'Mathematics Academy',
+      downloads: 234
+    },
+    {
+      id: 6,
+      title: 'JAMB Government Complete Handbook',
+      description: 'Complete guide to JAMB Government with current affairs and practice questions.',
+      type: 'ebook',
+      examType: 'JAMB',
+      subject: 'Government',
+      price: 1800,
+      pages: 156,
+      rating: 4.4,
+      author: 'Political Science Dept.',
+      downloads: 178
     }
-  });
+  ];
   
-  const handlePurchase = async (pack: QuestionPack) => {
-    try {
-      await processQuestionPackPurchase(
-        pack.id.toString(),
-        `${pack.examType}: ${pack.subject} (${pack.year})`,
-        pack.price,
-        currentUser
-      );
-    } catch (error) {
-      console.error('Payment error:', error);
-      toast.error('Payment processing failed');
-    }
+  const handlePurchase = async (material: any) => {
+    toast.success(`Processing purchase of ${material.title}...`);
+    // Simulate purchase process
+    setTimeout(() => {
+      toast.success('Purchase successful! Check your downloads.');
+    }, 2000);
   };
   
-  const filteredPacks = questionPacks.filter(pack => {
-    const matchesSearch = pack.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         pack.examType.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         pack.title.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredMaterials = materials.filter(material => {
+    const matchesSearch = material.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         material.examType.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         material.title.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesExamType = selectedExamType === 'all' || pack.examType === selectedExamType;
+    const matchesExamType = selectedExamType === 'all' || material.examType === selectedExamType;
+    const matchesMaterialType = selectedMaterialType === 'all' || material.type === selectedMaterialType;
     
-    return matchesSearch && matchesExamType;
+    return matchesSearch && matchesExamType && matchesMaterialType;
   });
   
   // Get unique exam types for filtering
-  const examTypes = Array.from(new Set(questionPacks.map(pack => pack.examType)));
+  const examTypes = Array.from(new Set(materials.map(material => material.examType)));
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'past-question': return <FileText className="h-4 w-4" />;
+      case 'video': return <Video className="h-4 w-4" />;
+      case 'ebook': return <BookOpen className="h-4 w-4" />;
+      default: return <FileText className="h-4 w-4" />;
+    }
+  };
+
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case 'past-question': return 'bg-blue-100 text-blue-800';
+      case 'video': return 'bg-red-100 text-red-800';
+      case 'ebook': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getTypeName = (type: string) => {
+    switch (type) {
+      case 'past-question': return 'Past Question';
+      case 'video': return 'Video Course';
+      case 'ebook': return 'E-Book';
+      default: return type;
+    }
+  };
   
   return (
     <Layout>
       <div className="container mx-auto px-4 pt-28 pb-16">
-        <h1 className="text-3xl font-bold mb-6">Past Questions & Study Materials</h1>
+        <h1 className="text-3xl font-bold mb-6">Study Materials & Resources</h1>
         
         {/* Search and Filters */}
         <div className="flex flex-col md:flex-row gap-4 mb-8">
@@ -95,106 +172,173 @@ const ExamListing = () => {
             />
           </div>
           
-          <div className="flex items-center">
-            <Filter className="mr-2 h-4 w-4 text-muted-foreground" />
-            <span className="mr-2 text-sm">Filter:</span>
-            <Tabs defaultValue="all" value={selectedExamType} onValueChange={setSelectedExamType}>
-              <TabsList>
-                <TabsTrigger value="all">All</TabsTrigger>
-                {examTypes.map(type => (
-                  <TabsTrigger key={type} value={type}>{type}</TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center">
+              <Filter className="mr-2 h-4 w-4 text-muted-foreground" />
+              <span className="mr-2 text-sm">Exam:</span>
+              <Tabs defaultValue="all" value={selectedExamType} onValueChange={setSelectedExamType}>
+                <TabsList>
+                  <TabsTrigger value="all">All</TabsTrigger>
+                  {examTypes.map(type => (
+                    <TabsTrigger key={type} value={type}>{type}</TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
+            </div>
+            
+            <div className="flex items-center">
+              <span className="mr-2 text-sm">Type:</span>
+              <Tabs defaultValue="all" value={selectedMaterialType} onValueChange={setSelectedMaterialType}>
+                <TabsList>
+                  <TabsTrigger value="all">All</TabsTrigger>
+                  <TabsTrigger value="past-question">Questions</TabsTrigger>
+                  <TabsTrigger value="video">Videos</TabsTrigger>
+                  <TabsTrigger value="ebook">E-Books</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
           </div>
         </div>
         
-        {/* Question Packs Grid */}
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => (
-              <Card key={i} className="animate-pulse">
-                <CardHeader className="bg-muted/30 h-36"></CardHeader>
-                <CardContent className="pt-4">
-                  <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
-                  <div className="h-4 bg-muted rounded w-1/2 mb-6"></div>
-                  <div className="h-4 bg-muted rounded w-full mb-2"></div>
-                  <div className="h-4 bg-muted rounded w-full"></div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredPacks.length > 0 ? (
-              filteredPacks.map((pack) => (
-                <Card key={pack.id} className="overflow-hidden">
-                  <CardHeader className="bg-muted/30 pb-4 relative">
-                    <div className="flex justify-between items-start">
-                      <Badge variant="outline" className="bg-background">
-                        {pack.examType}
-                      </Badge>
+        {/* Materials Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredMaterials.length > 0 ? (
+            filteredMaterials.map((material) => (
+              <Card key={material.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                {material.type === 'video' && (
+                  <div className="aspect-video bg-gradient-to-r from-primary/10 to-primary/5 flex items-center justify-center relative">
+                    <Video className="h-12 w-12 text-primary" />
+                  </div>
+                )}
+                
+                <CardHeader className="pb-4 relative">
+                  <div className="flex justify-between items-start mb-2">
+                    <Badge className={`${getTypeColor(material.type)} flex items-center gap-1`}>
+                      {getTypeIcon(material.type)}
+                      {getTypeName(material.type)}
+                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
+                        <Star className="h-4 w-4 fill-current text-yellow-500" />
+                        <span className="text-sm">{material.rating}</span>
+                      </div>
                       <Button variant="ghost" size="icon">
-                        <Bookmark className="h-5 w-5" />
+                        <Bookmark className="h-4 w-4" />
                       </Button>
                     </div>
-                    <CardTitle className="mt-4">{pack.subject}</CardTitle>
-                    <CardDescription>
-                      {pack.title} • {pack.year}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-4">
-                    <div className="flex justify-between items-center mb-4">
-                      <div className="flex items-center">
-                        <FileText className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">{pack.questionCount} Questions</span>
-                      </div>
-                      <div className="text-sm text-primary font-medium">
-                        {pack.price ? `₦${pack.price.toLocaleString()}` : 'Free'}
-                      </div>
+                  </div>
+                  
+                  <div className="flex gap-2 mb-2">
+                    <Badge variant="outline">{material.examType}</Badge>
+                    <Badge variant="secondary">{material.subject}</Badge>
+                    {material.year && <Badge variant="outline">{material.year}</Badge>}
+                  </div>
+                  
+                  <CardTitle className="text-lg">{material.title}</CardTitle>
+                  <CardDescription className="line-clamp-2">
+                    {material.description}
+                  </CardDescription>
+                </CardHeader>
+                
+                <CardContent className="pt-2">
+                  <div className="space-y-2 mb-4 text-sm text-muted-foreground">
+                    {material.type === 'past-question' && (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <span className="flex items-center gap-1">
+                            <FileText className="h-4 w-4" />
+                            Questions:
+                          </span>
+                          <span>{material.questionCount}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Pages:</span>
+                          <span>{material.pages}</span>
+                        </div>
+                      </>
+                    )}
+                    
+                    {material.type === 'video' && (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <span>Duration:</span>
+                          <span>{material.duration}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Lessons:</span>
+                          <span>{material.lessons}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Instructor:</span>
+                          <span className="text-right text-xs">{material.instructor}</span>
+                        </div>
+                      </>
+                    )}
+                    
+                    {material.type === 'ebook' && (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <span>Pages:</span>
+                          <span>{material.pages}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Author:</span>
+                          <span className="text-right text-xs">{material.author}</span>
+                        </div>
+                      </>
+                    )}
+                    
+                    <div className="flex items-center justify-between">
+                      <span>Downloads:</span>
+                      <span>{material.downloads}</span>
                     </div>
-                    <p className="text-sm line-clamp-3">{pack.description}</p>
-                  </CardContent>
-                  <CardFooter className="border-t pt-4 pb-4">
-                    <div className="flex space-x-2 w-full">
-                      <Button 
-                        variant="outline" 
-                        className="flex-1"
-                        onClick={() => navigate(`/questions/${pack.id}`)}
-                      >
-                        <Book className="h-4 w-4 mr-2" />
-                        Preview
-                      </Button>
-                      <Button 
-                        className="flex-1"
-                        onClick={() => handlePurchase(pack)}
-                        disabled={purchaseMutation.isPending}
-                      >
-                        {pack.price > 0 ? (
-                          <>
-                            <ShoppingCart className="h-4 w-4 mr-2" />
-                            {purchaseMutation.isPending ? 'Processing...' : 'Purchase'}
-                          </>
-                        ) : (
-                          <>
-                            <Download className="h-4 w-4 mr-2" />
-                            Download
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </CardFooter>
-                </Card>
-              ))
-            ) : (
-              <div className="col-span-full text-center py-12">
-                <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-xl font-medium mb-2">No results found</h3>
-                <p className="text-muted-foreground">Try adjusting your search or filters</p>
-              </div>
-            )}
-          </div>
-        )}
+                  </div>
+                  
+                  <div className="text-center mb-4">
+                    <span className="text-2xl font-bold text-primary">
+                      {material.price ? `₦${material.price.toLocaleString()}` : 'Free'}
+                    </span>
+                  </div>
+                </CardContent>
+                
+                <CardFooter className="border-t pt-4 pb-4">
+                  <div className="flex space-x-2 w-full">
+                    <Button 
+                      variant="outline" 
+                      className="flex-1"
+                      onClick={() => navigate(`/materials/${material.id}`)}
+                    >
+                      <Book className="h-4 w-4 mr-2" />
+                      Preview
+                    </Button>
+                    <Button 
+                      className="flex-1"
+                      onClick={() => handlePurchase(material)}
+                    >
+                      {material.price > 0 ? (
+                        <>
+                          <ShoppingCart className="h-4 w-4 mr-2" />
+                          Purchase
+                        </>
+                      ) : (
+                        <>
+                          <Download className="h-4 w-4 mr-2" />
+                          Download
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </CardFooter>
+              </Card>
+            ))
+          ) : (
+            <div className="col-span-full text-center py-12">
+              <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-xl font-medium mb-2">No results found</h3>
+              <p className="text-muted-foreground">Try adjusting your search or filters</p>
+            </div>
+          )}
+        </div>
       </div>
     </Layout>
   );
