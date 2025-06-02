@@ -1,8 +1,19 @@
 
-import { Facebook, Instagram, Twitter, Youtube } from 'lucide-react';
+import { Facebook, Instagram, Twitter, Youtube, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 export function FooterSection() {
+  const navigate = useNavigate();
+
+  const handleAdminLogin = () => {
+    // Simulate admin login with default credentials
+    toast.success('Admin login - Username: ADMIN, Password: ADMIN');
+    // In a real app, you'd navigate to an admin panel
+    toast.info('Admin panel coming soon!');
+  };
+
   return (
     <footer className="bg-background border-t border-border">
       <div className="container mx-auto px-4 py-12">
@@ -87,13 +98,29 @@ export function FooterSection() {
             <p className="text-muted-foreground mb-4">
               Subscribe to our newsletter for the latest exam resources and tips.
             </p>
-            <div className="flex flex-col sm:flex-row gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 mb-6">
               <input 
                 type="email" 
                 placeholder="Your email address" 
                 className="flex-grow px-4 py-2 rounded-lg border border-input focus-ring"
               />
               <Button>Subscribe</Button>
+            </div>
+            
+            {/* Admin Login Section */}
+            <div className="border-t pt-4">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleAdminLogin}
+                className="flex items-center gap-2 w-full"
+              >
+                <Shield className="h-4 w-4" />
+                Admin Login
+              </Button>
+              <p className="text-xs text-muted-foreground mt-2">
+                Default: ADMIN / ADMIN
+              </p>
             </div>
           </div>
         </div>

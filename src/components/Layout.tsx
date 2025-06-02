@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Menu, X, BookOpen, User, LogOut } from 'lucide-react';
+import { Menu, X, BookOpen, User, LogOut, Newspaper } from 'lucide-react';
 import { useAuth } from '@/hooks/auth';
 import { toast } from 'sonner';
 
@@ -21,9 +21,14 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const handleBlogClick = () => {
+    toast.info('Education blog coming soon! Stay tuned for the latest education news and updates.');
+  };
+
   const navigation = [
     { name: 'Home', href: '/' },
     { name: 'Marketplace', href: '/exams' },
+    { name: 'Blog', href: '#', onClick: handleBlogClick, icon: Newspaper },
     ...(currentUser ? [{ name: 'Dashboard', href: '/dashboard' }] : []),
   ];
 
@@ -42,13 +47,25 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-8">
               {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className="text-muted-foreground hover:text-primary transition-colors"
-                >
-                  {item.name}
-                </Link>
+                <div key={item.name}>
+                  {item.onClick ? (
+                    <button
+                      onClick={item.onClick}
+                      className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
+                    >
+                      {item.icon && <item.icon className="h-4 w-4" />}
+                      {item.name}
+                    </button>
+                  ) : (
+                    <Link
+                      to={item.href}
+                      className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
+                    >
+                      {item.icon && <item.icon className="h-4 w-4" />}
+                      {item.name}
+                    </Link>
+                  )}
+                </div>
               ))}
             </div>
 
@@ -102,14 +119,29 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           <div className="md:hidden">
             <div className="px-2 pt-2 pb-3 space-y-1 bg-background border-t">
               {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className="block px-3 py-2 text-base font-medium text-muted-foreground hover:text-primary transition-colors"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  {item.name}
-                </Link>
+                <div key={item.name}>
+                  {item.onClick ? (
+                    <button
+                      onClick={() => {
+                        item.onClick();
+                        setIsMenuOpen(false);
+                      }}
+                      className="flex items-center px-3 py-2 text-base font-medium text-muted-foreground hover:text-primary transition-colors w-full text-left"
+                    >
+                      {item.icon && <item.icon className="h-4 w-4 mr-2" />}
+                      {item.name}
+                    </button>
+                  ) : (
+                    <Link
+                      to={item.href}
+                      className="flex items-center px-3 py-2 text-base font-medium text-muted-foreground hover:text-primary transition-colors"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      {item.icon && <item.icon className="h-4 w-4 mr-2" />}
+                      {item.name}
+                    </Link>
+                  )}
+                </div>
               ))}
               
               <div className="border-t pt-2 mt-2">
