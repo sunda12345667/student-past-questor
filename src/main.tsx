@@ -1,8 +1,8 @@
 
+import React, { StrictMode, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
-import { StrictMode, Suspense } from 'react'
-import React from 'react'  // Add explicit React import
-import { BrowserRouter } from 'react-router-dom' // Import BrowserRouter
+import { BrowserRouter } from 'react-router-dom'
+import { ErrorBoundary } from 'react-error-boundary'
 import App from './App.tsx'
 import './index.css'
 
@@ -29,35 +29,22 @@ const ErrorFallback = ({ error }: { error: Error }) => {
   );
 };
 
-// Import ErrorBoundary from react-error-boundary package
-import { ErrorBoundary as ReactErrorBoundary } from 'react-error-boundary';
+const rootElement = document.getElementById("root");
 
-try {
-  const rootElement = document.getElementById("root");
-  
-  if (!rootElement) {
-    throw new Error("Root element not found. Cannot mount React application.");
-  }
-  
-  const root = createRoot(rootElement);
-  
-  root.render(
-    <ReactErrorBoundary FallbackComponent={ErrorFallback}>
+if (!rootElement) {
+  throw new Error("Root element not found. Cannot mount React application.");
+}
+
+const root = createRoot(rootElement);
+
+root.render(
+  <StrictMode>
+    <ErrorBoundary FallbackComponent={ErrorFallback}>
       <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
         <BrowserRouter>
           <App />
         </BrowserRouter>
       </Suspense>
-    </ReactErrorBoundary>
-  );
-} catch (error) {
-  console.error("Failed to render application:", error);
-  // Render a minimal error message if the React tree fails to mount
-  document.body.innerHTML = `
-    <div style="text-align: center; padding: 20px; font-family: Arial, sans-serif;">
-      <h2>Application Failed to Load</h2>
-      <p>Please refresh the page or try again later.</p>
-      <p>Error: ${error instanceof Error ? error.message : 'Unknown error'}</p>
-    </div>
-  `;
-}
+    </ErrorBoundary>
+  </StrictMode>
+);
