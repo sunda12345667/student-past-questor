@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -21,14 +20,10 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const handleBlogClick = () => {
-    toast.info('Education blog coming soon! Stay tuned for the latest education news and updates.');
-  };
-
   const navigation = [
     { name: 'Home', href: '/' },
     { name: 'Marketplace', href: '/exams' },
-    { name: 'Blog', href: '#', onClick: handleBlogClick, icon: Newspaper },
+    { name: 'Blog', href: '/blog', icon: Newspaper },
     ...(currentUser ? [{ name: 'Dashboard', href: '/dashboard' }] : []),
   ];
 

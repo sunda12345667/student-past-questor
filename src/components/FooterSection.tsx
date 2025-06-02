@@ -3,15 +3,30 @@ import { Facebook, Instagram, Twitter, Youtube, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/auth';
 
 export function FooterSection() {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
-  const handleAdminLogin = () => {
-    // Simulate admin login with default credentials
-    toast.success('Admin login - Username: ADMIN, Password: ADMIN');
-    // In a real app, you'd navigate to an admin panel
-    toast.info('Admin panel coming soon!');
+  const handleAdminLogin = async () => {
+    try {
+      // Simulate admin login with default credentials
+      const adminEmail = 'admin@studyquest.com';
+      const adminPassword = 'ADMIN';
+      
+      toast.info('Logging in as admin...');
+      
+      // In a real implementation, you would validate these credentials
+      // For now, we'll simulate a successful login
+      setTimeout(() => {
+        toast.success('Admin login successful!');
+        navigate('/admin');
+      }, 1000);
+      
+    } catch (error) {
+      toast.error('Admin login failed. Please check your credentials.');
+    }
   };
 
   return (
@@ -23,7 +38,7 @@ export function FooterSection() {
               <span className="text-primary">StudyQuest</span>
             </div>
             <p className="text-muted-foreground mb-4">
-              Empowering students to excel in their exams through comprehensive past question resources.
+              Empowering students to excel in their exams through comprehensive past question resources and video materials.
             </p>
             <div className="flex space-x-4">
               <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
@@ -45,23 +60,23 @@ export function FooterSection() {
             <h3 className="font-medium text-lg mb-4">Resources</h3>
             <ul className="space-y-3">
               <li>
-                <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+                <a href="/exams" className="text-muted-foreground hover:text-primary transition-colors">
                   Past Questions
                 </a>
               </li>
               <li>
-                <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+                <a href="/dashboard#marketplace" className="text-muted-foreground hover:text-primary transition-colors">
+                  Video Materials
+                </a>
+              </li>
+              <li>
+                <a href="/dashboard" className="text-muted-foreground hover:text-primary transition-colors">
                   Study Materials
                 </a>
               </li>
               <li>
-                <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
-                  AI Chatbot
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
-                  FAQs
+                <a href="/blog" className="text-muted-foreground hover:text-primary transition-colors">
+                  Education Blog
                 </a>
               </li>
             </ul>
@@ -119,7 +134,7 @@ export function FooterSection() {
                 Admin Login
               </Button>
               <p className="text-xs text-muted-foreground mt-2">
-                Default: ADMIN / ADMIN
+                Username: ADMIN | Password: ADMIN
               </p>
             </div>
           </div>

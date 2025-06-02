@@ -17,6 +17,8 @@ import QuestionView from '@/pages/QuestionView';
 import ExamListing from '@/pages/ExamListing';
 import PaymentCallback from '@/pages/PaymentCallback';
 import NotFound from '@/pages/NotFound';
+import Blog from '@/pages/Blog';
+import AdminPanel from '@/pages/AdminPanel';
 import '@/index.css';
 
 const queryClient = new QueryClient({
