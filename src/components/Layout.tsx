@@ -1,9 +1,18 @@
+
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Menu, X, BookOpen, User, LogOut, Newspaper } from 'lucide-react';
 import { useAuth } from '@/hooks/auth';
 import { toast } from 'sonner';
+
+type NavigationItem = {
+  name: string;
+  icon?: React.ComponentType<{ className?: string }>;
+} & (
+  | { href: string; onClick?: never }
+  | { onClick: () => void; href?: never }
+);
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -20,7 +29,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const navigation = [
+  const navigation: NavigationItem[] = [
     { name: 'Home', href: '/' },
     { name: 'Marketplace', href: '/exams' },
     { name: 'Blog', href: '/blog', icon: Newspaper },
