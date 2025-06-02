@@ -2,9 +2,10 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Menu, X, BookOpen, User, LogOut, Newspaper } from 'lucide-react';
+import { Menu, X, BookOpen, User, LogOut, Newspaper, Shield } from 'lucide-react';
 import { useAuth } from '@/hooks/auth';
 import { toast } from 'sonner';
+import AdminLogin from './AdminLogin';
 
 type NavigationItem = {
   name: string;
@@ -16,17 +17,32 @@ type NavigationItem = {
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
     try {
       await logout();
+      localStorage.removeItem('adminAuthenticated');
       toast.success('Signed out successfully');
       navigate('/');
     } catch (error) {
       toast.error('Error signing out');
     }
+  };
+
+  const handleAdminAccess = () => {
+    const isAdminAuth = localStorage.getItem('adminAuthenticated') === 'true';
+    if (isAdminAuth) {
+      navigate('/admin');
+    } else {
+      setShowAdminLogin(true);
+    }
+  };
+
+  const handleAdminLoginSuccess = () => {
+    navigate('/admin');
   };
 
   const navigation: NavigationItem[] = [
@@ -75,6 +91,16 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
             {/* Desktop Auth Buttons */}
             <div className="hidden md:flex items-center space-x-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleAdminAccess}
+                className="flex items-center gap-2 text-muted-foreground hover:text-primary"
+              >
+                <Shield className="h-4 w-4" />
+                Admin
+              </Button>
+              
               {currentUser ? (
                 <div className="flex items-center space-x-4">
                   <Link to="/dashboard">
@@ -149,6 +175,17 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               ))}
               
               <div className="border-t pt-2 mt-2">
+                <button
+                  onClick={() => {
+                    handleAdminAccess();
+                    setIsMenuOpen(false);
+                  }}
+                  className="flex items-center w-full px-3 py-2 text-base font-medium text-muted-foreground hover:text-primary transition-colors"
+                >
+                  <Shield className="h-4 w-4 mr-2" />
+                  Admin Access
+                </button>
+                
                 {currentUser ? (
                   <div className="space-y-1">
                     <Link
@@ -193,6 +230,12 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           </div>
         )}
       </nav>
+
+      <AdminLogin
+        isOpen={showAdminLogin}
+        onClose={() => setShowAdminLogin(false)}
+        onSuccess={handleAdminLoginSuccess}
+      />
 
       <main>{children}</main>
     </div>

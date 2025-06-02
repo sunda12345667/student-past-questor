@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,63 +7,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FileInput } from '@/components/ui/file-input';
 import { Badge } from '@/components/ui/badge';
-import { Upload, FileText, Video, BookOpen, Trash2, Edit, Download } from 'lucide-react';
+import { Upload, FileText, Video, BookOpen, Trash2, Edit, Download, Star } from 'lucide-react';
 import { toast } from 'sonner';
-
-interface Material {
-  id: number;
-  title: string;
-  description: string;
-  type: 'past-question' | 'video' | 'ebook';
-  examType: string;
-  subject: string;
-  year?: number;
-  price: number;
-  file?: File;
-  fileName?: string;
-  fileSize?: string;
-  duration?: string;
-  pages?: number;
-  downloads: number;
-  uploadDate: string;
-  status: 'active' | 'draft' | 'archived';
-}
+import { 
+  getAllMaterials, 
+  addMaterial, 
+  updateMaterial, 
+  deleteMaterial, 
+  type Material 
+} from '@/services/materialsService';
 
 const MaterialUpload = () => {
-  const [materials, setMaterials] = useState<Material[]>([
-    {
-      id: 1,
-      title: 'WAEC Mathematics 2023',
-      description: 'Complete WAEC Mathematics past questions with detailed solutions',
-      type: 'past-question',
-      examType: 'WAEC',
-      subject: 'Mathematics',
-      year: 2023,
-      price: 1500,
-      fileName: 'waec-math-2023.pdf',
-      fileSize: '2.3 MB',
-      pages: 45,
-      downloads: 156,
-      uploadDate: '2024-05-15',
-      status: 'active'
-    },
-    {
-      id: 2,
-      title: 'JAMB Physics Video Course',
-      description: 'Comprehensive video course covering all JAMB Physics topics',
-      type: 'video',
-      examType: 'JAMB',
-      subject: 'Physics',
-      price: 3500,
-      fileName: 'jamb-physics-course.mp4',
-      fileSize: '850 MB',
-      duration: '4:30:00',
-      downloads: 89,
-      uploadDate: '2024-05-10',
-      status: 'active'
-    }
-  ]);
-
+  const [materials, setMaterials] = useState<Material[]>([]);
   const [newMaterial, setNewMaterial] = useState<{
     title: string;
     description: string;
@@ -76,6 +31,9 @@ const MaterialUpload = () => {
     duration: string;
     pages: number;
     status: 'active' | 'draft' | 'archived';
+    instructor: string;
+    author: string;
+    lessons: number;
   }>({
     title: '',
     description: '',
@@ -87,17 +45,26 @@ const MaterialUpload = () => {
     file: null,
     duration: '',
     pages: 0,
-    status: 'active'
+    status: 'active',
+    instructor: '',
+    author: '',
+    lessons: 0
   });
 
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
 
-  const examTypes = ['WAEC', 'JAMB', 'NECO', 'GCE', 'NABTEB'];
+  const examTypes = ['WAEC', 'JAMB', 'NECO', 'GCE', 'NABTEB', 'Cambridge', 'Post-UTME'];
   const subjects = [
     'Mathematics', 'English Language', 'Physics', 'Chemistry', 'Biology',
     'Economics', 'Government', 'Literature', 'Geography', 'History',
-    'Commerce', 'Accounting', 'Computer Science', 'Agricultural Science'
+    'Commerce', 'Accounting', 'Computer Science', 'Agricultural Science',
+    'General', 'Science', 'Arts', 'Engineering'
   ];
+
+  // Load materials on component mount
+  useEffect(() => {
+    setMaterials(getAllMaterials());
+  }, []);
 
   const handleFileUpload = (file: File | null) => {
     if (file) {
@@ -112,8 +79,7 @@ const MaterialUpload = () => {
       return;
     }
 
-    const material: Material = {
-      id: Date.now(),
+    const materialData = {
       title: newMaterial.title,
       description: newMaterial.description,
       type: newMaterial.type,
@@ -125,12 +91,17 @@ const MaterialUpload = () => {
       fileSize: `${(newMaterial.file.size / (1024 * 1024)).toFixed(1)} MB`,
       duration: newMaterial.type === 'video' ? newMaterial.duration : undefined,
       pages: newMaterial.type !== 'video' ? newMaterial.pages : undefined,
-      downloads: 0,
-      uploadDate: new Date().toISOString().split('T')[0],
-      status: newMaterial.status
+      status: newMaterial.status,
+      instructor: newMaterial.type === 'video' ? newMaterial.instructor : undefined,
+      author: newMaterial.type === 'ebook' ? newMaterial.author : undefined,
+      lessons: newMaterial.type === 'video' ? newMaterial.lessons : undefined,
+      rating: 0
     };
 
-    setMaterials([...materials, material]);
+    const addedMaterial = addMaterial(materialData);
+    setMaterials(getAllMaterials());
+    
+    // Reset form
     setNewMaterial({
       title: '',
       description: '',
@@ -142,24 +113,24 @@ const MaterialUpload = () => {
       file: null,
       duration: '',
       pages: 0,
-      status: 'active'
+      status: 'active',
+      instructor: '',
+      author: '',
+      lessons: 0
     });
-    toast.success('Material uploaded successfully!');
   };
 
   const handleUpdateMaterial = () => {
     if (!editingMaterial) return;
 
-    setMaterials(materials.map(material => 
-      material.id === editingMaterial.id ? editingMaterial : material
-    ));
+    updateMaterial(editingMaterial.id, editingMaterial);
+    setMaterials(getAllMaterials());
     setEditingMaterial(null);
-    toast.success('Material updated successfully!');
   };
 
-  const deleteMaterial = (id: number) => {
-    setMaterials(materials.filter(material => material.id !== id));
-    toast.success('Material deleted successfully');
+  const handleDeleteMaterial = (id: string) => {
+    deleteMaterial(id);
+    setMaterials(getAllMaterials());
   };
 
   const getTypeIcon = (type: string) => {
@@ -177,6 +148,15 @@ const MaterialUpload = () => {
       case 'video': return 'bg-red-100 text-red-800';
       case 'ebook': return 'bg-green-100 text-green-800';
       default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getTypeName = (type: string) => {
+    switch (type) {
+      case 'past-question': return 'Past Question';
+      case 'video': return 'Video Course';
+      case 'ebook': return 'E-Book';
+      default: return type;
     }
   };
 
@@ -270,43 +250,87 @@ const MaterialUpload = () => {
             />
           </div>
 
+          {/* Conditional fields based on material type */}
           {(editingMaterial?.type === 'past-question' || newMaterial.type === 'past-question') && (
-            <Input
-              type="number"
-              placeholder="Year"
-              value={editingMaterial ? editingMaterial.year || '' : newMaterial.year}
-              onChange={(e) => 
-                editingMaterial 
-                  ? setEditingMaterial({ ...editingMaterial, year: parseInt(e.target.value) })
-                  : setNewMaterial({ ...newMaterial, year: parseInt(e.target.value) })
-              }
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                type="number"
+                placeholder="Year"
+                value={editingMaterial ? editingMaterial.year || '' : newMaterial.year}
+                onChange={(e) => 
+                  editingMaterial 
+                    ? setEditingMaterial({ ...editingMaterial, year: parseInt(e.target.value) })
+                    : setNewMaterial({ ...newMaterial, year: parseInt(e.target.value) })
+                }
+              />
+              <Input
+                type="number"
+                placeholder="Number of pages"
+                value={editingMaterial ? editingMaterial.pages || '' : newMaterial.pages}
+                onChange={(e) => 
+                  editingMaterial 
+                    ? setEditingMaterial({ ...editingMaterial, pages: parseInt(e.target.value) })
+                    : setNewMaterial({ ...newMaterial, pages: parseInt(e.target.value) })
+                }
+              />
+            </div>
           )}
 
           {(editingMaterial?.type === 'video' || newMaterial.type === 'video') && (
-            <Input
-              placeholder="Duration (e.g., 4:30:00)"
-              value={editingMaterial ? editingMaterial.duration || '' : newMaterial.duration}
-              onChange={(e) => 
-                editingMaterial 
-                  ? setEditingMaterial({ ...editingMaterial, duration: e.target.value })
-                  : setNewMaterial({ ...newMaterial, duration: e.target.value })
-              }
-            />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Input
+                placeholder="Duration (e.g., 4:30:00)"
+                value={editingMaterial ? editingMaterial.duration || '' : newMaterial.duration}
+                onChange={(e) => 
+                  editingMaterial 
+                    ? setEditingMaterial({ ...editingMaterial, duration: e.target.value })
+                    : setNewMaterial({ ...newMaterial, duration: e.target.value })
+                }
+              />
+              <Input
+                placeholder="Instructor name"
+                value={editingMaterial ? editingMaterial.instructor || '' : newMaterial.instructor}
+                onChange={(e) => 
+                  editingMaterial 
+                    ? setEditingMaterial({ ...editingMaterial, instructor: e.target.value })
+                    : setNewMaterial({ ...newMaterial, instructor: e.target.value })
+                }
+              />
+              <Input
+                type="number"
+                placeholder="Number of lessons"
+                value={editingMaterial ? editingMaterial.lessons || '' : newMaterial.lessons}
+                onChange={(e) => 
+                  editingMaterial 
+                    ? setEditingMaterial({ ...editingMaterial, lessons: parseInt(e.target.value) })
+                    : setNewMaterial({ ...newMaterial, lessons: parseInt(e.target.value) })
+                }
+              />
+            </div>
           )}
 
-          {(editingMaterial?.type === 'past-question' || editingMaterial?.type === 'ebook' || 
-            newMaterial.type === 'past-question' || newMaterial.type === 'ebook') && (
-            <Input
-              type="number"
-              placeholder="Number of pages"
-              value={editingMaterial ? editingMaterial.pages || '' : newMaterial.pages}
-              onChange={(e) => 
-                editingMaterial 
-                  ? setEditingMaterial({ ...editingMaterial, pages: parseInt(e.target.value) })
-                  : setNewMaterial({ ...newMaterial, pages: parseInt(e.target.value) })
-              }
-            />
+          {(editingMaterial?.type === 'ebook' || newMaterial.type === 'ebook') && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                placeholder="Author name"
+                value={editingMaterial ? editingMaterial.author || '' : newMaterial.author}
+                onChange={(e) => 
+                  editingMaterial 
+                    ? setEditingMaterial({ ...editingMaterial, author: e.target.value })
+                    : setNewMaterial({ ...newMaterial, author: e.target.value })
+                }
+              />
+              <Input
+                type="number"
+                placeholder="Number of pages"
+                value={editingMaterial ? editingMaterial.pages || '' : newMaterial.pages}
+                onChange={(e) => 
+                  editingMaterial 
+                    ? setEditingMaterial({ ...editingMaterial, pages: parseInt(e.target.value) })
+                    : setNewMaterial({ ...newMaterial, pages: parseInt(e.target.value) })
+                }
+              />
+            </div>
           )}
 
           <Textarea
@@ -371,12 +395,17 @@ const MaterialUpload = () => {
                     <div className="flex items-center gap-2 mb-2">
                       <Badge className={`${getTypeColor(material.type)} flex items-center gap-1`}>
                         {getTypeIcon(material.type)}
-                        {material.type === 'past-question' ? 'Past Question' : 
-                         material.type === 'video' ? 'Video Course' : 'E-Book'}
+                        {getTypeName(material.type)}
                       </Badge>
                       <Badge variant="outline">{material.examType}</Badge>
                       <Badge variant="secondary">{material.subject}</Badge>
                       {material.year && <Badge variant="outline">{material.year}</Badge>}
+                      {material.rating && (
+                        <div className="flex items-center gap-1">
+                          <Star className="h-4 w-4 fill-current text-yellow-500" />
+                          <span className="text-sm">{material.rating}</span>
+                        </div>
+                      )}
                     </div>
                     
                     <h3 className="font-semibold text-lg mb-1">{material.title}</h3>
@@ -400,9 +429,24 @@ const MaterialUpload = () => {
                           <span className="font-medium">Duration:</span> {material.duration}
                         </div>
                       )}
+                      {material.lessons && (
+                        <div>
+                          <span className="font-medium">Lessons:</span> {material.lessons}
+                        </div>
+                      )}
+                      {material.instructor && (
+                        <div>
+                          <span className="font-medium">Instructor:</span> {material.instructor}
+                        </div>
+                      )}
                       {material.pages && (
                         <div>
                           <span className="font-medium">Pages:</span> {material.pages}
+                        </div>
+                      )}
+                      {material.author && (
+                        <div>
+                          <span className="font-medium">Author:</span> {material.author}
                         </div>
                       )}
                       <div>
@@ -431,7 +475,7 @@ const MaterialUpload = () => {
                     <Button 
                       variant="outline" 
                       size="sm"
-                      onClick={() => deleteMaterial(material.id)}
+                      onClick={() => handleDeleteMaterial(material.id)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -439,6 +483,14 @@ const MaterialUpload = () => {
                 </div>
               </div>
             ))}
+            
+            {materials.length === 0 && (
+              <div className="text-center py-12">
+                <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-xl font-medium mb-2">No materials uploaded yet</h3>
+                <p className="text-muted-foreground">Upload your first material to get started</p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

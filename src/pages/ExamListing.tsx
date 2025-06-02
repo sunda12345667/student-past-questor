@@ -1,130 +1,66 @@
 
 import { useState, useEffect } from 'react';
-import { useMutation } from '@tanstack/react-query';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Book, Search, Filter, Bookmark, ShoppingCart, Download, FileText, Video, BookOpen, Star } from 'lucide-react';
+import { getAllMaterials, searchMaterials, purchaseMaterial, type Material } from '@/services/materialsService';
 
 const ExamListing = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedExamType, setSelectedExamType] = useState<string>('all');
   const [selectedMaterialType, setSelectedMaterialType] = useState<string>('all');
-  
-  // Combined materials data
-  const materials = [
-    // Past Questions
-    {
-      id: 1,
-      title: 'WAEC Mathematics 2023 Past Questions',
-      description: 'Complete WAEC Mathematics past questions with detailed solutions and marking scheme.',
-      type: 'past-question',
-      examType: 'WAEC',
-      subject: 'Mathematics',
-      year: 2023,
-      price: 1500,
-      questionCount: 60,
-      pages: 45,
-      rating: 4.8,
-      downloads: 156
-    },
-    {
-      id: 2,
-      title: 'JAMB English Language Past Questions',
-      description: 'Comprehensive JAMB English past questions covering all topics with explanations.',
-      type: 'past-question',
-      examType: 'JAMB',
-      subject: 'English Language',
-      year: 2022,
-      price: 1200,
-      questionCount: 80,
-      pages: 52,
-      rating: 4.9,
-      downloads: 203
-    },
-    // Video Courses
-    {
-      id: 3,
-      title: 'Physics JAMB Complete Video Course',
-      description: 'Comprehensive video course covering all JAMB Physics topics with practical examples.',
-      type: 'video',
-      examType: 'JAMB',
-      subject: 'Physics',
-      price: 4500,
-      duration: '8 hours',
-      lessons: 24,
-      rating: 4.7,
-      instructor: 'Dr. Michael Okafor',
-      downloads: 89
-    },
-    {
-      id: 4,
-      title: 'Chemistry WAEC Video Tutorials',
-      description: 'Step-by-step chemistry tutorials with lab demonstrations and theory explanations.',
-      type: 'video',
-      examType: 'WAEC',
-      subject: 'Chemistry',
-      price: 3800,
-      duration: '6.5 hours',
-      lessons: 18,
-      rating: 4.6,
-      instructor: 'Prof. Sarah Adebayo',
-      downloads: 67
-    },
-    // E-books
-    {
-      id: 5,
-      title: 'Complete WAEC Mathematics Study Guide',
-      description: 'Comprehensive e-book covering all WAEC Mathematics topics with solved examples.',
-      type: 'ebook',
-      examType: 'WAEC',
-      subject: 'Mathematics',
-      price: 2200,
-      pages: 180,
-      rating: 4.5,
-      author: 'Mathematics Academy',
-      downloads: 234
-    },
-    {
-      id: 6,
-      title: 'JAMB Government Complete Handbook',
-      description: 'Complete guide to JAMB Government with current affairs and practice questions.',
-      type: 'ebook',
-      examType: 'JAMB',
-      subject: 'Government',
-      price: 1800,
-      pages: 156,
-      rating: 4.4,
-      author: 'Political Science Dept.',
-      downloads: 178
+  const [materials, setMaterials] = useState<Material[]>([]);
+  const [filteredMaterials, setFilteredMaterials] = useState<Material[]>([]);
+
+  // Load materials on component mount
+  useEffect(() => {
+    const allMaterials = getAllMaterials();
+    setMaterials(allMaterials);
+    setFilteredMaterials(allMaterials);
+  }, []);
+
+  // Filter materials when filters change
+  useEffect(() => {
+    let filtered = materials;
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      filtered = searchMaterials(searchQuery);
     }
-  ];
-  
-  const handlePurchase = async (material: any) => {
+
+    // Apply exam type filter
+    if (selectedExamType !== 'all') {
+      filtered = filtered.filter(material => material.examType === selectedExamType);
+    }
+
+    // Apply material type filter
+    if (selectedMaterialType !== 'all') {
+      filtered = filtered.filter(material => material.type === selectedMaterialType);
+    }
+
+    setFilteredMaterials(filtered);
+  }, [searchQuery, selectedExamType, selectedMaterialType, materials]);
+
+  const handlePurchase = async (material: Material) => {
     toast.success(`Processing purchase of ${material.title}...`);
-    // Simulate purchase process
-    setTimeout(() => {
-      toast.success('Purchase successful! Check your downloads.');
-    }, 2000);
+    
+    try {
+      await purchaseMaterial(material.id);
+      // Refresh materials to update download count
+      const updatedMaterials = getAllMaterials();
+      setMaterials(updatedMaterials);
+    } catch (error) {
+      toast.error('Purchase failed. Please try again.');
+    }
   };
-  
-  const filteredMaterials = materials.filter(material => {
-    const matchesSearch = material.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         material.examType.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         material.title.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesExamType = selectedExamType === 'all' || material.examType === selectedExamType;
-    const matchesMaterialType = selectedMaterialType === 'all' || material.type === selectedMaterialType;
-    
-    return matchesSearch && matchesExamType && matchesMaterialType;
-  });
-  
+
   // Get unique exam types for filtering
   const examTypes = Array.from(new Set(materials.map(material => material.examType)));
 
@@ -154,11 +90,14 @@ const ExamListing = () => {
       default: return type;
     }
   };
-  
+
   return (
     <Layout>
       <div className="container mx-auto px-4 pt-28 pb-16">
-        <h1 className="text-3xl font-bold mb-6">Study Materials & Resources</h1>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2">Study Materials & Resources</h1>
+          <p className="text-muted-foreground">Discover high-quality past questions, video courses, and e-books</p>
+        </div>
         
         {/* Search and Filters */}
         <div className="flex flex-col md:flex-row gap-4 mb-8">
@@ -176,7 +115,7 @@ const ExamListing = () => {
             <div className="flex items-center">
               <Filter className="mr-2 h-4 w-4 text-muted-foreground" />
               <span className="mr-2 text-sm">Exam:</span>
-              <Tabs defaultValue="all" value={selectedExamType} onValueChange={setSelectedExamType}>
+              <Tabs value={selectedExamType} onValueChange={setSelectedExamType}>
                 <TabsList>
                   <TabsTrigger value="all">All</TabsTrigger>
                   {examTypes.map(type => (
@@ -188,7 +127,7 @@ const ExamListing = () => {
             
             <div className="flex items-center">
               <span className="mr-2 text-sm">Type:</span>
-              <Tabs defaultValue="all" value={selectedMaterialType} onValueChange={setSelectedMaterialType}>
+              <Tabs value={selectedMaterialType} onValueChange={setSelectedMaterialType}>
                 <TabsList>
                   <TabsTrigger value="all">All</TabsTrigger>
                   <TabsTrigger value="past-question">Questions</TabsTrigger>
@@ -218,10 +157,12 @@ const ExamListing = () => {
                       {getTypeName(material.type)}
                     </Badge>
                     <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1">
-                        <Star className="h-4 w-4 fill-current text-yellow-500" />
-                        <span className="text-sm">{material.rating}</span>
-                      </div>
+                      {material.rating && (
+                        <div className="flex items-center gap-1">
+                          <Star className="h-4 w-4 fill-current text-yellow-500" />
+                          <span className="text-sm">{material.rating}</span>
+                        </div>
+                      )}
                       <Button variant="ghost" size="icon">
                         <Bookmark className="h-4 w-4" />
                       </Button>
@@ -242,22 +183,6 @@ const ExamListing = () => {
                 
                 <CardContent className="pt-2">
                   <div className="space-y-2 mb-4 text-sm text-muted-foreground">
-                    {material.type === 'past-question' && (
-                      <>
-                        <div className="flex items-center justify-between">
-                          <span className="flex items-center gap-1">
-                            <FileText className="h-4 w-4" />
-                            Questions:
-                          </span>
-                          <span>{material.questionCount}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span>Pages:</span>
-                          <span>{material.pages}</span>
-                        </div>
-                      </>
-                    )}
-                    
                     {material.type === 'video' && (
                       <>
                         <div className="flex items-center justify-between">
@@ -268,24 +193,27 @@ const ExamListing = () => {
                           <span>Lessons:</span>
                           <span>{material.lessons}</span>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span>Instructor:</span>
-                          <span className="text-right text-xs">{material.instructor}</span>
-                        </div>
+                        {material.instructor && (
+                          <div className="flex items-center justify-between">
+                            <span>Instructor:</span>
+                            <span className="text-right text-xs">{material.instructor}</span>
+                          </div>
+                        )}
                       </>
                     )}
                     
-                    {material.type === 'ebook' && (
-                      <>
-                        <div className="flex items-center justify-between">
-                          <span>Pages:</span>
-                          <span>{material.pages}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span>Author:</span>
-                          <span className="text-right text-xs">{material.author}</span>
-                        </div>
-                      </>
+                    {(material.type === 'past-question' || material.type === 'ebook') && (
+                      <div className="flex items-center justify-between">
+                        <span>Pages:</span>
+                        <span>{material.pages}</span>
+                      </div>
+                    )}
+                    
+                    {material.type === 'ebook' && material.author && (
+                      <div className="flex items-center justify-between">
+                        <span>Author:</span>
+                        <span className="text-right text-xs">{material.author}</span>
+                      </div>
                     )}
                     
                     <div className="flex items-center justify-between">
