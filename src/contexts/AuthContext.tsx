@@ -2,13 +2,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
-import { toast } from 'sonner';
 
 export interface User {
   id: string;
-  name: string;
   email: string;
-  role: 'user' | 'admin';
+  name: string;
+  role?: string;
 }
 
 interface AuthContextType {
@@ -18,242 +17,129 @@ interface AuthContextType {
   signup: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   isAdmin: () => boolean;
-  session: Session | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch user profile data from the profiles table
-  const fetchUserProfile = async (userId: string) => {
-    try {
-      console.log('Fetching user profile for:', userId);
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, name, email, role')
-        .eq('id', userId)
-        .maybeSingle();
-      
-      if (error) {
-        console.error('Error fetching user profile:', error);
-        throw error;
-      }
-      
-      console.log('Profile data received:', data);
-      return data as User;
-    } catch (error) {
-      console.error('Error in fetchUserProfile:', error);
-      return null;
-    }
-  };
-
-  // Set up the auth state listener for Supabase
   useEffect(() => {
-    console.log('Setting up auth state listener');
-    let mounted = true;
-    
-    // Set up auth state listener FIRST
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, newSession) => {
-        console.log('Auth state changed:', event, newSession ? 'Session exists' : 'No session');
+      async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email);
+        setSession(session);
         
-        if (!mounted) return;
-        
-        if (newSession) {
-          setSession(newSession);
-          // Use setTimeout to prevent potential deadlocks with Supabase auth
-          setTimeout(async () => {
-            if (!mounted) return;
-            try {
-              const profileData = await fetchUserProfile(newSession.user.id);
-              
-              if (profileData) {
-                console.log('Setting user from profile:', profileData);
-                setCurrentUser(profileData);
-              } else {
-                // Fallback to session data if profile not found
-                console.log('Profile not found, using session data');
-                setCurrentUser({
-                  id: newSession.user.id,
-                  email: newSession.user.email || '',
-                  name: newSession.user.user_metadata?.name || newSession.user.email?.split('@')[0] || '',
-                  role: newSession.user.user_metadata?.role || 'user',
-                });
-              }
-            } catch (error) {
-              console.error('Error setting user data after auth change:', error);
-              // Still set user from session to avoid blocking the login
-              setCurrentUser({
-                id: newSession.user.id,
-                email: newSession.user.email || '',
-                name: newSession.user.user_metadata?.name || newSession.user.email?.split('@')[0] || '',
-                role: newSession.user.user_metadata?.role || 'user',
-              });
-            } finally {
-              if (mounted) setIsLoading(false);
-            }
-          }, 0);
+        if (session?.user) {
+          // Convert Supabase user to our User type
+          const userData: User = {
+            id: session.user.id,
+            email: session.user.email || '',
+            name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+            role: session.user.user_metadata?.role || 'user'
+          };
+          setCurrentUser(userData);
         } else {
-          setSession(null);
           setCurrentUser(null);
-          if (mounted) setIsLoading(false);
         }
+        setIsLoading(false);
       }
     );
 
-    // THEN check for existing session
-    const checkExistingSession = async () => {
-      try {
-        console.log('Checking for existing session');
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        console.log('Existing session check result:', currentSession ? 'Found' : 'Not found');
-        
-        if (!mounted) return;
-        
-        if (currentSession) {
-          setSession(currentSession);
-          // Use setTimeout to prevent potential deadlocks with Supabase auth
-          setTimeout(async () => {
-            if (!mounted) return;
-            try {
-              const profileData = await fetchUserProfile(currentSession.user.id);
-              
-              if (profileData) {
-                console.log('Setting user from existing session profile');
-                setCurrentUser(profileData);
-              } else {
-                // Fallback to session data if profile not found
-                console.log('Profile not found for existing session, using session data');
-                setCurrentUser({
-                  id: currentSession.user.id,
-                  email: currentSession.user.email || '',
-                  name: currentSession.user.user_metadata?.name || currentSession.user.email?.split('@')[0] || '',
-                  role: currentSession.user.user_metadata?.role || 'user',
-                });
-              }
-            } catch (error) {
-              console.error('Error setting user from existing session:', error);
-              // Still set user from session to avoid blocking the login
-              setCurrentUser({
-                id: currentSession.user.id,
-                email: currentSession.user.email || '',
-                name: currentSession.user.user_metadata?.name || currentSession.user.email?.split('@')[0] || '',
-                role: currentSession.user.user_metadata?.role || 'user',
-              });
-            } finally {
-              if (mounted) setIsLoading(false);
-            }
-          }, 0);
-        } else {
-          if (mounted) setIsLoading(false);
-        }
-      } catch (error) {
-        console.error('Error checking existing session:', error);
-        if (mounted) setIsLoading(false);
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        const userData: User = {
+          id: session.user.id,
+          email: session.user.email || '',
+          name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+          role: session.user.user_metadata?.role || 'user'
+        };
+        setCurrentUser(userData);
       }
-    };
-    
-    checkExistingSession();
+      setIsLoading(false);
+    });
 
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   const login = async (email: string, password: string) => {
-    try {
-      console.log(`Attempting login for: ${email}`);
-      
-      // Try direct Supabase auth first, which is more reliable
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-      if (error) {
-        console.error('Login error from Supabase:', error);
-        // Pass the error to the caller with code for specific handling
-        throw {
-          message: error.message,
-          code: error.code
-        };
-      }
-      
-      if (!data.session) {
-        console.error('No session returned from login');
-        throw new Error('Authentication failed. Please try again.');
-      }
-      
-      console.log('Login successful, session established:', data.session.user.email);
-      // Auth state change event will handle setting the user
-      return;
-    } catch (error: any) {
-      console.error('Login failed:', error);
+    if (error) {
       throw error;
+    }
+
+    if (data.user) {
+      const userData: User = {
+        id: data.user.id,
+        email: data.user.email || '',
+        name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'User',
+        role: data.user.user_metadata?.role || 'user'
+      };
+      setCurrentUser(userData);
     }
   };
 
   const signup = async (name: string, email: string, password: string) => {
-    setIsLoading(true);
-    try {
-      // Using signUp for client-side signup
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name,
-            role: 'user',
-          },
-          emailRedirectTo: window.location.origin + '/login',
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name,
+          role: 'user'
         },
-      });
+        emailRedirectTo: `${window.location.origin}/`
+      },
+    });
 
-      if (error) {
-        throw error;
-      }
-      
-      toast.success('Account created successfully! Please check your email to confirm your registration.');
-    } catch (error: any) {
-      console.error('Signup failed:', error);
-      let errorMessage = 'Signup failed. Please try again.';
-      
-      if (error.message.includes('already registered')) {
-        errorMessage = 'Email is already in use. Please use a different email or try logging in.';
-      }
-      
-      toast.error(errorMessage);
+    if (error) {
       throw error;
-    } finally {
-      setIsLoading(false);
+    }
+
+    if (data.user) {
+      const userData: User = {
+        id: data.user.id,
+        email: data.user.email || '',
+        name: name,
+        role: 'user'
+      };
+      setCurrentUser(userData);
     }
   };
 
   const logout = async () => {
-    setIsLoading(true);
-    try {
-      const { error } = await supabase.auth.signOut();
-      
-      if (error) {
-        throw error;
-      }
-      
-      toast.success('You have been logged out');
-    } catch (error) {
-      console.error('Logout failed:', error);
+    // Clear admin authentication when logging out
+    localStorage.removeItem('adminAuthenticated');
+    
+    const { error } = await supabase.auth.signOut();
+    if (error) {
       throw error;
-    } finally {
-      setIsLoading(false);
     }
+    setCurrentUser(null);
+    setSession(null);
   };
 
   const isAdmin = () => {
-    return currentUser?.role === 'admin';
+    // Check both user role and localStorage for admin authentication
+    const isAdminUser = currentUser?.role === 'admin' || currentUser?.email === 'irapidbusiness@gmail.com';
+    const hasAdminAuth = localStorage.getItem('adminAuthenticated') === 'true';
+    return isAdminUser || hasAdminAuth;
   };
 
   const value = {
@@ -263,16 +149,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signup,
     logout,
     isAdmin,
-    session,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-}
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
