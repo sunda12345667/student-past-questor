@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Downloads } from './Downloads';
+import Downloads from './Downloads';
 
 const DownloadsTab = () => {
   return <Downloads />;

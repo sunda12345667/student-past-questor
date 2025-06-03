@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { StudyGroups } from './StudyGroups';
+import StudyGroups from './StudyGroups';
 
 const StudyGroupsTab = () => {
   return <StudyGroups />;

@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { ReferralSystem } from './ReferralSystem';
+import ReferralSystem from './ReferralSystem';
 
 const ReferralsTab = () => {
   return <ReferralSystem />;

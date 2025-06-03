@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { StudySessions } from './StudySessions';
+import StudySessions from './StudySessions';
 
 const StudySessionsTab = () => {
   return <StudySessions />;

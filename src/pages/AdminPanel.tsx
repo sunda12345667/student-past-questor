@@ -1,665 +1,586 @@
-import { useState, useEffect } from 'react';
-import Layout from '@/components/Layout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit, Trash2, Users, FileText, Video, DollarSign, Upload, Save, BookOpen } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import MaterialUpload from '@/components/admin/MaterialUpload';
+import { 
+  Users, 
+  BookOpen, 
+  CreditCard, 
+  BarChart3, 
+  Settings, 
+  Upload,
+  Eye,
+  Trash2,
+  Edit,
+  LogOut,
+  Key
+} from 'lucide-react';
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+  createdAt: string;
+}
+
+interface Question {
+  id: string;
+  title: string;
+  subject: string;
+  examType: string;
+  year: string;
+  status: string;
+}
+
+interface Transaction {
+  id: string;
+  userId: string;
+  amount: number;
+  type: string;
+  status: string;
+  date: string;
+}
 
 const AdminPanel = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-
-  const [users, setUsers] = useState([
-    { id: 1, name: 'John Doe', email: 'john@example.com', role: 'Student', joined: '2024-01-15' },
-    { id: 2, name: 'Jane Smith', email: 'jane@example.com', role: 'Student', joined: '2024-02-20' },
-    { id: 3, name: 'Mike Johnson', email: 'mike@example.com', role: 'Teacher', joined: '2024-03-10' },
+  const { currentUser, isAdmin, logout } = useAuth();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('users');
+  
+  // Mock data for demonstration
+  const [users, setUsers] = useState<User[]>([
+    { id: '1', name: 'John Doe', email: 'john@example.com', role: 'user', status: 'active', createdAt: '2023-01-15' },
+    { id: '2', name: 'Jane Smith', email: 'jane@example.com', role: 'user', status: 'active', createdAt: '2023-02-20' },
+    { id: '3', name: 'Admin User', email: 'admin@example.com', role: 'admin', status: 'active', createdAt: '2022-12-01' },
   ]);
-
-  const [blogPosts, setBlogPosts] = useState([
-    { 
-      id: 1, 
-      title: 'How to Prepare for WAEC 2024: Complete Study Guide', 
-      content: 'A comprehensive guide to help students prepare effectively for the West African Examinations Council (WAEC) examinations...', 
-      excerpt: 'A comprehensive guide to help students prepare effectively for WAEC examinations.',
-      status: 'Published', 
-      date: '2024-05-15',
-      category: 'WAEC',
-      author: 'StudyQuest Team'
-    },
-    { 
-      id: 2, 
-      title: 'JAMB Registration Updates', 
-      content: 'Latest updates and step-by-step guide for JAMB UTME registration process...', 
-      excerpt: 'Latest updates and step-by-step guide for JAMB UTME registration process.',
-      status: 'Draft', 
-      date: '2024-05-20',
-      category: 'JAMB',
-      author: 'Education Team'
-    },
+  
+  const [questions, setQuestions] = useState<Question[]>([
+    { id: '1', title: 'Calculus Integration Problem', subject: 'Mathematics', examType: 'WAEC', year: '2022', status: 'published' },
+    { id: '2', title: 'Newton\'s Laws of Motion', subject: 'Physics', examType: 'JAMB', year: '2023', status: 'published' },
+    { id: '3', title: 'Organic Chemistry Compounds', subject: 'Chemistry', examType: 'NECO', year: '2021', status: 'draft' },
   ]);
-
-  const [videos, setVideos] = useState([
-    { id: 1, title: 'Mathematics WAEC Past Questions', price: '₦2,500', category: 'WAEC', duration: '2:30:00', description: 'Comprehensive mathematics past questions and solutions' },
-    { id: 2, title: 'English Language JAMB Prep', price: '₦3,000', category: 'JAMB', duration: '1:45:00', description: 'Complete English language preparation for JAMB' },
-    { id: 3, title: 'Physics NECO Complete Guide', price: '₦2,800', category: 'NECO', duration: '3:15:00', description: 'Complete physics guide for NECO examinations' },
+  
+  const [transactions, setTransactions] = useState<Transaction[]>([
+    { id: '1', userId: '1', amount: 2500, type: 'purchase', status: 'completed', date: '2023-05-15' },
+    { id: '2', userId: '2', amount: 1000, type: 'wallet_funding', status: 'completed', date: '2023-05-16' },
+    { id: '3', userId: '1', amount: 500, type: 'bill_payment', status: 'completed', date: '2023-05-17' },
   ]);
-
-  const [newBlogPost, setNewBlogPost] = useState({ 
-    title: '', 
-    content: '', 
-    excerpt: '', 
-    category: '', 
-    author: 'StudyQuest Team' 
+  
+  // Form states
+  const [newQuestion, setNewQuestion] = useState({
+    title: '',
+    subject: '',
+    examType: '',
+    year: '',
+    content: '',
+    file: null as File | null,
   });
   
-  const [newVideo, setNewVideo] = useState({ 
-    title: '', 
-    price: '', 
-    category: '', 
-    duration: '', 
-    description: '' 
-  });
-
-  const [editingPost, setEditingPost] = useState<any>(null);
-  const [editingVideo, setEditingVideo] = useState<any>(null);
-
-  const blogCategories = ['WAEC', 'JAMB', 'NECO', 'Study Tips', 'English', 'Mathematics', 'Science', 'Admission'];
-
-  const handleAddBlogPost = () => {
-    if (!newBlogPost.title || !newBlogPost.content || !newBlogPost.category) {
-      toast.error('Please fill in all required fields');
-      return;
+  useEffect(() => {
+    // Check if user is admin, if not redirect to home
+    if (!isAdmin()) {
+      navigate('/');
+      toast.error('You do not have permission to access the admin panel');
     }
-
-    const post = {
-      id: Date.now(),
-      title: newBlogPost.title,
-      content: newBlogPost.content,
-      excerpt: newBlogPost.excerpt || newBlogPost.content.substring(0, 150) + '...',
-      status: 'Published',
-      date: new Date().toISOString().split('T')[0],
-      category: newBlogPost.category,
-      author: newBlogPost.author
-    };
-
-    setBlogPosts([...blogPosts, post]);
-    setNewBlogPost({ title: '', content: '', excerpt: '', category: '', author: 'StudyQuest Team' });
-    toast.success('Blog post published successfully');
-  };
-
-  const handleUpdateBlogPost = () => {
-    if (!editingPost) return;
-
-    setBlogPosts(blogPosts.map(post => 
-      post.id === editingPost.id ? editingPost : post
-    ));
-    setEditingPost(null);
-    toast.success('Blog post updated successfully');
-  };
-
-  const handleAddVideo = () => {
-    if (!newVideo.title || !newVideo.price || !newVideo.category) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
-
-    const video = {
-      id: Date.now(),
-      title: newVideo.title,
-      price: newVideo.price,
-      category: newVideo.category,
-      duration: newVideo.duration || '1:00:00',
-      description: newVideo.description
-    };
-
-    setVideos([...videos, video]);
-    setNewVideo({ title: '', price: '', category: '', duration: '', description: '' });
-    toast.success('Video material added successfully');
-  };
-
-  const handleUpdateVideo = () => {
-    if (!editingVideo) return;
-
-    setVideos(videos.map(video => 
-      video.id === editingVideo.id ? editingVideo : video
-    ));
-    setEditingVideo(null);
-    toast.success('Video updated successfully');
-  };
-
-  const deleteBlogPost = (id: number) => {
-    setBlogPosts(blogPosts.filter(post => post.id !== id));
-    toast.success('Blog post deleted');
-  };
-
-  const deleteVideo = (id: number) => {
-    setVideos(videos.filter(video => video.id !== id));
-    toast.success('Video deleted');
-  };
-
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      // Simulate file upload
-      toast.success(`File "${file.name}" uploaded successfully`);
+  }, [isAdmin, navigate]);
+  
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
     }
   };
-
-  const handleLogin = (password: string) => {
-    if (password === 'admin123') {
-      setIsLoggedIn(true);
-      toast.success('Welcome to iRapid Admin Panel');
-    } else {
-      toast.error('Invalid password');
+  
+  const handleQuestionSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Handle question submission logic here
+    toast.success('Question added successfully!');
+    setNewQuestion({
+      title: '',
+      subject: '',
+      examType: '',
+      year: '',
+      content: '',
+      file: null,
+    });
+  };
+  
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setNewQuestion({
+        ...newQuestion,
+        file: e.target.files[0],
+      });
     }
   };
-
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    toast.success('Logged out successfully');
+  
+  const handleDeleteUser = (userId: string) => {
+    setUsers(users.filter(user => user.id !== userId));
+    toast.success('User deleted successfully');
   };
-
-  const handlePasswordChange = () => {
-    if (newPassword !== confirmPassword) {
-      toast.error('Passwords do not match');
-      return;
-    }
-    if (currentPassword !== 'admin123') {
-      toast.error('Current password is incorrect');
-      return;
-    }
-    toast.success('Password changed successfully');
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
+  
+  const handleDeleteQuestion = (questionId: string) => {
+    setQuestions(questions.filter(question => question.id !== questionId));
+    toast.success('Question deleted successfully');
   };
-
-  const handlePrintBulk = (provider: string) => {
-    // Generate bulk print layout
-    const printWindow = window.open('', '_blank');
-    const logoUrl = provider === 'MTN' ? '/mtn-logo.png' : 
-                   provider === 'GLO' ? '/glo-logo.png' : 
-                   provider === 'AIRTEL' ? '/airtel-logo.png' : '/9mobile-logo.png';
-    
-    const printContent = `
-      <html>
-        <head>
-          <title>Bulk ${provider} Cards - iRapid</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
-            .card { border: 1px solid #ccc; margin: 10px; padding: 15px; display: inline-block; width: 200px; }
-            .logo { width: 50px; height: 50px; }
-            .provider { font-weight: bold; color: ${provider === 'MTN' ? '#ffcc00' : provider === 'GLO' ? '#00a651' : '#e60000'}; }
-          </style>
-        </head>
-        <body>
-          <h2>Bulk ${provider} Recharge Cards - iRapid</h2>
-          ${Array(20).fill(0).map((_, i) => `
-            <div class="card">
-              <img src="${logoUrl}" alt="${provider}" class="logo" />
-              <div class="provider">${provider}</div>
-              <div>₦1000</div>
-              <div>PIN: ${Math.random().toString().substr(2, 16)}</div>
-              <div>Serial: ${provider}${Date.now() + i}</div>
-            </div>
-          `).join('')}
-        </body>
-      </html>
-    `;
-    
-    printWindow?.document.write(printContent);
-    printWindow?.document.close();
-    printWindow?.print();
-  };
-
-  if (!isLoggedIn) {
-    return (
-      <Layout>
-        <div className="container mx-auto px-4 pt-28 pb-16">
-          <Card className="max-w-md mx-auto">
+  
+  return (
+    <div className="container mx-auto py-10">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold">Admin Panel</h1>
+        <Button variant="outline" onClick={handleLogout} className="flex items-center gap-2">
+          <LogOut className="h-4 w-4" />
+          Logout
+        </Button>
+      </div>
+      
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="grid grid-cols-5 gap-4">
+          <TabsTrigger value="users" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Users
+          </TabsTrigger>
+          <TabsTrigger value="content" className="flex items-center gap-2">
+            <BookOpen className="h-4 w-4" />
+            Content
+          </TabsTrigger>
+          <TabsTrigger value="transactions" className="flex items-center gap-2">
+            <CreditCard className="h-4 w-4" />
+            Transactions
+          </TabsTrigger>
+          <TabsTrigger value="analytics" className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Analytics
+          </TabsTrigger>
+          <TabsTrigger value="settings" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            Settings
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="users" className="space-y-4">
+          <Card>
             <CardHeader>
-              <CardTitle>iRapid Admin Login</CardTitle>
+              <CardTitle>User Management</CardTitle>
+              <CardDescription>Manage user accounts, roles, and permissions.</CardDescription>
             </CardHeader>
             <CardContent>
-              <Input
-                type="password"
-                placeholder="Enter admin password"
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    handleLogin(e.currentTarget.value);
-                  }
-                }}
-              />
-              <Button 
-                className="w-full mt-4" 
-                onClick={(e) => {
-                  const input = e.currentTarget.parentElement?.querySelector('input') as HTMLInputElement;
-                  handleLogin(input.value);
-                }}
-              >
-                Login
-              </Button>
+              <div className="rounded-md border">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="p-2 text-left font-medium">Name</th>
+                      <th className="p-2 text-left font-medium">Email</th>
+                      <th className="p-2 text-left font-medium">Role</th>
+                      <th className="p-2 text-left font-medium">Status</th>
+                      <th className="p-2 text-left font-medium">Joined</th>
+                      <th className="p-2 text-left font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.map((user) => (
+                      <tr key={user.id} className="border-b">
+                        <td className="p-2">{user.name}</td>
+                        <td className="p-2">{user.email}</td>
+                        <td className="p-2">
+                          <span className={`px-2 py-1 rounded-full text-xs ${
+                            user.role === 'admin' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
+                          }`}>
+                            {user.role}
+                          </span>
+                        </td>
+                        <td className="p-2">
+                          <span className={`px-2 py-1 rounded-full text-xs ${
+                            user.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          }`}>
+                            {user.status}
+                          </span>
+                        </td>
+                        <td className="p-2">{user.createdAt}</td>
+                        <td className="p-2">
+                          <div className="flex space-x-2">
+                            <Button variant="ghost" size="sm">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => handleDeleteUser(user.id)}
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </CardContent>
           </Card>
-        </div>
-      </Layout>
-    );
-  }
-
-  return (
-    <Layout>
-      <div className="container mx-auto px-4 pt-28 pb-16">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">iRapid Admin Panel</h1>
-            <p className="text-muted-foreground">Manage platform content and settings</p>
-          </div>
-          <Button variant="outline" onClick={handleLogout}>
-            Logout
-          </Button>
-        </div>
-
-        <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="dashboard">Overview</TabsTrigger>
-            <TabsTrigger value="users">Users</TabsTrigger>
-            <TabsTrigger value="materials">Materials</TabsTrigger>
-            <TabsTrigger value="blog">Blog</TabsTrigger>
-            <TabsTrigger value="bulk">Bulk Print</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="dashboard" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{users.length}</div>
-                  <p className="text-xs text-muted-foreground">+2 from last month</p>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Blog Posts</CardTitle>
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{blogPosts.length}</div>
-                  <p className="text-xs text-muted-foreground">
-                    {blogPosts.filter(p => p.status === 'Published').length} published
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Video Materials</CardTitle>
-                  <Video className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{videos.length}</div>
-                  <p className="text-xs text-muted-foreground">Across all categories</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Revenue</CardTitle>
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">₦125,000</div>
-                  <p className="text-xs text-muted-foreground">+12% from last month</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Blog Posts</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {blogPosts.slice(0, 3).map((post) => (
-                      <div key={post.id} className="flex items-center justify-between p-2 border rounded">
-                        <div>
-                          <p className="font-medium text-sm">{post.title}</p>
-                          <p className="text-xs text-muted-foreground">{post.date}</p>
-                        </div>
-                        <Badge variant={post.status === 'Published' ? 'default' : 'secondary'}>
-                          {post.status}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Popular Videos</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {videos.slice(0, 3).map((video) => (
-                      <div key={video.id} className="flex items-center justify-between p-2 border rounded">
-                        <div>
-                          <p className="font-medium text-sm">{video.title}</p>
-                          <p className="text-xs text-muted-foreground">{video.category}</p>
-                        </div>
-                        <span className="text-sm font-medium text-primary">{video.price}</span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="users" className="space-y-6">
+        </TabsContent>
+        
+        <TabsContent value="content" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>User Management</CardTitle>
+                <CardTitle>Add New Question</CardTitle>
+                <CardDescription>Upload new exam questions to the platform.</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {users.map((user) => (
-                    <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <h3 className="font-medium">{user.name}</h3>
-                        <p className="text-sm text-muted-foreground">{user.email}</p>
-                        <p className="text-xs text-muted-foreground">Joined: {user.joined}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary">{user.role}</Badge>
-                        <Button variant="outline" size="sm">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="materials" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Upload Study Materials</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input placeholder="Material title" />
-                  <Input placeholder="Price (₦)" type="number" />
-                  <Input placeholder="School/Institution" />
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Subject" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="mathematics">Mathematics</SelectItem>
-                      <SelectItem value="english">English</SelectItem>
-                      <SelectItem value="physics">Physics</SelectItem>
-                      <SelectItem value="chemistry">Chemistry</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Textarea placeholder="Material description" />
-                <Input type="file" accept=".pdf,.doc,.docx" />
-                <Button className="w-full">Upload Material</Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="blog" className="space-y-6">
-            {/* Add/Edit Blog Post Form */}
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  {editingPost ? 'Edit Blog Post' : 'Create New Blog Post'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Input
-                  placeholder="Blog post title"
-                  value={editingPost ? editingPost.title : newBlogPost.title}
-                  onChange={(e) => 
-                    editingPost 
-                      ? setEditingPost({ ...editingPost, title: e.target.value })
-                      : setNewBlogPost({ ...newBlogPost, title: e.target.value })
-                  }
-                />
-                
-                <Select 
-                  value={editingPost ? editingPost.category : newBlogPost.category}
-                  onValueChange={(value) => 
-                    editingPost 
-                      ? setEditingPost({ ...editingPost, category: value })
-                      : setNewBlogPost({ ...newBlogPost, category: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {blogCategories.map((category) => (
-                      <SelectItem key={category} value={category}>
-                        {category}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Textarea
-                  placeholder="Short excerpt (optional)"
-                  value={editingPost ? editingPost.excerpt : newBlogPost.excerpt}
-                  onChange={(e) => 
-                    editingPost 
-                      ? setEditingPost({ ...editingPost, excerpt: e.target.value })
-                      : setNewBlogPost({ ...newBlogPost, excerpt: e.target.value })
-                  }
-                  rows={2}
-                />
-                
-                <Textarea
-                  placeholder="Blog post content"
-                  value={editingPost ? editingPost.content : newBlogPost.content}
-                  onChange={(e) => 
-                    editingPost 
-                      ? setEditingPost({ ...editingPost, content: e.target.value })
-                      : setNewBlogPost({ ...newBlogPost, content: e.target.value })
-                  }
-                  rows={8}
-                />
-
-                <Input
-                  placeholder="Author name"
-                  value={editingPost ? editingPost.author : newBlogPost.author}
-                  onChange={(e) => 
-                    editingPost 
-                      ? setEditingPost({ ...editingPost, author: e.target.value })
-                      : setNewBlogPost({ ...newBlogPost, author: e.target.value })
-                  }
-                />
-
-                <div className="flex items-center gap-4">
-                  <div>
-                    <label htmlFor="image-upload" className="cursor-pointer">
-                      <Button variant="outline" asChild>
-                        <span>
-                          <Upload className="h-4 w-4 mr-2" />
-                          Upload Image
-                        </span>
-                      </Button>
-                    </label>
-                    <input
-                      id="image-upload"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileUpload}
-                      className="hidden"
+                <form onSubmit={handleQuestionSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="title">Question Title</Label>
+                    <Input 
+                      id="title" 
+                      value={newQuestion.title}
+                      onChange={(e) => setNewQuestion({...newQuestion, title: e.target.value})}
+                      placeholder="Enter question title"
+                      required
                     />
                   </div>
                   
-                  <div className="flex gap-2">
-                    {editingPost ? (
-                      <>
-                        <Button onClick={handleUpdateBlogPost} className="flex items-center gap-2">
-                          <Save className="h-4 w-4" />
-                          Update Post
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          onClick={() => setEditingPost(null)}
-                        >
-                          Cancel
-                        </Button>
-                      </>
-                    ) : (
-                      <Button onClick={handleAddBlogPost} className="flex items-center gap-2">
-                        <Plus className="h-4 w-4" />
-                        Publish Post
-                      </Button>
-                    )}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="subject">Subject</Label>
+                      <Select 
+                        value={newQuestion.subject}
+                        onValueChange={(value) => setNewQuestion({...newQuestion, subject: value})}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select subject" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="mathematics">Mathematics</SelectItem>
+                          <SelectItem value="english">English</SelectItem>
+                          <SelectItem value="physics">Physics</SelectItem>
+                          <SelectItem value="chemistry">Chemistry</SelectItem>
+                          <SelectItem value="biology">Biology</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="examType">Exam Type</Label>
+                      <Select 
+                        value={newQuestion.examType}
+                        onValueChange={(value) => setNewQuestion({...newQuestion, examType: value})}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select exam" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="waec">WAEC</SelectItem>
+                          <SelectItem value="jamb">JAMB</SelectItem>
+                          <SelectItem value="neco">NECO</SelectItem>
+                          <SelectItem value="gce">GCE</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="year">Year</Label>
+                    <Select 
+                      value={newQuestion.year}
+                      onValueChange={(value) => setNewQuestion({...newQuestion, year: value})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select year" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="2023">2023</SelectItem>
+                        <SelectItem value="2022">2022</SelectItem>
+                        <SelectItem value="2021">2021</SelectItem>
+                        <SelectItem value="2020">2020</SelectItem>
+                        <SelectItem value="2019">2019</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="content">Question Content</Label>
+                    <Textarea 
+                      id="content" 
+                      value={newQuestion.content}
+                      onChange={(e) => setNewQuestion({...newQuestion, content: e.target.value})}
+                      placeholder="Enter question content"
+                      rows={5}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="file">Upload File (PDF, Image)</Label>
+                    <Input 
+                      id="file" 
+                      type="file" 
+                      onChange={handleFileChange}
+                      accept=".pdf,.jpg,.jpeg,.png"
+                    />
+                  </div>
+                  
+                  <Button type="submit" className="w-full">
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload Question
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Manage Questions</CardTitle>
+                <CardDescription>View and manage existing questions.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-md border">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b bg-muted/50">
+                        <th className="p-2 text-left font-medium">Title</th>
+                        <th className="p-2 text-left font-medium">Subject</th>
+                        <th className="p-2 text-left font-medium">Exam</th>
+                        <th className="p-2 text-left font-medium">Year</th>
+                        <th className="p-2 text-left font-medium">Status</th>
+                        <th className="p-2 text-left font-medium">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {questions.map((question) => (
+                        <tr key={question.id} className="border-b">
+                          <td className="p-2">{question.title}</td>
+                          <td className="p-2">{question.subject}</td>
+                          <td className="p-2">{question.examType}</td>
+                          <td className="p-2">{question.year}</td>
+                          <td className="p-2">
+                            <span className={`px-2 py-1 rounded-full text-xs ${
+                              question.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                            }`}>
+                              {question.status}
+                            </span>
+                          </td>
+                          <td className="p-2">
+                            <div className="flex space-x-2">
+                              <Button variant="ghost" size="sm">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => handleDeleteQuestion(question.id)}
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </CardContent>
             </Card>
-
-            {/* Blog Posts List */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Published Blog Posts</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {blogPosts.map((post) => (
-                    <div key={post.id} className="flex items-start justify-between p-4 border rounded-lg">
-                      <div className="flex-1">
-                        <h3 className="font-medium mb-1">{post.title}</h3>
-                        <p className="text-sm text-muted-foreground mb-2">{post.excerpt}</p>
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          <span>By {post.author}</span>
-                          <span>Published: {post.date}</span>
-                          <Badge variant="outline">{post.category}</Badge>
-                        </div>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="transactions" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Transaction History</CardTitle>
+              <CardDescription>View and manage payment transactions.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="p-2 text-left font-medium">Transaction ID</th>
+                      <th className="p-2 text-left font-medium">User ID</th>
+                      <th className="p-2 text-left font-medium">Amount</th>
+                      <th className="p-2 text-left font-medium">Type</th>
+                      <th className="p-2 text-left font-medium">Status</th>
+                      <th className="p-2 text-left font-medium">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {transactions.map((transaction) => (
+                      <tr key={transaction.id} className="border-b">
+                        <td className="p-2">{transaction.id}</td>
+                        <td className="p-2">{transaction.userId}</td>
+                        <td className="p-2">₦{transaction.amount.toLocaleString()}</td>
+                        <td className="p-2">
+                          <span className="capitalize">{transaction.type.replace('_', ' ')}</span>
+                        </td>
+                        <td className="p-2">
+                          <span className={`px-2 py-1 rounded-full text-xs ${
+                            transaction.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                          }`}>
+                            {transaction.status}
+                          </span>
+                        </td>
+                        <td className="p-2">{transaction.date}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="analytics" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Platform Analytics</CardTitle>
+              <CardDescription>View platform usage and performance metrics.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">1,234</div>
+                    <p className="text-xs text-muted-foreground">+12% from last month</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">₦2,345,670</div>
+                    <p className="text-xs text-muted-foreground">+8% from last month</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">Active Subscriptions</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">567</div>
+                    <p className="text-xs text-muted-foreground">+15% from last month</p>
+                  </CardContent>
+                </Card>
+              </div>
+              
+              <div className="mt-8">
+                <h3 className="text-lg font-medium mb-4">Monthly Revenue</h3>
+                <div className="h-[300px] bg-muted/20 rounded-md flex items-center justify-center">
+                  <p className="text-muted-foreground">Chart placeholder - Revenue data visualization</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="settings" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Platform Settings</CardTitle>
+              <CardDescription>Configure platform settings and security options.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-medium mb-4">Security Settings</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-medium">Two-Factor Authentication</h4>
+                        <p className="text-sm text-muted-foreground">Require admins to use 2FA</p>
                       </div>
-                      <div className="flex items-center gap-2 ml-4">
-                        <Badge variant={post.status === 'Published' ? 'default' : 'secondary'}>
-                          {post.status}
-                        </Badge>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => setEditingPost(post)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => deleteBlogPost(post.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
+                      <div>
+                        <Button variant="outline" size="sm" className="flex items-center gap-2">
+                          <Key className="h-4 w-4" />
+                          Configure
                         </Button>
                       </div>
                     </div>
-                  ))}
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-medium">Password Policy</h4>
+                        <p className="text-sm text-muted-foreground">Set password requirements</p>
+                      </div>
+                      <div>
+                        <Button variant="outline" size="sm">Configure</Button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="bulk" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Bulk Recharge Card Printing</CardTitle>
-                <CardDescription>Print bulk recharge cards for resellers</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {['MTN', 'GLO', 'AIRTEL', '9MOBILE'].map((provider) => (
-                    <Button
-                      key={provider}
-                      variant="outline"
-                      onClick={() => handlePrintBulk(provider)}
-                      className="h-20 flex flex-col gap-2"
-                    >
-                      <span className="font-bold">{provider}</span>
-                      <span className="text-sm">Print Bulk Cards</span>
-                    </Button>
-                  ))}
+                
+                <div className="border-t pt-6">
+                  <h3 className="text-lg font-medium mb-4">Payment Settings</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-medium">Payment Gateways</h4>
+                        <p className="text-sm text-muted-foreground">Configure payment providers</p>
+                      </div>
+                      <div>
+                        <Button variant="outline" size="sm">Configure</Button>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-medium">Transaction Fees</h4>
+                        <p className="text-sm text-muted-foreground">Set platform transaction fees</p>
+                      </div>
+                      <div>
+                        <Button variant="outline" size="sm">Configure</Button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="settings" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Platform Settings</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium">Platform Name</label>
-                  <Input defaultValue="iRapid" />
+                
+                <div className="border-t pt-6">
+                  <h3 className="text-lg font-medium mb-4">Content Settings</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-medium">Content Moderation</h4>
+                        <p className="text-sm text-muted-foreground">Configure content review process</p>
+                      </div>
+                      <div>
+                        <Button variant="outline" size="sm">Configure</Button>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-medium">File Upload Limits</h4>
+                        <p className="text-sm text-muted-foreground">Set maximum file sizes</p>
+                      </div>
+                      <div>
+                        <Button variant="outline" size="sm">Configure</Button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-sm font-medium">Contact Email</label>
-                  <Input defaultValue="admin@irapid.com" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Support Phone</label>
-                  <Input defaultValue="+234 706 299 6474" />
-                </div>
-                <Button>Save Settings</Button>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Change Password</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Input
-                  type="password"
-                  placeholder="Current password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                />
-                <Input
-                  type="password"
-                  placeholder="New password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                />
-                <Input
-                  type="password"
-                  placeholder="Confirm new password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                />
-                <Button onClick={handlePasswordChange}>Change Password</Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
-    </Layout>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 };
 

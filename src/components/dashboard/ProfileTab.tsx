@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { UserProfile } from './UserProfile';
+import UserProfile from './UserProfile';
 
 const ProfileTab = () => {
   return <UserProfile />;
