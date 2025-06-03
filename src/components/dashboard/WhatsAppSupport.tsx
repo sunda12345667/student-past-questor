@@ -37,6 +37,17 @@ export default function WhatsAppSupport() {
     window.open(whatsappUrl, '_blank');
   };
 
+  const quickIssues = [
+    'Failed Transaction',
+    'Refund Request', 
+    'Account Issues',
+    'Payment Problem',
+    'DSTV/GOTV Issue',
+    'Airtime Not Received',
+    'Exam PIN Problem',
+    'Technical Support'
+  ];
+
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-medium">Customer Support</h2>
@@ -67,7 +78,7 @@ export default function WhatsAppSupport() {
             <CardDescription>We respond quickly</CardDescription>
           </CardHeader>
           <CardContent className="text-center">
-            <p className="text-2xl font-bold text-blue-500">< 5 min</p>
+            <p className="text-2xl font-bold text-blue-500">{"< 5 min"}</p>
             <p className="text-sm text-muted-foreground">Average response time</p>
           </CardContent>
         </Card>
@@ -93,16 +104,7 @@ export default function WhatsAppSupport() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {[
-              'Failed Transaction',
-              'Refund Request', 
-              'Account Issues',
-              'Payment Problem',
-              'DSTV/GOTV Issue',
-              'Airtime Not Received',
-              'Exam PIN Problem',
-              'Technical Support'
-            ].map((issue) => (
+            {quickIssues.map((issue) => (
               <Button
                 key={issue}
                 variant="outline"
