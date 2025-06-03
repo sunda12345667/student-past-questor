@@ -3,7 +3,6 @@ import Layout from '@/components/Layout';
 import { Hero } from '@/components/Hero';
 import { Features } from '@/components/Features';
 import { SampleQuestions } from '@/components/SampleQuestions';
-import { FooterSection } from '@/components/FooterSection';
 import { Button } from '@/components/ui/button';
 import { ArrowUp } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -31,8 +30,8 @@ const Index = () => {
   };
 
   const handleSignUpFree = () => {
-    navigate('/signup');
-    toast.success('Starting your journey with StudyQuest!');
+    navigate('/auth');
+    toast.success('Starting your journey with iRapid!');
   };
 
   const handleExploreQuestions = () => {
@@ -170,7 +169,7 @@ const Index = () => {
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="heading-lg mb-6">Ready to ace your exams?</h2>
             <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Join thousands of students who are already preparing smarter with StudyQuest's comprehensive past question marketplace.
+              Join thousands of students who are already preparing smarter with iRapid's comprehensive past question marketplace.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
               <Button 
@@ -192,8 +191,6 @@ const Index = () => {
           </div>
         </div>
       </section>
-      
-      <FooterSection />
       
       {/* Scroll to top button */}
       {showScrollTop && (

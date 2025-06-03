@@ -24,21 +24,21 @@ const AdminLogin = ({ isOpen, onClose, onSuccess }: AdminLoginProps) => {
     setIsLoading(true);
     setError('');
 
-    // Simulate login delay
-    setTimeout(() => {
-      if (username === 'admin' && password === 'admin123') {
-        toast.success('Admin login successful!');
-        localStorage.setItem('adminAuthenticated', 'true');
-        onSuccess();
-        onClose();
-        setUsername('');
-        setPassword('');
-      } else {
-        setError('Invalid username or password');
-        toast.error('Invalid admin credentials');
-      }
-      setIsLoading(false);
-    }, 1000);
+    console.log('Admin login attempt:', { username, password });
+
+    // Check credentials
+    if (username === 'admin' && password === 'admin123') {
+      toast.success('Admin login successful!');
+      localStorage.setItem('adminAuthenticated', 'true');
+      onSuccess();
+      onClose();
+      setUsername('');
+      setPassword('');
+    } else {
+      setError('Invalid username or password');
+      toast.error('Invalid admin credentials');
+    }
+    setIsLoading(false);
   };
 
   const handleClose = () => {
