@@ -5,10 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/auth';
-import { BookOpen, Download, ShoppingCart, User, CreditCard } from 'lucide-react';
+import { BookOpen, Download, ShoppingCart, User, CreditCard, Wallet } from 'lucide-react';
 import Marketplace from '@/components/dashboard/Marketplace';
 import Downloads from '@/components/dashboard/Downloads';
 import BillPayments from '@/components/dashboard/BillPayments';
+import WalletTab from '@/components/dashboard/WalletTab';
 import { QuestionsTab } from '@/components/dashboard/QuestionsTab';
 
 const Dashboard = () => {
@@ -18,7 +19,7 @@ const Dashboard = () => {
   useEffect(() => {
     // Check URL hash to set active tab
     const hash = window.location.hash.replace('#', '');
-    if (hash && ['marketplace', 'questions', 'downloads', 'bills', 'profile'].includes(hash)) {
+    if (hash && ['marketplace', 'questions', 'downloads', 'bills', 'wallet', 'profile'].includes(hash)) {
       setActiveTab(hash);
     }
   }, []);
@@ -55,7 +56,7 @@ const Dashboard = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="marketplace" className="flex items-center gap-2">
               <ShoppingCart className="h-4 w-4" />
               Marketplace
@@ -71,6 +72,10 @@ const Dashboard = () => {
             <TabsTrigger value="bills" className="flex items-center gap-2">
               <CreditCard className="h-4 w-4" />
               Bill Payments
+            </TabsTrigger>
+            <TabsTrigger value="wallet" className="flex items-center gap-2">
+              <Wallet className="h-4 w-4" />
+              Wallet
             </TabsTrigger>
             <TabsTrigger value="profile" className="flex items-center gap-2">
               <User className="h-4 w-4" />
@@ -92,6 +97,10 @@ const Dashboard = () => {
 
           <TabsContent value="bills" className="space-y-6">
             <BillPayments />
+          </TabsContent>
+
+          <TabsContent value="wallet" className="space-y-6">
+            <WalletTab />
           </TabsContent>
 
           <TabsContent value="profile" className="space-y-6">

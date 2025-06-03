@@ -9,8 +9,7 @@ import { NotificationProvider } from '@/contexts/NotificationContext';
 import { Toaster as UIToaster } from '@/components/ui/toaster';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Index from '@/pages/Index';
-import Login from '@/pages/Login';
-import Signup from '@/pages/Signup';
+import Auth from '@/pages/Auth';
 import Dashboard from '@/pages/Dashboard';
 import QuestionView from '@/pages/QuestionView';
 import ExamListing from '@/pages/ExamListing';
@@ -19,6 +18,10 @@ import NotFound from '@/pages/NotFound';
 import Blog from '@/pages/Blog';
 import AdminPanel from '@/pages/AdminPanel';
 import StudentChat from '@/pages/StudentChat';
+import AboutUs from '@/pages/AboutUs';
+import PrivacyPolicy from '@/pages/PrivacyPolicy';
+import TermsOfService from '@/pages/TermsOfService';
+import Careers from '@/pages/Careers';
 import '@/index.css';
 
 const queryClient = new QueryClient({
@@ -40,8 +43,13 @@ function App() {
             <div className="min-h-screen bg-background">
               <Routes>
                 <Route path="/" element={<Index />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/signup" element={<Signup />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/login" element={<Auth />} />
+                <Route path="/signup" element={<Auth />} />
+                <Route path="/about" element={<AboutUs />} />
+                <Route path="/privacy" element={<PrivacyPolicy />} />
+                <Route path="/terms" element={<TermsOfService />} />
+                <Route path="/careers" element={<Careers />} />
                 <Route path="/blog" element={<Blog />} />
                 <Route path="/admin" element={<AdminPanel />} />
                 <Route 

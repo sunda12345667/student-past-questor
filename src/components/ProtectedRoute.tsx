@@ -21,9 +21,9 @@ const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps)
   }
 
   if (!currentUser) {
-    console.log('User not authenticated, redirecting to login');
+    console.log('User not authenticated, redirecting to auth');
     // Save the current location to redirect back after login
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
   if (requireAdmin && !isAdmin()) {

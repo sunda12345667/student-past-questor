@@ -8,8 +8,11 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { getUserWallet, debitWallet } from '@/services/walletService';
+import { initializePayment } from '@/services/paystackService';
 
 export default function BillPayments() {
+  const { currentUser } = useAuth();
   const [serviceType, setServiceType] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [amount, setAmount] = useState<number>(0);
@@ -47,31 +50,83 @@ export default function BillPayments() {
     setDetectedNetwork(network);
   };
 
-  const handleWalletPayment = async () => {
+  const handlePayment = async () => {
+    if (!currentUser) {
+      toast.error('Please log in to make payments');
+      return;
+    }
+
     if (!amount || amount < 100) {
       toast.error('Minimum amount is ₦100');
+      return;
+    }
+
+    if (serviceType === 'airtime' || serviceType === 'data') {
+      if (!phoneNumber || !detectedNetwork) {
+        toast.error('Please enter a valid phone number');
+        return;
+      }
+    } else if (!accountNumber) {
+      toast.error('Please enter account number');
       return;
     }
 
     setIsLoading(true);
     
     try {
-      const { processWalletPayment } = await import('@/services/paystackService');
-      const result = await processWalletPayment('user-id', amount, `${serviceType} payment`);
+      // Check wallet balance first
+      const wallet = getUserWallet(currentUser.id);
       
-      if (result.success && result.source === 'wallet') {
-        toast.success('Payment successful from wallet!');
-        setAmount(0);
-        setAccountNumber('');
-        setPhoneNumber('');
-        setDetectedNetwork('');
+      if (wallet.balance >= amount) {
+        // Pay from wallet
+        const success = debitWallet(currentUser.id, amount, `${serviceType} payment - ${phoneNumber || accountNumber}`);
+        if (success) {
+          toast.success(`Payment successful! ₦${amount.toLocaleString()} debited from wallet`);
+          
+          // Add to history
+          const newTransaction = {
+            id: Date.now().toString(),
+            serviceType: serviceType.toUpperCase(),
+            amount,
+            date: new Date().toISOString(),
+            phone: phoneNumber,
+            network: detectedNetwork,
+            account: accountNumber,
+            status: 'completed'
+          };
+          setBillHistory(prev => [newTransaction, ...prev]);
+          
+          // Reset form
+          setAmount(0);
+          setAccountNumber('');
+          setPhoneNumber('');
+          setDetectedNetwork('');
+        }
       } else {
-        // Redirect to Paystack for payment
-        toast.info('Redirecting to payment...');
-        // Add actual Paystack integration here
+        // Insufficient wallet balance, redirect to Paystack
+        toast.info('Insufficient wallet balance. Redirecting to payment...');
+        
+        const paymentResponse = await initializePayment({
+          email: currentUser.email,
+          amount,
+          metadata: {
+            userId: currentUser.id,
+            service: `${serviceType} payment`,
+            phone: phoneNumber,
+            account: accountNumber
+          }
+        });
+
+        if (paymentResponse.status) {
+          // Redirect to Paystack
+          window.location.href = paymentResponse.data.authorization_url;
+        } else {
+          throw new Error('Payment initialization failed');
+        }
       }
     } catch (error) {
-      toast.error('Payment failed');
+      console.error('Payment error:', error);
+      toast.error('Payment failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -130,13 +185,13 @@ export default function BillPayments() {
                 id="amount"
                 type="number"
                 placeholder="1000"
-                value={amount}
+                value={amount || ''}
                 onChange={(e) => setAmount(Number(e.target.value))}
               />
             </div>
 
-            <Button onClick={handleWalletPayment} disabled={isLoading} className="w-full">
-              {isLoading ? 'Processing...' : `Pay ₦${amount.toLocaleString()} from Wallet`}
+            <Button onClick={handlePayment} disabled={isLoading} className="w-full">
+              {isLoading ? 'Processing...' : `Pay ₦${amount.toLocaleString()}`}
             </Button>
           </CardContent>
         </Card>
@@ -170,13 +225,13 @@ export default function BillPayments() {
                 id="amount"
                 type="number"
                 placeholder="1000"
-                value={amount}
+                value={amount || ''}
                 onChange={(e) => setAmount(Number(e.target.value))}
               />
             </div>
 
-            <Button onClick={handleWalletPayment} disabled={isLoading} className="w-full">
-              {isLoading ? 'Processing...' : `Pay ₦${amount.toLocaleString()} from Wallet`}
+            <Button onClick={handlePayment} disabled={isLoading} className="w-full">
+              {isLoading ? 'Processing...' : `Pay ₦${amount.toLocaleString()}`}
             </Button>
           </CardContent>
         </Card>
@@ -204,13 +259,13 @@ export default function BillPayments() {
                 id="amount"
                 type="number"
                 placeholder="1000"
-                value={amount}
+                value={amount || ''}
                 onChange={(e) => setAmount(Number(e.target.value))}
               />
             </div>
 
-            <Button onClick={handleWalletPayment} disabled={isLoading} className="w-full">
-              {isLoading ? 'Processing...' : `Pay ₦${amount.toLocaleString()} from Wallet`}
+            <Button onClick={handlePayment} disabled={isLoading} className="w-full">
+              {isLoading ? 'Processing...' : `Pay ₦${amount.toLocaleString()}`}
             </Button>
           </CardContent>
         </Card>
@@ -238,13 +293,13 @@ export default function BillPayments() {
                 id="amount"
                 type="number"
                 placeholder="1000"
-                value={amount}
+                value={amount || ''}
                 onChange={(e) => setAmount(Number(e.target.value))}
               />
             </div>
 
-            <Button onClick={handleWalletPayment} disabled={isLoading} className="w-full">
-              {isLoading ? 'Processing...' : `Pay ₦${amount.toLocaleString()} from Wallet`}
+            <Button onClick={handlePayment} disabled={isLoading} className="w-full">
+              {isLoading ? 'Processing...' : `Pay ₦${amount.toLocaleString()}`}
             </Button>
           </CardContent>
         </Card>
