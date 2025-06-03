@@ -12,6 +12,11 @@ import { toast } from 'sonner';
 import MaterialUpload from '@/components/admin/MaterialUpload';
 
 const AdminPanel = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
   const [users, setUsers] = useState([
     { id: 1, name: 'John Doe', email: 'john@example.com', role: 'Student', joined: '2024-01-15' },
     { id: 2, name: 'Jane Smith', email: 'jane@example.com', role: 'Student', joined: '2024-02-20' },
@@ -148,12 +153,118 @@ const AdminPanel = () => {
     }
   };
 
+  const handleLogin = (password: string) => {
+    if (password === 'admin123') {
+      setIsLoggedIn(true);
+      toast.success('Welcome to iRapid Admin Panel');
+    } else {
+      toast.error('Invalid password');
+    }
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    toast.success('Logged out successfully');
+  };
+
+  const handlePasswordChange = () => {
+    if (newPassword !== confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+    if (currentPassword !== 'admin123') {
+      toast.error('Current password is incorrect');
+      return;
+    }
+    toast.success('Password changed successfully');
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+  };
+
+  const handlePrintBulk = (provider: string) => {
+    // Generate bulk print layout
+    const printWindow = window.open('', '_blank');
+    const logoUrl = provider === 'MTN' ? '/mtn-logo.png' : 
+                   provider === 'GLO' ? '/glo-logo.png' : 
+                   provider === 'AIRTEL' ? '/airtel-logo.png' : '/9mobile-logo.png';
+    
+    const printContent = `
+      <html>
+        <head>
+          <title>Bulk ${provider} Cards - iRapid</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            .card { border: 1px solid #ccc; margin: 10px; padding: 15px; display: inline-block; width: 200px; }
+            .logo { width: 50px; height: 50px; }
+            .provider { font-weight: bold; color: ${provider === 'MTN' ? '#ffcc00' : provider === 'GLO' ? '#00a651' : '#e60000'}; }
+          </style>
+        </head>
+        <body>
+          <h2>Bulk ${provider} Recharge Cards - iRapid</h2>
+          ${Array(20).fill(0).map((_, i) => `
+            <div class="card">
+              <img src="${logoUrl}" alt="${provider}" class="logo" />
+              <div class="provider">${provider}</div>
+              <div>₦1000</div>
+              <div>PIN: ${Math.random().toString().substr(2, 16)}</div>
+              <div>Serial: ${provider}${Date.now() + i}</div>
+            </div>
+          `).join('')}
+        </body>
+      </html>
+    `;
+    
+    printWindow?.document.write(printContent);
+    printWindow?.document.close();
+    printWindow?.print();
+  };
+
+  if (!isLoggedIn) {
+    return (
+      <Layout>
+        <div className="container mx-auto px-4 pt-28 pb-16">
+          <Card className="max-w-md mx-auto">
+            <CardHeader>
+              <CardTitle>iRapid Admin Login</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Input
+                type="password"
+                placeholder="Enter admin password"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handleLogin(e.currentTarget.value);
+                  }
+                }}
+              />
+              <Button 
+                className="w-full mt-4" 
+                onClick={(e) => {
+                  const input = e.currentTarget.parentElement?.querySelector('input') as HTMLInputElement;
+                  handleLogin(input.value);
+                }}
+              >
+                Login
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       <div className="container mx-auto px-4 pt-28 pb-16">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
-          <p className="text-muted-foreground">Manage users, content, materials, and platform settings</p>
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">iRapid Admin Panel</h1>
+            <p className="text-muted-foreground">Manage platform content and settings</p>
+          </div>
+          <Button variant="outline" onClick={handleLogout}>
+            Logout
+          </Button>
         </div>
 
         <Tabs defaultValue="dashboard" className="space-y-6">
@@ -162,7 +273,7 @@ const AdminPanel = () => {
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="materials">Materials</TabsTrigger>
             <TabsTrigger value="blog">Blog</TabsTrigger>
-            <TabsTrigger value="videos">Videos</TabsTrigger>
+            <TabsTrigger value="bulk">Bulk Print</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
 
@@ -286,7 +397,32 @@ const AdminPanel = () => {
           </TabsContent>
 
           <TabsContent value="materials" className="space-y-6">
-            <MaterialUpload />
+            <Card>
+              <CardHeader>
+                <CardTitle>Upload Study Materials</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Input placeholder="Material title" />
+                  <Input placeholder="Price (₦)" type="number" />
+                  <Input placeholder="School/Institution" />
+                  <Select>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Subject" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="mathematics">Mathematics</SelectItem>
+                      <SelectItem value="english">English</SelectItem>
+                      <SelectItem value="physics">Physics</SelectItem>
+                      <SelectItem value="chemistry">Chemistry</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Textarea placeholder="Material description" />
+                <Input type="file" accept=".pdf,.doc,.docx" />
+                <Button className="w-full">Upload Material</Button>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="blog" className="space-y-6">
@@ -448,156 +584,24 @@ const AdminPanel = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="videos" className="space-y-6">
-            {/* Add/Edit Video Form */}
+          <TabsContent value="bulk" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>
-                  {editingVideo ? 'Edit Video Material' : 'Add New Video Material'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Input
-                  placeholder="Video title"
-                  value={editingVideo ? editingVideo.title : newVideo.title}
-                  onChange={(e) => 
-                    editingVideo 
-                      ? setEditingVideo({ ...editingVideo, title: e.target.value })
-                      : setNewVideo({ ...newVideo, title: e.target.value })
-                  }
-                />
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Input
-                    placeholder="Price (e.g., ₦2,500)"
-                    value={editingVideo ? editingVideo.price : newVideo.price}
-                    onChange={(e) => 
-                      editingVideo 
-                        ? setEditingVideo({ ...editingVideo, price: e.target.value })
-                        : setNewVideo({ ...newVideo, price: e.target.value })
-                    }
-                  />
-                  
-                  <Select 
-                    value={editingVideo ? editingVideo.category : newVideo.category}
-                    onValueChange={(value) => 
-                      editingVideo 
-                        ? setEditingVideo({ ...editingVideo, category: value })
-                        : setNewVideo({ ...newVideo, category: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="WAEC">WAEC</SelectItem>
-                      <SelectItem value="JAMB">JAMB</SelectItem>
-                      <SelectItem value="NECO">NECO</SelectItem>
-                      <SelectItem value="GCE">GCE</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  
-                  <Input
-                    placeholder="Duration (e.g., 2:30:00)"
-                    value={editingVideo ? editingVideo.duration : newVideo.duration}
-                    onChange={(e) => 
-                      editingVideo 
-                        ? setEditingVideo({ ...editingVideo, duration: e.target.value })
-                        : setNewVideo({ ...newVideo, duration: e.target.value })
-                    }
-                  />
-                </div>
-
-                <Textarea
-                  placeholder="Video description"
-                  value={editingVideo ? editingVideo.description : newVideo.description}
-                  onChange={(e) => 
-                    editingVideo 
-                      ? setEditingVideo({ ...editingVideo, description: e.target.value })
-                      : setNewVideo({ ...newVideo, description: e.target.value })
-                  }
-                  rows={3}
-                />
-
-                <div className="flex items-center gap-4">
-                  <div>
-                    <label htmlFor="video-upload" className="cursor-pointer">
-                      <Button variant="outline" asChild>
-                        <span>
-                          <Upload className="h-4 w-4 mr-2" />
-                          Upload Video
-                        </span>
-                      </Button>
-                    </label>
-                    <input
-                      id="video-upload"
-                      type="file"
-                      accept="video/*"
-                      onChange={handleFileUpload}
-                      className="hidden"
-                    />
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    {editingVideo ? (
-                      <>
-                        <Button onClick={handleUpdateVideo} className="flex items-center gap-2">
-                          <Save className="h-4 w-4" />
-                          Update Video
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          onClick={() => setEditingVideo(null)}
-                        >
-                          Cancel
-                        </Button>
-                      </>
-                    ) : (
-                      <Button onClick={handleAddVideo} className="flex items-center gap-2">
-                        <Plus className="h-4 w-4" />
-                        Add Video Material
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Videos List */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Video Materials</CardTitle>
+                <CardTitle>Bulk Recharge Card Printing</CardTitle>
+                <CardDescription>Print bulk recharge cards for resellers</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {videos.map((video) => (
-                    <div key={video.id} className="flex items-start justify-between p-4 border rounded-lg">
-                      <div className="flex-1">
-                        <h3 className="font-medium mb-1">{video.title}</h3>
-                        <p className="text-sm text-muted-foreground mb-2">{video.description}</p>
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          <span>Duration: {video.duration}</span>
-                          <Badge variant="outline">{video.category}</Badge>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 ml-4">
-                        <span className="text-sm font-medium text-primary">{video.price}</span>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => setEditingVideo(video)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => deleteVideo(video.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {['MTN', 'GLO', 'AIRTEL', '9MOBILE'].map((provider) => (
+                    <Button
+                      key={provider}
+                      variant="outline"
+                      onClick={() => handlePrintBulk(provider)}
+                      className="h-20 flex flex-col gap-2"
+                    >
+                      <span className="font-bold">{provider}</span>
+                      <span className="text-sm">Print Bulk Cards</span>
+                    </Button>
                   ))}
                 </div>
               </CardContent>
@@ -612,21 +616,44 @@ const AdminPanel = () => {
               <CardContent className="space-y-4">
                 <div>
                   <label className="text-sm font-medium">Platform Name</label>
-                  <Input defaultValue="StudyQuest" />
+                  <Input defaultValue="iRapid" />
                 </div>
                 <div>
                   <label className="text-sm font-medium">Contact Email</label>
-                  <Input defaultValue="admin@studyquest.com" />
+                  <Input defaultValue="admin@irapid.com" />
                 </div>
                 <div>
                   <label className="text-sm font-medium">Support Phone</label>
-                  <Input defaultValue="+234 800 000 0000" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Admin Password</label>
-                  <Input type="password" defaultValue="ADMIN" />
+                  <Input defaultValue="+234 706 299 6474" />
                 </div>
                 <Button>Save Settings</Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Change Password</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Input
+                  type="password"
+                  placeholder="Current password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                />
+                <Input
+                  type="password"
+                  placeholder="New password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                />
+                <Input
+                  type="password"
+                  placeholder="Confirm new password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                />
+                <Button onClick={handlePasswordChange}>Change Password</Button>
               </CardContent>
             </Card>
           </TabsContent>

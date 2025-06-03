@@ -37,13 +37,12 @@ export const initializePayment = async ({
   metadata,
 }: InitializePaymentParams): Promise<PaymentResponse> => {
   try {
-    // For development/demo, we'll use the mock response but with live key reference
     console.log("Initializing payment with live Paystack key", { email, amount, metadata });
     
     const response = await fetch('https://api.paystack.co/transaction/initialize', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${PAYSTACK_PUBLIC_KEY}`,
+        'Authorization': `Bearer sk_live_da9fcf3fb46bbacc6cb38973739d2f1c75a45a87`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -59,6 +58,12 @@ export const initializePayment = async ({
     }
 
     const data = await response.json();
+    
+    // Redirect immediately to Paystack
+    if (data.status && data.data.authorization_url) {
+      window.location.href = data.data.authorization_url;
+    }
+    
     return data;
   } catch (error) {
     console.error('Payment initialization error:', error);

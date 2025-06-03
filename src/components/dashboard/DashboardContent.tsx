@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import {
   ShoppingBag,
@@ -25,9 +26,9 @@ import RewardsTab from './RewardsTab';
 import AcademicAITab from './AcademicAITab';
 import StudyGroupsTab from './StudyGroupsTab';
 import StudySessionsTab from './StudySessionsTab';
-import QuestionsTab from './QuestionsTab';
+import { QuestionsTab } from './QuestionsTab';
 import ReferralsTab from './ReferralsTab';
-import NotificationsTab from './NotificationsTab';
+import { NotificationsTab } from './NotificationsTab';
 import LeaderboardTab from './LeaderboardTab';
 import PaymentMethods from './PaymentMethods';
 import ProfileTab from './ProfileTab';
@@ -67,7 +68,7 @@ const DashboardContent = () => {
     <div className="container mx-auto py-10">
       <Card>
         <CardHeader>
-          <CardTitle>Dashboard</CardTitle>
+          <CardTitle>iRapid Dashboard</CardTitle>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue={activeTab} className="space-y-4">

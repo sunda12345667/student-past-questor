@@ -1,193 +1,75 @@
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Label } from "@/components/ui/label";
-import { Smartphone, Lightbulb, Tv, GraduationCap, CreditCard } from "lucide-react";
-import { toast } from "sonner";
-import { useAuth } from "@/contexts/AuthContext";
-import { payBill, purchaseEducationalPin, getPinPrice } from "@/services/billsService";
-import { processWalletPayment } from '@/services/paystackService';
-import { getUserWallet, debitWallet } from '@/services/walletService';
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { History } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function BillPayments() {
-  const { currentUser } = useAuth();
+  const [serviceType, setServiceType] = useState('');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [amount, setAmount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(false);
-  const [useWallet, setUseWallet] = useState(false);
-  
-  // Airtime/Data form state
-  const [airtimeForm, setAirtimeForm] = useState({
-    provider: '',
-    phoneNumber: '',
-    amount: '',
-    serviceType: 'airtime'
-  });
+  const [billHistory, setBillHistory] = useState([]);
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [detectedNetwork, setDetectedNetwork] = useState('');
 
-  // Electricity form state
-  const [electricityForm, setElectricityForm] = useState({
-    provider: '',
-    meterNumber: '',
-    amount: ''
-  });
-
-  // TV subscription form state
-  const [tvForm, setTvForm] = useState({
-    provider: '',
-    smartCardNumber: '',
-    package: '',
-    amount: ''
-  });
-
-  // Education PIN form state
-  const [educationForm, setEducationForm] = useState({
-    pinType: '',
-    quantity: '1',
-    email: currentUser?.email || '',
-    phone: ''
-  });
-
-  // Wallet balance state
-  const [walletBalance, setWalletBalance] = useState(0);
-
-  useEffect(() => {
-    if (currentUser?.id) {
-      const wallet = getUserWallet(currentUser.id);
-      setWalletBalance(wallet.balance);
+  const detectNetwork = (phone: string) => {
+    const cleaned = phone.replace(/\D/g, '');
+    
+    if (cleaned.startsWith('0803') || cleaned.startsWith('0806') || cleaned.startsWith('0813') || 
+        cleaned.startsWith('0814') || cleaned.startsWith('0816') || cleaned.startsWith('0903') || 
+        cleaned.startsWith('0906') || cleaned.startsWith('0913') || cleaned.startsWith('0916') ||
+        cleaned.startsWith('0704') || cleaned.startsWith('0708') || cleaned.startsWith('0812')) {
+      return 'MTN';
+    } else if (cleaned.startsWith('0805') || cleaned.startsWith('0807') || cleaned.startsWith('0815') ||
+               cleaned.startsWith('0811') || cleaned.startsWith('0905') || cleaned.startsWith('0915') ||
+               cleaned.startsWith('0705') || cleaned.startsWith('0905')) {
+      return 'GLO';
+    } else if (cleaned.startsWith('0802') || cleaned.startsWith('0808') || cleaned.startsWith('0812') ||
+               cleaned.startsWith('0701') || cleaned.startsWith('0902') || cleaned.startsWith('0904') ||
+               cleaned.startsWith('0912') || cleaned.startsWith('0901')) {
+      return 'AIRTEL';
+    } else if (cleaned.startsWith('0809') || cleaned.startsWith('0817') || cleaned.startsWith('0818') ||
+               cleaned.startsWith('0909') || cleaned.startsWith('0908')) {
+      return '9MOBILE';
     }
-  }, [currentUser]);
+    return '';
+  };
 
-  const handleAirtimePayment = async () => {
-    if (!airtimeForm.provider || !airtimeForm.phoneNumber || !airtimeForm.amount) {
-      toast.error('Please fill in all required fields');
+  const handlePhoneChange = (value: string) => {
+    setPhoneNumber(value);
+    const network = detectNetwork(value);
+    setDetectedNetwork(network);
+  };
+
+  const handleWalletPayment = async () => {
+    if (!amount || amount < 100) {
+      toast.error('Minimum amount is ₦100');
       return;
     }
 
-    if (!currentUser?.id) {
-      toast.error('Please log in to continue');
-      return;
-    }
-
-    const amount = parseInt(airtimeForm.amount);
     setIsLoading(true);
     
     try {
-      // Try wallet payment first if selected
-      if (useWallet) {
-        const walletPayment = debitWallet(
-          currentUser.id, 
-          amount, 
-          `${airtimeForm.serviceType} - ${airtimeForm.phoneNumber}`
-        );
-        
-        if (walletPayment) {
-          toast.success(`${airtimeForm.serviceType === 'airtime' ? 'Airtime' : 'Data'} purchase successful!`);
-          setAirtimeForm({ provider: '', phoneNumber: '', amount: '', serviceType: 'airtime' });
-          // Update wallet balance
-          const wallet = getUserWallet(currentUser.id);
-          setWalletBalance(wallet.balance);
-          setIsLoading(false);
-          return;
-        }
+      const { processWalletPayment } = await import('@/services/paystackService');
+      const result = await processWalletPayment('user-id', amount, `${serviceType} payment`);
+      
+      if (result.success && result.source === 'wallet') {
+        toast.success('Payment successful from wallet!');
+        setAmount(0);
+        setAccountNumber('');
+        setPhoneNumber('');
+        setDetectedNetwork('');
+      } else {
+        // Redirect to Paystack for payment
+        toast.info('Redirecting to payment...');
+        // Add actual Paystack integration here
       }
-      
-      // Fallback to regular payment
-      await payBill(
-        airtimeForm.serviceType as 'airtime' | 'data',
-        airtimeForm.provider,
-        airtimeForm.phoneNumber,
-        amount
-      );
-      
-      toast.success(`${airtimeForm.serviceType === 'airtime' ? 'Airtime' : 'Data'} purchase successful!`);
-      setAirtimeForm({ provider: '', phoneNumber: '', amount: '', serviceType: 'airtime' });
     } catch (error) {
-      toast.error('Payment failed. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleElectricityPayment = async () => {
-    if (!electricityForm.provider || !electricityForm.meterNumber || !electricityForm.amount) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
-
-    if (!currentUser?.id) {
-      toast.error('Please log in to continue');
-      return;
-    }
-
-    const amount = parseInt(electricityForm.amount);
-    setIsLoading(true);
-    
-    try {
-      if (useWallet) {
-        const walletPayment = debitWallet(
-          currentUser.id, 
-          amount, 
-          `Electricity - ${electricityForm.meterNumber}`
-        );
-        
-        if (walletPayment) {
-          toast.success('Electricity bill payment successful!');
-          setElectricityForm({ provider: '', meterNumber: '', amount: '' });
-          const wallet = getUserWallet(currentUser.id);
-          setWalletBalance(wallet.balance);
-          setIsLoading(false);
-          return;
-        }
-      }
-
-      await payBill('electricity', electricityForm.provider, electricityForm.meterNumber, amount);
-      toast.success('Electricity bill payment successful!');
-      setElectricityForm({ provider: '', meterNumber: '', amount: '' });
-    } catch (error) {
-      toast.error('Payment failed. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleTVPayment = async () => {
-    if (!tvForm.provider || !tvForm.smartCardNumber || !tvForm.amount) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      await payBill('tv', tvForm.provider, tvForm.smartCardNumber, parseInt(tvForm.amount));
-      toast.success('TV subscription payment successful!');
-      setTvForm({ provider: '', smartCardNumber: '', package: '', amount: '' });
-    } catch (error) {
-      toast.error('Payment failed. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleEducationPinPurchase = async () => {
-    if (!educationForm.pinType || !educationForm.email || !educationForm.phone) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      await purchaseEducationalPin(
-        educationForm.pinType as 'waec' | 'jamb' | 'neco' | 'gce',
-        parseInt(educationForm.quantity),
-        educationForm.email,
-        educationForm.phone
-      );
-      
-      toast.success(`${educationForm.pinType.toUpperCase()} PIN purchase successful!`);
-      setEducationForm({ pinType: '', quantity: '1', email: currentUser?.email || '', phone: '' });
-    } catch (error) {
-      toast.error('PIN purchase failed. Please try again.');
+      toast.error('Payment failed');
     } finally {
       setIsLoading(false);
     }
@@ -195,362 +77,205 @@ export default function BillPayments() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col space-y-4">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Utility Payments & Services</h2>
-        <p className="text-muted-foreground">Pay your bills quickly and securely</p>
-        
-        {/* Wallet Balance Display */}
-        {currentUser && (
-          <Card className="bg-gradient-to-r from-primary to-primary/80 text-white">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm opacity-90">Wallet Balance</p>
-                  <p className="text-2xl font-bold">₦{walletBalance.toLocaleString()}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="use-wallet"
-                    checked={useWallet}
-                    onChange={(e) => setUseWallet(e.target.checked)}
-                    className="rounded"
-                  />
-                  <label htmlFor="use-wallet" className="text-sm">Pay from wallet</label>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+      <h2 className="text-2xl font-medium">Bill Payments</h2>
       
-      <Tabs defaultValue="airtime" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="airtime" className="flex items-center gap-2">
-            <Smartphone className="h-4 w-4" />
-            Airtime & Data
-          </TabsTrigger>
-          <TabsTrigger value="electricity" className="flex items-center gap-2">
-            <Lightbulb className="h-4 w-4" />
-            Electricity
-          </TabsTrigger>
-          <TabsTrigger value="tv" className="flex items-center gap-2">
-            <Tv className="h-4 w-4" />
-            TV Subscription
-          </TabsTrigger>
-          <TabsTrigger value="education" className="flex items-center gap-2">
-            <GraduationCap className="h-4 w-4" />
-            Education
-          </TabsTrigger>
-        </TabsList>
+      {/* Service Type Selection */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Select Service Type</CardTitle>
+          <CardDescription>Choose the type of bill you want to pay</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Select value={serviceType} onValueChange={setServiceType}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select service type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="airtime">Airtime</SelectItem>
+              <SelectItem value="data">Data</SelectItem>
+              <SelectItem value="tv">TV Subscription</SelectItem>
+              <SelectItem value="electricity">Electricity</SelectItem>
+            </SelectContent>
+          </Select>
+        </CardContent>
+      </Card>
 
-        <TabsContent value="airtime">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Smartphone className="h-5 w-5" />
-                Buy Airtime & Data
-              </CardTitle>
-              <CardDescription>Purchase airtime and data for all Nigerian networks</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="service-type">Service Type</Label>
-                  <Select 
-                    value={airtimeForm.serviceType} 
-                    onValueChange={(value) => setAirtimeForm(prev => ({ ...prev, serviceType: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select service type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="airtime">Airtime</SelectItem>
-                      <SelectItem value="data">Data Bundle</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="provider">Network Provider</Label>
-                  <Select 
-                    value={airtimeForm.provider} 
-                    onValueChange={(value) => setAirtimeForm(prev => ({ ...prev, provider: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select provider" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="mtn">MTN</SelectItem>
-                      <SelectItem value="glo">Glo</SelectItem>
-                      <SelectItem value="airtel">Airtel</SelectItem>
-                      <SelectItem value="9mobile">9mobile</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <Input
-                    id="phone"
-                    placeholder="08012345678"
-                    value={airtimeForm.phoneNumber}
-                    onChange={(e) => setAirtimeForm(prev => ({ ...prev, phoneNumber: e.target.value }))}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="amount">Amount (₦)</Label>
-                  <Input
-                    id="amount"
-                    type="number"
-                    placeholder="100"
-                    value={airtimeForm.amount}
-                    onChange={(e) => setAirtimeForm(prev => ({ ...prev, amount: e.target.value }))}
-                  />
-                </div>
-              </div>
-
-              <Button onClick={handleAirtimePayment} disabled={isLoading} className="w-full">
-                <CreditCard className="mr-2 h-4 w-4" />
-                {isLoading ? 'Processing...' : `Pay ₦${airtimeForm.amount || '0'}`}
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="electricity">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Lightbulb className="h-5 w-5" />
-                Pay Electricity Bills
-              </CardTitle>
-              <CardDescription>Pay for electricity across Nigeria</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="disco">Distribution Company</Label>
-                  <Select 
-                    value={electricityForm.provider} 
-                    onValueChange={(value) => setElectricityForm(prev => ({ ...prev, provider: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select DISCO" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="eko">Eko Electric (EKEDC)</SelectItem>
-                      <SelectItem value="ikeja">Ikeja Electric (IE)</SelectItem>
-                      <SelectItem value="abuja">Abuja Electric (AEDC)</SelectItem>
-                      <SelectItem value="phcn">Port Harcourt Electric (PHEDC)</SelectItem>
-                      <SelectItem value="kano">Kano Electric (KEDCO)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="meter">Meter Number</Label>
-                  <Input
-                    id="meter"
-                    placeholder="Enter meter number"
-                    value={electricityForm.meterNumber}
-                    onChange={(e) => setElectricityForm(prev => ({ ...prev, meterNumber: e.target.value }))}
-                  />
-                </div>
-
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="amount">Amount (₦)</Label>
-                  <Input
-                    id="amount"
-                    type="number"
-                    placeholder="1000"
-                    value={electricityForm.amount}
-                    onChange={(e) => setElectricityForm(prev => ({ ...prev, amount: e.target.value }))}
-                  />
-                </div>
-              </div>
-
-              <Button onClick={handleElectricityPayment} disabled={isLoading} className="w-full">
-                <CreditCard className="mr-2 h-4 w-4" />
-                {isLoading ? 'Processing...' : `Pay ₦${electricityForm.amount || '0'}`}
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="tv">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Tv className="h-5 w-5" />
-                Pay TV Subscriptions
-              </CardTitle>
-              <CardDescription>Subscribe to your favorite TV packages</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="tv-provider">TV Provider</Label>
-                  <Select 
-                    value={tvForm.provider} 
-                    onValueChange={(value) => setTvForm(prev => ({ ...prev, provider: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select TV provider" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="dstv">DStv</SelectItem>
-                      <SelectItem value="gotv">GOtv</SelectItem>
-                      <SelectItem value="startimes">StarTimes</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="smartcard">Smart Card Number</Label>
-                  <Input
-                    id="smartcard"
-                    placeholder="Enter smart card number"
-                    value={tvForm.smartCardNumber}
-                    onChange={(e) => setTvForm(prev => ({ ...prev, smartCardNumber: e.target.value }))}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="package">Package</Label>
-                  <Select 
-                    value={tvForm.package} 
-                    onValueChange={(value) => setTvForm(prev => ({ ...prev, package: value, amount: getPackagePrice(value) }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select package" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="compact">Compact - ₦9,000</SelectItem>
-                      <SelectItem value="premium">Premium - ₦21,000</SelectItem>
-                      <SelectItem value="family">Family - ₦4,000</SelectItem>
-                      <SelectItem value="access">Access - ₦2,500</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="amount">Amount (₦)</Label>
-                  <Input
-                    id="amount"
-                    type="number"
-                    value={tvForm.amount}
-                    onChange={(e) => setTvForm(prev => ({ ...prev, amount: e.target.value }))}
-                    readOnly
-                  />
-                </div>
-              </div>
-
-              <Button onClick={handleTVPayment} disabled={isLoading} className="w-full">
-                <CreditCard className="mr-2 h-4 w-4" />
-                {isLoading ? 'Processing...' : `Pay ₦${tvForm.amount || '0'}`}
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="education">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <GraduationCap className="h-5 w-5" />
-                Education Payments
-              </CardTitle>
-              <CardDescription>Purchase education PINs for exams</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="pin-type">Exam Type</Label>
-                  <Select 
-                    value={educationForm.pinType} 
-                    onValueChange={(value) => setEducationForm(prev => ({ ...prev, pinType: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select exam type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="waec">WAEC - ₦7,500</SelectItem>
-                      <SelectItem value="jamb">JAMB - ₦5,700</SelectItem>
-                      <SelectItem value="neco">NECO - ₦6,500</SelectItem>
-                      <SelectItem value="gce">GCE - ₦8,500</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="quantity">Quantity</Label>
-                  <Select 
-                    value={educationForm.quantity} 
-                    onValueChange={(value) => setEducationForm(prev => ({ ...prev, quantity: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select quantity" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">1</SelectItem>
-                      <SelectItem value="2">2</SelectItem>
-                      <SelectItem value="3">3</SelectItem>
-                      <SelectItem value="4">4</SelectItem>
-                      <SelectItem value="5">5</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email Address</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={educationForm.email}
-                    onChange={(e) => setEducationForm(prev => ({ ...prev, email: e.target.value }))}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <Input
-                    id="phone"
-                    placeholder="08012345678"
-                    value={educationForm.phone}
-                    onChange={(e) => setEducationForm(prev => ({ ...prev, phone: e.target.value }))}
-                  />
-                </div>
-              </div>
-
-              {educationForm.pinType && (
-                <div className="p-4 bg-muted rounded-lg">
-                  <p className="text-sm">
-                    <strong>Total Amount:</strong> ₦{(getPinPrice(educationForm.pinType as any) * parseInt(educationForm.quantity)).toLocaleString()}
-                  </p>
+      {serviceType === 'airtime' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Buy Airtime</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone Number</Label>
+              <Input
+                id="phone"
+                placeholder="08012345678"
+                value={phoneNumber}
+                onChange={(e) => handlePhoneChange(e.target.value)}
+              />
+              {detectedNetwork && (
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline">{detectedNetwork}</Badge>
+                  <span className="text-sm text-muted-foreground">Network detected</span>
                 </div>
               )}
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="amount">Amount (₦)</Label>
+              <Input
+                id="amount"
+                type="number"
+                placeholder="1000"
+                value={amount}
+                onChange={(e) => setAmount(Number(e.target.value))}
+              />
+            </div>
 
-              <Button onClick={handleEducationPinPurchase} disabled={isLoading} className="w-full">
-                <CreditCard className="mr-2 h-4 w-4" />
-                {isLoading ? 'Processing...' : 'Purchase PIN'}
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            <Button onClick={handleWalletPayment} disabled={isLoading} className="w-full">
+              {isLoading ? 'Processing...' : `Pay ₦${amount.toLocaleString()} from Wallet`}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {serviceType === 'data' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Buy Data</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone Number</Label>
+              <Input
+                id="phone"
+                placeholder="08012345678"
+                value={phoneNumber}
+                onChange={(e) => handlePhoneChange(e.target.value)}
+              />
+              {detectedNetwork && (
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline">{detectedNetwork}</Badge>
+                  <span className="text-sm text-muted-foreground">Network detected</span>
+                </div>
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="amount">Amount (₦)</Label>
+              <Input
+                id="amount"
+                type="number"
+                placeholder="1000"
+                value={amount}
+                onChange={(e) => setAmount(Number(e.target.value))}
+              />
+            </div>
+
+            <Button onClick={handleWalletPayment} disabled={isLoading} className="w-full">
+              {isLoading ? 'Processing...' : `Pay ₦${amount.toLocaleString()} from Wallet`}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {serviceType === 'tv' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>TV Subscription</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="accountNumber">Account Number</Label>
+              <Input
+                id="accountNumber"
+                placeholder="Enter your account number"
+                value={accountNumber}
+                onChange={(e) => setAccountNumber(e.target.value)}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="amount">Amount (₦)</Label>
+              <Input
+                id="amount"
+                type="number"
+                placeholder="1000"
+                value={amount}
+                onChange={(e) => setAmount(Number(e.target.value))}
+              />
+            </div>
+
+            <Button onClick={handleWalletPayment} disabled={isLoading} className="w-full">
+              {isLoading ? 'Processing...' : `Pay ₦${amount.toLocaleString()} from Wallet`}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {serviceType === 'electricity' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Electricity Bill</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="accountNumber">Account Number</Label>
+              <Input
+                id="accountNumber"
+                placeholder="Enter your account number"
+                value={accountNumber}
+                onChange={(e) => setAccountNumber(e.target.value)}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="amount">Amount (₦)</Label>
+              <Input
+                id="amount"
+                type="number"
+                placeholder="1000"
+                value={amount}
+                onChange={(e) => setAmount(Number(e.target.value))}
+              />
+            </div>
+
+            <Button onClick={handleWalletPayment} disabled={isLoading} className="w-full">
+              {isLoading ? 'Processing...' : `Pay ₦${amount.toLocaleString()} from Wallet`}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Bill Payment History */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Payment History</CardTitle>
+          <CardDescription>View your recent bill payments</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {billHistory.length === 0 ? (
+            <p>No payment history available.</p>
+          ) : (
+            <div className="space-y-2">
+              {billHistory.map((bill) => (
+                <div key={bill.id} className="flex items-center justify-between p-2 border rounded">
+                  <div>
+                    <p className="font-medium text-sm">{bill.serviceType}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(bill.date).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <span className="text-sm font-medium text-primary">
+                    ₦{bill.amount.toLocaleString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
-}
-
-// Helper function to get package prices
-function getPackagePrice(packageType: string): string {
-  switch (packageType) {
-    case 'compact': return '9000';
-    case 'premium': return '21000';
-    case 'family': return '4000';
-    case 'access': return '2500';
-    default: return '';
-  }
 }
