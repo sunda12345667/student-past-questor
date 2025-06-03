@@ -111,9 +111,7 @@ export default function BillPayments() {
           amount,
           metadata: {
             userId: currentUser.id,
-            service: `${serviceType} payment`,
-            phone: phoneNumber,
-            account: accountNumber
+            service: `${serviceType} payment`
           }
         });
 
