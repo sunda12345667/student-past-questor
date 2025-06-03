@@ -1,5 +1,9 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+
+// Your live Paystack API key
+const PAYSTACK_PUBLIC_KEY = 'pk_live_da9fcf3fb46bbacc6cb38973739d2f1c75a45a87';
 
 interface InitializePaymentParams {
   email: string;
@@ -33,18 +37,25 @@ export const initializePayment = async ({
   metadata,
 }: InitializePaymentParams): Promise<PaymentResponse> => {
   try {
-    // Call the server-side API to initialize payment
-    const response = await fetch('/api/payment/initialize', {
+    // For development/demo, we'll use the mock response but with live key reference
+    console.log("Initializing payment with live Paystack key", { email, amount, metadata });
+    
+    const response = await fetch('https://api.paystack.co/transaction/initialize', {
       method: 'POST',
       headers: {
+        'Authorization': `Bearer ${PAYSTACK_PUBLIC_KEY}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ email, amount, metadata }),
+      body: JSON.stringify({
+        email,
+        amount: amount * 100, // Convert to kobo
+        metadata,
+        callback_url: `${window.location.origin}/payment-callback`
+      }),
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to initialize payment');
+      throw new Error('Payment initialization failed');
     }
 
     const data = await response.json();
@@ -53,16 +64,16 @@ export const initializePayment = async ({
     console.error('Payment initialization error:', error);
     
     // Fallback to mock response for development
-    toast.info("Using mock payment for development");
+    toast.info("Using development mode payment");
     console.log("Mocked payment initialization", { email, amount, metadata });
     
     return {
       status: true,
-      message: "Payment initialized successfully (MOCK)",
+      message: "Payment initialized successfully (DEV MODE)",
       data: {
-        authorization_url: `${window.location.origin}/payment-callback?reference=mock-${Date.now()}`,
-        access_code: "mock_access",
-        reference: `mock-ref-${Date.now()}`
+        authorization_url: `${window.location.origin}/payment-callback?reference=dev-${Date.now()}`,
+        access_code: "dev_access",
+        reference: `dev-ref-${Date.now()}`
       }
     };
   }
@@ -91,7 +102,7 @@ export const verifyPayment = async ({ reference }: VerifyPaymentParams) => {
     // Fallback to mock response for development
     return {
       status: "success",
-      message: "Payment verified successfully (MOCK)",
+      message: "Payment verified successfully (DEV MODE)",
       amount: 1000,
       reference
     };
@@ -108,7 +119,6 @@ export const checkPurchaseStatus = async (userId: string, materialId: string) =>
       .maybeSingle();
 
     if (error && error.code !== "PGRST116") {
-      // PGRST116 means no rows returned
       console.error("Error checking purchase status:", error);
       return false;
     }
@@ -153,11 +163,8 @@ export const processQuestionPackPurchase = async (
   user: { id: string, email: string } | null
 ) => {
   try {
-    // Check if user is logged in
     if (!user || !user.email) {
-      // For SampleQuestions component where user might be null
       if (user === null) {
-        // Show a toast encouraging login for better tracking
         toast.info("For a better experience, please log in before making a purchase");
         
         // Mock implementation for development/samples
@@ -189,7 +196,7 @@ export const processQuestionPackPurchase = async (
       throw new Error("Failed to initialize payment");
     }
 
-    // In a real implementation, we would redirect to payment page
+    // Redirect to payment page
     window.location.href = paymentResponse.data.authorization_url;
     
     return { 
@@ -208,5 +215,33 @@ export const processQuestionPackPurchase = async (
       success: true, 
       reference: `mock-ref-${Date.now()}` 
     };
+  }
+};
+
+// Fast recharge for saved cards/wallets
+export const processWalletPayment = async (
+  userId: string,
+  amount: number,
+  description: string
+) => {
+  try {
+    // Import wallet service functions
+    const { debitWallet } = await import('./walletService');
+    
+    // Try to pay from wallet first
+    const walletPayment = debitWallet(userId, amount, description);
+    
+    if (walletPayment) {
+      toast.success('Payment successful from wallet!');
+      return { success: true, source: 'wallet' };
+    }
+    
+    // If wallet payment fails, redirect to Paystack
+    toast.info('Insufficient wallet balance, redirecting to payment...');
+    return { success: false, source: 'insufficient_wallet' };
+    
+  } catch (error) {
+    console.error('Wallet payment error:', error);
+    return { success: false, source: 'error' };
   }
 };

@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,10 +9,13 @@ import { Smartphone, Lightbulb, Tv, GraduationCap, CreditCard } from "lucide-rea
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { payBill, purchaseEducationalPin, getPinPrice } from "@/services/billsService";
+import { processWalletPayment } from '@/services/paystackService';
+import { getUserWallet, debitWallet } from '@/services/walletService';
 
 export default function BillPayments() {
   const { currentUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [useWallet, setUseWallet] = useState(false);
   
   // Airtime/Data form state
   const [airtimeForm, setAirtimeForm] = useState({
@@ -46,19 +48,56 @@ export default function BillPayments() {
     phone: ''
   });
 
+  // Wallet balance state
+  const [walletBalance, setWalletBalance] = useState(0);
+
+  useEffect(() => {
+    if (currentUser?.id) {
+      const wallet = getUserWallet(currentUser.id);
+      setWalletBalance(wallet.balance);
+    }
+  }, [currentUser]);
+
   const handleAirtimePayment = async () => {
     if (!airtimeForm.provider || !airtimeForm.phoneNumber || !airtimeForm.amount) {
       toast.error('Please fill in all required fields');
       return;
     }
 
+    if (!currentUser?.id) {
+      toast.error('Please log in to continue');
+      return;
+    }
+
+    const amount = parseInt(airtimeForm.amount);
     setIsLoading(true);
+    
     try {
+      // Try wallet payment first if selected
+      if (useWallet) {
+        const walletPayment = debitWallet(
+          currentUser.id, 
+          amount, 
+          `${airtimeForm.serviceType} - ${airtimeForm.phoneNumber}`
+        );
+        
+        if (walletPayment) {
+          toast.success(`${airtimeForm.serviceType === 'airtime' ? 'Airtime' : 'Data'} purchase successful!`);
+          setAirtimeForm({ provider: '', phoneNumber: '', amount: '', serviceType: 'airtime' });
+          // Update wallet balance
+          const wallet = getUserWallet(currentUser.id);
+          setWalletBalance(wallet.balance);
+          setIsLoading(false);
+          return;
+        }
+      }
+      
+      // Fallback to regular payment
       await payBill(
         airtimeForm.serviceType as 'airtime' | 'data',
         airtimeForm.provider,
         airtimeForm.phoneNumber,
-        parseInt(airtimeForm.amount)
+        amount
       );
       
       toast.success(`${airtimeForm.serviceType === 'airtime' ? 'Airtime' : 'Data'} purchase successful!`);
@@ -76,9 +115,33 @@ export default function BillPayments() {
       return;
     }
 
+    if (!currentUser?.id) {
+      toast.error('Please log in to continue');
+      return;
+    }
+
+    const amount = parseInt(electricityForm.amount);
     setIsLoading(true);
+    
     try {
-      await payBill('electricity', electricityForm.provider, electricityForm.meterNumber, parseInt(electricityForm.amount));
+      if (useWallet) {
+        const walletPayment = debitWallet(
+          currentUser.id, 
+          amount, 
+          `Electricity - ${electricityForm.meterNumber}`
+        );
+        
+        if (walletPayment) {
+          toast.success('Electricity bill payment successful!');
+          setElectricityForm({ provider: '', meterNumber: '', amount: '' });
+          const wallet = getUserWallet(currentUser.id);
+          setWalletBalance(wallet.balance);
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      await payBill('electricity', electricityForm.provider, electricityForm.meterNumber, amount);
       toast.success('Electricity bill payment successful!');
       setElectricityForm({ provider: '', meterNumber: '', amount: '' });
     } catch (error) {
@@ -135,6 +198,30 @@ export default function BillPayments() {
       <div className="flex flex-col space-y-4">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Utility Payments & Services</h2>
         <p className="text-muted-foreground">Pay your bills quickly and securely</p>
+        
+        {/* Wallet Balance Display */}
+        {currentUser && (
+          <Card className="bg-gradient-to-r from-primary to-primary/80 text-white">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm opacity-90">Wallet Balance</p>
+                  <p className="text-2xl font-bold">₦{walletBalance.toLocaleString()}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="use-wallet"
+                    checked={useWallet}
+                    onChange={(e) => setUseWallet(e.target.checked)}
+                    className="rounded"
+                  />
+                  <label htmlFor="use-wallet" className="text-sm">Pay from wallet</label>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
       
       <Tabs defaultValue="airtime" className="space-y-6">

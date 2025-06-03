@@ -1,76 +1,136 @@
+import { useState } from 'react';
+import {
+  ShoppingBag,
+  Download,
+  Users,
+  Calendar,
+  HelpCircle,
+  MessageCircle,
+  UserPlus,
+  Bell,
+  Trophy,
+  CreditCard,
+  User,
+  Gift,
+  Brain,
+  Wallet,
+} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useSearchParams } from 'react-router-dom';
+import MarketplaceTab from './MarketplaceTab';
+import DownloadsTab from './DownloadsTab';
+import BillPayments from './BillPayments';
+import RewardsTab from './RewardsTab';
+import AcademicAITab from './AcademicAITab';
+import StudyGroupsTab from './StudyGroupsTab';
+import StudySessionsTab from './StudySessionsTab';
+import QuestionsTab from './QuestionsTab';
+import ReferralsTab from './ReferralsTab';
+import NotificationsTab from './NotificationsTab';
+import LeaderboardTab from './LeaderboardTab';
+import PaymentMethods from './PaymentMethods';
+import ProfileTab from './ProfileTab';
+import WalletTab from './WalletTab';
+import WhatsAppSupport from './WhatsAppSupport';
 
-import { SidebarInset } from '@/components/ui/sidebar';
-import { TabContent } from './TabContent';
-import { useState, useEffect } from 'react';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useIsMobile } from '@/hooks/use-mobile';
+type Tab = {
+  id: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+};
 
-interface DashboardContentProps {
-  activeTab: string;
-}
+const tabs: Tab[] = [
+  { id: 'marketplace', label: 'Marketplace', icon: ShoppingBag },
+  { id: 'downloads', label: 'Downloads', icon: Download },
+  { id: 'wallet', label: 'My Wallet', icon: Wallet },
+  { id: 'bills', label: 'Bill Payments', icon: CreditCard },
+  { id: 'rewards', label: 'Rewards', icon: Gift },
+  { id: 'ai', label: 'Academic AI', icon: Brain },
+  { id: 'groups', label: 'Study Groups', icon: Users },
+  { id: 'sessions', label: 'Study Sessions', icon: Calendar },
+  { id: 'questions', label: 'Questions', icon: HelpCircle },
+  { id: 'support', label: 'Support', icon: MessageCircle },
+  { id: 'referrals', label: 'Referrals', icon: UserPlus },
+  { id: 'notifications', label: 'Notifications', icon: Bell },
+  { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
+  { id: 'payment-methods', label: 'Payment Methods', icon: CreditCard },
+  { id: 'profile', label: 'Profile', icon: User },
+];
 
-export const DashboardContent = ({ activeTab }: DashboardContentProps) => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const isMobile = useIsMobile();
-
-  useEffect(() => {
-    // Reset states when tab changes
-    setIsLoading(true);
-    setError(null);
-    
-    // Simulate loading time for tab content
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 600);
-    
-    return () => clearTimeout(timer);
-  }, [activeTab]);
-
-  const handleRetry = () => {
-    setIsLoading(true);
-    setError(null);
-    
-    // Simulate retry attempt
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 800);
-  };
+const DashboardContent = () => {
+  const [searchParams] = useSearchParams();
+  const defaultTab = searchParams.get('tab') || 'marketplace';
+  const [activeTab, setActiveTab] = useState(defaultTab);
 
   return (
-    <SidebarInset className={`px-2 sm:px-4 py-3 sm:py-6 w-full ${isMobile ? 'overflow-x-hidden' : ''}`}>
-      <div className="glass-panel p-4 sm:p-6 rounded-xl">
-        {isLoading ? (
-          <div className="animate-pulse space-y-4" aria-hidden="true">
-            <Skeleton className="h-8 w-1/3 rounded" />
-            <Skeleton className="h-[70vh] w-full rounded" />
-          </div>
-        ) : error ? (
-          <Alert variant="destructive" className="animate-fade-in">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error loading content</AlertTitle>
-            <AlertDescription className="flex flex-col gap-4">
-              <p>{error || "Something went wrong. Please try again."}</p>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="self-start flex items-center gap-2" 
-                onClick={handleRetry}
-              >
-                <RefreshCw className="h-4 w-4" />
-                Try Again
-              </Button>
-            </AlertDescription>
-          </Alert>
-        ) : (
-          <div className="animate-fade-in" role="tabpanel" aria-live="polite">
-            <TabContent activeTab={activeTab} />
-          </div>
-        )}
-      </div>
-    </SidebarInset>
+    <div className="container mx-auto py-10">
+      <Card>
+        <CardHeader>
+          <CardTitle>Dashboard</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue={activeTab} className="space-y-4">
+            <TabsList>
+              {tabs.map((tab) => (
+                <TabsTrigger key={tab.id} value={tab.id} onClick={() => setActiveTab(tab.id)}>
+                  {tab.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            
+            <TabsContent value="marketplace">
+              <MarketplaceTab />
+            </TabsContent>
+            <TabsContent value="downloads">
+              <DownloadsTab />
+            </TabsContent>
+
+            <TabsContent value="wallet">
+              <WalletTab />
+            </TabsContent>
+            <TabsContent value="support">
+              <WhatsAppSupport />
+            </TabsContent>
+            
+            <TabsContent value="bills">
+              <BillPayments />
+            </TabsContent>
+            <TabsContent value="rewards">
+              <RewardsTab />
+            </TabsContent>
+            <TabsContent value="ai">
+              <AcademicAITab />
+            </TabsContent>
+            <TabsContent value="groups">
+              <StudyGroupsTab />
+            </TabsContent>
+            <TabsContent value="sessions">
+              <StudySessionsTab />
+            </TabsContent>
+            <TabsContent value="questions">
+              <QuestionsTab />
+            </TabsContent>
+            <TabsContent value="referrals">
+              <ReferralsTab />
+            </TabsContent>
+            <TabsContent value="notifications">
+              <NotificationsTab />
+            </TabsContent>
+            <TabsContent value="leaderboard">
+              <LeaderboardTab />
+            </TabsContent>
+            <TabsContent value="payment-methods">
+              <PaymentMethods />
+            </TabsContent>
+            <TabsContent value="profile">
+              <ProfileTab />
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
+
+export default DashboardContent;
