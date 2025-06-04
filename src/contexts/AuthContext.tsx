@@ -75,6 +75,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (email: string, password: string) => {
+    // Check if user is already logged in
+    if (currentUser) {
+      throw new Error('User is already logged in');
+    }
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -96,6 +101,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signup = async (name: string, email: string, password: string) => {
+    // Check if user is already logged in
+    if (currentUser) {
+      throw new Error('User is already logged in');
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,

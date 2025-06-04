@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,7 +20,7 @@ export default function Navbar() {
   const handleLogout = async () => {
     try {
       await logout();
-      navigate('/login');
+      navigate('/');
     } catch (error) {
       console.error('Logout failed:', error);
     }
@@ -29,58 +30,66 @@ export default function Navbar() {
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-8">
             <Link to="/" className="text-2xl font-bold text-primary">
               iRapid
             </Link>
+            <div className="hidden md:flex items-center space-x-6">
+              <Link to="/exams" className="text-sm font-medium hover:text-primary transition-colors">
+                Past Questions
+              </Link>
+              <Link to="/blog" className="text-sm font-medium hover:text-primary transition-colors">
+                Blog
+              </Link>
+              <Link to="/about" className="text-sm font-medium hover:text-primary transition-colors">
+                About
+              </Link>
+            </div>
           </div>
-          {currentUser && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage 
-                      src="/placeholder.svg" 
-                      alt={currentUser.email || "User"} 
-                    />
-                    <AvatarFallback>
-                      {currentUser.email?.[0]?.toUpperCase() || "U"}
-                    </AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end" forceMount>
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">
-                      {currentUser.email}
-                    </p>
-                    <p className="text-xs leading-none text-muted-foreground">
-                      {currentUser.email}
-                    </p>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate('/dashboard')}>
-                  Dashboard
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout}>
-                  Log out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-          {!currentUser && (
-            <>
-              <Link to="/login">
-                <Button variant="ghost">Log In</Button>
+          
+          <div className="flex items-center space-x-4">
+            {currentUser ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage 
+                        src="/placeholder.svg" 
+                        alt={currentUser.email || "User"} 
+                      />
+                      <AvatarFallback>
+                        {currentUser.email?.[0]?.toUpperCase() || "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">
+                        {currentUser.name || currentUser.email}
+                      </p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {currentUser.email}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                    Dashboard
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout}>
+                    Log out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link to="/auth">
+                <Button>Get Started</Button>
               </Link>
-              <Link to="/register">
-                <Button>Sign Up</Button>
-              </Link>
-            </>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </nav>
