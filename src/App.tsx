@@ -39,8 +39,8 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
-          <NotificationProvider>
-            <div className="min-h-screen bg-background">
+          <div className="min-h-screen bg-background w-full">
+            <NotificationProvider>
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
@@ -90,17 +90,17 @@ function App() {
                 />
                 <Route path="*" element={<NotFound />} />
               </Routes>
-            </div>
-            <Toaster 
-              position="top-right" 
-              richColors 
-              closeButton
-              toastOptions={{
-                duration: 4000,
-              }}
-            />
-            <UIToaster />
-          </NotificationProvider>
+              <Toaster 
+                position="top-right" 
+                richColors 
+                closeButton
+                toastOptions={{
+                  duration: 4000,
+                }}
+              />
+              <UIToaster />
+            </NotificationProvider>
+          </div>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>

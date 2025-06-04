@@ -1,8 +1,10 @@
+
 import Layout from '@/components/Layout';
 import { Hero } from '@/components/Hero';
 import { Features } from '@/components/Features';
 import { SampleQuestions } from '@/components/SampleQuestions';
 import WhatsAppChatbot from '@/components/WhatsAppChatbot';
+import Newsletter from '@/components/Newsletter';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -38,11 +40,6 @@ const Index = () => {
 
   const handleExploreQuestions = () => {
     navigate('/exams');
-  };
-
-  const handleQuickPurchase = (type: string) => {
-    navigate('/dashboard#bills');
-    toast.success(`Redirecting to ${type} purchase...`);
   };
 
   // Featured blog posts
@@ -83,19 +80,19 @@ const Index = () => {
       <SampleQuestions />
       
       {/* Main Focus Areas */}
-      <section className="py-20 bg-primary/5">
+      <section className="py-12 sm:py-20 bg-primary/5">
         <div className="container mx-auto px-4">
-          <div className="text-center max-w-3xl mx-auto mb-16">
+          <div className="text-center max-w-3xl mx-auto mb-12 sm:mb-16">
             <h2 className="heading-lg mb-4">Our Core Services</h2>
-            <p className="text-lg text-muted-foreground">
+            <p className="text-base sm:text-lg text-muted-foreground">
               Everything you need for academic success in one place
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            <div className="glass-panel rounded-xl p-8 card-hover text-center">
-              <h3 className="text-2xl font-bold mb-4">Past Questions</h3>
-              <p className="text-muted-foreground mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto">
+            <div className="glass-panel rounded-xl p-6 sm:p-8 card-hover text-center">
+              <h3 className="text-xl sm:text-2xl font-bold mb-4">Past Questions</h3>
+              <p className="text-muted-foreground mb-6 text-sm sm:text-base">
                 Comprehensive collection of past questions from WAEC, JAMB, NECO, and more with detailed solutions.
               </p>
               <Button 
@@ -106,9 +103,9 @@ const Index = () => {
               </Button>
             </div>
             
-            <div className="glass-panel rounded-xl p-8 card-hover text-center">
-              <h3 className="text-2xl font-bold mb-4">Video Courses</h3>
-              <p className="text-muted-foreground mb-6">
+            <div className="glass-panel rounded-xl p-6 sm:p-8 card-hover text-center">
+              <h3 className="text-xl sm:text-2xl font-bold mb-4">Video Courses</h3>
+              <p className="text-muted-foreground mb-6 text-sm sm:text-base">
                 High-quality video tutorials and courses from expert instructors covering all subjects.
               </p>
               <Button 
@@ -119,9 +116,9 @@ const Index = () => {
               </Button>
             </div>
             
-            <div className="glass-panel rounded-xl p-8 card-hover text-center">
-              <h3 className="text-2xl font-bold mb-4">Study Blog</h3>
-              <p className="text-muted-foreground mb-6">
+            <div className="glass-panel rounded-xl p-6 sm:p-8 card-hover text-center">
+              <h3 className="text-xl sm:text-2xl font-bold mb-4">Study Blog</h3>
+              <p className="text-muted-foreground mb-6 text-sm sm:text-base">
                 Latest education news, exam tips, and study guides to help you excel in your academic journey.
               </p>
               <Button 
@@ -135,12 +132,21 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Featured Blog Section */}
-      <section className="py-20">
+      {/* Newsletter Section */}
+      <section className="py-12 sm:py-20">
         <div className="container mx-auto px-4">
-          <div className="text-center max-w-3xl mx-auto mb-16">
+          <div className="max-w-2xl mx-auto">
+            <Newsletter />
+          </div>
+        </div>
+      </section>
+
+      {/* Featured Blog Section */}
+      <section className="py-12 sm:py-20 bg-gray-50">
+        <div className="container mx-auto px-4">
+          <div className="text-center max-w-3xl mx-auto mb-12 sm:mb-16">
             <h2 className="heading-lg mb-4">Latest from Our Blog</h2>
-            <p className="text-lg text-muted-foreground">
+            <p className="text-base sm:text-lg text-muted-foreground">
               Stay updated with the latest education news, exam tips, and study guides
             </p>
           </div>
@@ -148,25 +154,25 @@ const Index = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             {featuredBlogPosts.map((post) => (
               <Card key={post.id} className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate('/blog')}>
-                <CardHeader>
+                <CardHeader className="p-4 sm:p-6">
                   <div className="flex items-center justify-between mb-2">
-                    <Badge variant="outline">{post.category}</Badge>
-                    <div className="flex items-center text-muted-foreground text-sm">
-                      <Clock className="h-4 w-4 mr-1" />
+                    <Badge variant="outline" className="text-xs">{post.category}</Badge>
+                    <div className="flex items-center text-muted-foreground text-xs">
+                      <Clock className="h-3 w-3 mr-1" />
                       {post.readTime}
                     </div>
                   </div>
-                  <CardTitle className="text-lg line-clamp-2">{post.title}</CardTitle>
+                  <CardTitle className="text-base sm:text-lg line-clamp-2">{post.title}</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground mb-4 line-clamp-3">{post.excerpt}</p>
-                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <CardContent className="p-4 sm:p-6 pt-0">
+                  <p className="text-muted-foreground mb-4 line-clamp-3 text-sm">{post.excerpt}</p>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <div className="flex items-center">
-                      <User className="h-4 w-4 mr-1" />
+                      <User className="h-3 w-3 mr-1" />
                       {post.author}
                     </div>
                     <div className="flex items-center">
-                      <Calendar className="h-4 w-4 mr-1" />
+                      <Calendar className="h-3 w-3 mr-1" />
                       {new Date(post.date).toLocaleDateString()}
                     </div>
                   </div>
@@ -190,11 +196,11 @@ const Index = () => {
       </section>
       
       {/* CTA Section */}
-      <section className="py-20 bg-primary/5">
+      <section className="py-12 sm:py-20 bg-primary/5">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="heading-lg mb-6">Ready to ace your exams?</h2>
-            <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
+            <p className="text-base sm:text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
               Join thousands of students who are already preparing smarter with iRapid's comprehensive educational resources.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">

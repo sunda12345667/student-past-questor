@@ -42,13 +42,13 @@ export default function WhatsAppChatbot() {
     <>
       {/* Chat Widget */}
       {isOpen && (
-        <Card className="fixed bottom-24 right-6 w-80 z-50 shadow-lg border">
+        <Card className="fixed bottom-20 sm:bottom-24 right-4 sm:right-6 w-72 sm:w-80 z-50 shadow-lg border">
           <CardContent className="p-0">
-            <div className="bg-green-500 text-white p-4 rounded-t-lg flex items-center justify-between">
+            <div className="bg-green-500 text-white p-3 sm:p-4 rounded-t-lg flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <MessageCircle className="h-5 w-5" />
+                <MessageCircle className="h-4 w-4 sm:h-5 sm:w-5" />
                 <div>
-                  <h3 className="font-medium">Chat with us</h3>
+                  <h3 className="font-medium text-sm sm:text-base">Chat with us</h3>
                   <p className="text-xs opacity-90">We're online now</p>
                 </div>
               </div>
@@ -56,14 +56,14 @@ export default function WhatsAppChatbot() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsOpen(false)}
-                className="text-white hover:bg-green-600 h-8 w-8 p-0"
+                className="text-white hover:bg-green-600 h-6 w-6 sm:h-8 sm:w-8 p-0"
               >
-                <X className="h-4 w-4" />
+                <X className="h-3 w-3 sm:h-4 sm:w-4" />
               </Button>
             </div>
             
-            <div className="p-4 space-y-3">
-              <p className="text-sm text-gray-600 mb-3">
+            <div className="p-3 sm:p-4 space-y-3">
+              <p className="text-xs sm:text-sm text-gray-600 mb-3">
                 Hi! How can we help you today? Choose a quick option or start a custom chat.
               </p>
               
@@ -74,7 +74,7 @@ export default function WhatsAppChatbot() {
                     variant="outline"
                     size="sm"
                     onClick={() => handleQuickMessage(message)}
-                    className="w-full text-left justify-start h-auto p-2 text-xs"
+                    className="w-full text-left justify-start h-auto p-2 text-xs leading-tight"
                   >
                     {message}
                   </Button>
@@ -83,10 +83,10 @@ export default function WhatsAppChatbot() {
               
               <Button
                 onClick={handleCustomChat}
-                className="w-full bg-green-500 hover:bg-green-600"
+                className="w-full bg-green-500 hover:bg-green-600 text-sm"
                 size="sm"
               >
-                <Send className="h-4 w-4 mr-2" />
+                <Send className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                 Start Custom Chat
               </Button>
               
@@ -101,13 +101,13 @@ export default function WhatsAppChatbot() {
       {/* Chat Button */}
       <Button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-green-500 hover:bg-green-600 shadow-lg z-40"
+        className="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 h-12 w-12 sm:h-14 sm:w-14 rounded-full bg-green-500 hover:bg-green-600 shadow-lg z-40"
         size="icon"
       >
         {isOpen ? (
-          <X className="h-6 w-6 text-white" />
+          <X className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
         ) : (
-          <MessageCircle className="h-6 w-6 text-white" />
+          <MessageCircle className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
         )}
       </Button>
     </>

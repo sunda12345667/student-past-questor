@@ -35,14 +35,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (!mounted) return;
+        
         console.log('Auth state changed:', event, session?.user?.email);
         setSession(session);
         
         if (session?.user) {
-          // Convert Supabase user to our User type
           const userData: User = {
             id: session.user.id,
             email: session.user.email || '',
@@ -58,92 +61,124 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
 
     // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        const userData: User = {
-          id: session.user.id,
-          email: session.user.email || '',
-          name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
-          role: session.user.user_metadata?.role || 'user'
-        };
-        setCurrentUser(userData);
+    const getInitialSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Error getting session:', error);
+          return;
+        }
+        
+        if (session?.user && mounted) {
+          const userData: User = {
+            id: session.user.id,
+            email: session.user.email || '',
+            name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+            role: session.user.user_metadata?.role || 'user'
+          };
+          setCurrentUser(userData);
+          setSession(session);
+        }
+      } catch (error) {
+        console.error('Session check error:', error);
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
-      setIsLoading(false);
-    });
+    };
 
-    return () => subscription.unsubscribe();
+    getInitialSession();
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) {
-      console.error('Login error:', error);
+      if (error) {
+        console.error('Login error:', error);
+        throw error;
+      }
+
+      if (data.user && data.session) {
+        const userData: User = {
+          id: data.user.id,
+          email: data.user.email || '',
+          name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'User',
+          role: data.user.user_metadata?.role || 'user'
+        };
+        setCurrentUser(userData);
+        setSession(data.session);
+      }
+    } catch (error) {
+      console.error('Login failed:', error);
       throw error;
-    }
-
-    if (data.user) {
-      const userData: User = {
-        id: data.user.id,
-        email: data.user.email || '',
-        name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'User',
-        role: data.user.user_metadata?.role || 'user'
-      };
-      setCurrentUser(userData);
     }
   };
 
   const signup = async (name: string, email: string, password: string) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          name,
-          role: 'user'
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+            role: 'user'
+          },
+          emailRedirectTo: `${window.location.origin}/dashboard`
         },
-        emailRedirectTo: `${window.location.origin}/dashboard`
-      },
-    });
+      });
 
-    if (error) {
-      console.error('Signup error:', error);
-      throw error;
-    }
+      if (error) {
+        console.error('Signup error:', error);
+        throw error;
+      }
 
-    if (data.user) {
-      const userData: User = {
-        id: data.user.id,
-        email: data.user.email || '',
-        name: name,
-        role: 'user'
-      };
-      setCurrentUser(userData);
-      
-      // For testing purposes, immediately sign in the user after signup
-      if (data.session) {
+      // For immediate login after signup (if email confirmation is disabled)
+      if (data.user && data.session) {
+        const userData: User = {
+          id: data.user.id,
+          email: data.user.email || '',
+          name: name,
+          role: 'user'
+        };
+        setCurrentUser(userData);
         setSession(data.session);
       }
+    } catch (error) {
+      console.error('Signup failed:', error);
+      throw error;
     }
   };
 
   const logout = async () => {
-    // Clear admin authentication when logging out
-    localStorage.removeItem('adminAuthenticated');
-    
-    const { error } = await supabase.auth.signOut();
-    if (error) {
+    try {
+      // Clear admin authentication when logging out
+      localStorage.removeItem('adminAuthenticated');
+      
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        throw error;
+      }
+      
+      setCurrentUser(null);
+      setSession(null);
+    } catch (error) {
+      console.error('Logout failed:', error);
       throw error;
     }
-    setCurrentUser(null);
-    setSession(null);
   };
 
   const isAdmin = () => {
-    // Check both user role and localStorage for admin authentication
     const isAdminUser = currentUser?.role === 'admin' || currentUser?.email === 'irapidbusiness@gmail.com';
     const hasAdminAuth = localStorage.getItem('adminAuthenticated') === 'true';
     return isAdminUser || hasAdminAuth;
