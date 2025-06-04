@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -74,8 +73,8 @@ const MaterialUpload = () => {
   };
 
   const handleAddMaterial = () => {
-    if (!newMaterial.title || !newMaterial.examType || !newMaterial.subject || !newMaterial.file) {
-      toast.error('Please fill in all required fields and select a file');
+    if (!newMaterial.title || !newMaterial.examType || !newMaterial.subject || !newMaterial.file || newMaterial.price <= 0) {
+      toast.error('Please fill in all required fields including price and select a file');
       return;
     }
 
@@ -118,19 +117,26 @@ const MaterialUpload = () => {
       author: '',
       lessons: 0
     });
+
+    toast.success(`${materialData.title} uploaded successfully with price ₦${materialData.price.toLocaleString()}`);
   };
 
   const handleUpdateMaterial = () => {
-    if (!editingMaterial) return;
+    if (!editingMaterial || editingMaterial.price <= 0) {
+      toast.error('Please ensure all fields are filled and price is greater than 0');
+      return;
+    }
 
     updateMaterial(editingMaterial.id, editingMaterial);
     setMaterials(getAllMaterials());
     setEditingMaterial(null);
+    toast.success('Material updated successfully');
   };
 
   const handleDeleteMaterial = (id: string) => {
     deleteMaterial(id);
     setMaterials(getAllMaterials());
+    toast.success('Material deleted successfully');
   };
 
   const getTypeIcon = (type: string) => {
@@ -167,13 +173,13 @@ const MaterialUpload = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" />
-            {editingMaterial ? 'Edit Material' : 'Upload New Material'}
+            {editingMaterial ? 'Edit Material' : 'Upload New Educational Material'}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
-              placeholder="Material title"
+              placeholder="Material title *"
               value={editingMaterial ? editingMaterial.title : newMaterial.title}
               onChange={(e) => 
                 editingMaterial 
@@ -191,7 +197,7 @@ const MaterialUpload = () => {
               }
             >
               <SelectTrigger>
-                <SelectValue placeholder="Material type" />
+                <SelectValue placeholder="Material type *" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="past-question">Past Questions</SelectItem>
@@ -201,7 +207,7 @@ const MaterialUpload = () => {
             </Select>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Select 
               value={editingMaterial ? editingMaterial.examType : newMaterial.examType}
               onValueChange={(value) => 
@@ -211,7 +217,7 @@ const MaterialUpload = () => {
               }
             >
               <SelectTrigger>
-                <SelectValue placeholder="Exam type" />
+                <SelectValue placeholder="Exam type *" />
               </SelectTrigger>
               <SelectContent>
                 {examTypes.map((type) => (
@@ -229,7 +235,7 @@ const MaterialUpload = () => {
               }
             >
               <SelectTrigger>
-                <SelectValue placeholder="Subject" />
+                <SelectValue placeholder="Subject *" />
               </SelectTrigger>
               <SelectContent>
                 {subjects.map((subject) => (
@@ -240,7 +246,8 @@ const MaterialUpload = () => {
 
             <Input
               type="number"
-              placeholder="Price (₦)"
+              placeholder="Price (₦) *"
+              min="1"
               value={editingMaterial ? editingMaterial.price : newMaterial.price}
               onChange={(e) => 
                 editingMaterial 
@@ -248,6 +255,24 @@ const MaterialUpload = () => {
                   : setNewMaterial({ ...newMaterial, price: parseInt(e.target.value) || 0 })
               }
             />
+
+            <Select 
+              value={editingMaterial ? editingMaterial.status : newMaterial.status}
+              onValueChange={(value: 'active' | 'draft' | 'archived') => 
+                editingMaterial 
+                  ? setEditingMaterial({ ...editingMaterial, status: value })
+                  : setNewMaterial({ ...newMaterial, status: value })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="archived">Archived</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Conditional fields based on material type */}
@@ -255,7 +280,7 @@ const MaterialUpload = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
                 type="number"
-                placeholder="Year"
+                placeholder="Year *"
                 value={editingMaterial ? editingMaterial.year || '' : newMaterial.year}
                 onChange={(e) => 
                   editingMaterial 
@@ -279,7 +304,7 @@ const MaterialUpload = () => {
           {(editingMaterial?.type === 'video' || newMaterial.type === 'video') && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Input
-                placeholder="Duration (e.g., 4:30:00)"
+                placeholder="Duration (e.g., 4:30:00) *"
                 value={editingMaterial ? editingMaterial.duration || '' : newMaterial.duration}
                 onChange={(e) => 
                   editingMaterial 
@@ -288,7 +313,7 @@ const MaterialUpload = () => {
                 }
               />
               <Input
-                placeholder="Instructor name"
+                placeholder="Instructor name *"
                 value={editingMaterial ? editingMaterial.instructor || '' : newMaterial.instructor}
                 onChange={(e) => 
                   editingMaterial 
@@ -312,7 +337,7 @@ const MaterialUpload = () => {
           {(editingMaterial?.type === 'ebook' || newMaterial.type === 'ebook') && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
-                placeholder="Author name"
+                placeholder="Author name *"
                 value={editingMaterial ? editingMaterial.author || '' : newMaterial.author}
                 onChange={(e) => 
                   editingMaterial 
@@ -334,7 +359,7 @@ const MaterialUpload = () => {
           )}
 
           <Textarea
-            placeholder="Description"
+            placeholder="Description *"
             value={editingMaterial ? editingMaterial.description : newMaterial.description}
             onChange={(e) => 
               editingMaterial 
@@ -346,7 +371,7 @@ const MaterialUpload = () => {
 
           {!editingMaterial && (
             <div>
-              <label className="block text-sm font-medium mb-2">Upload File</label>
+              <label className="block text-sm font-medium mb-2">Upload File *</label>
               <FileInput
                 accept={newMaterial.type === 'video' ? 'video/*' : '.pdf,.doc,.docx'}
                 onFileChange={handleFileUpload}
@@ -378,6 +403,14 @@ const MaterialUpload = () => {
               </Button>
             )}
           </div>
+
+          <div className="text-xs text-muted-foreground bg-primary/5 p-3 rounded-md">
+            <p className="font-medium mb-1">Required fields are marked with *</p>
+            <p>• Price must be greater than ₦0</p>
+            <p>• Past Questions: Year and pages are recommended</p>
+            <p>• Video Courses: Duration and instructor are required</p>
+            <p>• E-Books: Author and pages are recommended</p>
+          </div>
         </CardContent>
       </Card>
 
@@ -400,6 +433,9 @@ const MaterialUpload = () => {
                       <Badge variant="outline">{material.examType}</Badge>
                       <Badge variant="secondary">{material.subject}</Badge>
                       {material.year && <Badge variant="outline">{material.year}</Badge>}
+                      <Badge variant={material.status === 'active' ? 'default' : 'secondary'}>
+                        {material.status}
+                      </Badge>
                       {material.rating && (
                         <div className="flex items-center gap-1">
                           <Star className="h-4 w-4 fill-current text-yellow-500" />
@@ -413,7 +449,7 @@ const MaterialUpload = () => {
                     
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-muted-foreground">
                       <div>
-                        <span className="font-medium">Price:</span> ₦{material.price.toLocaleString()}
+                        <span className="font-medium text-primary text-lg">Price:</span> ₦{material.price.toLocaleString()}
                       </div>
                       <div>
                         <span className="font-medium">File:</span> {material.fileName}
@@ -452,12 +488,6 @@ const MaterialUpload = () => {
                       <div>
                         <span className="font-medium">Uploaded:</span> {material.uploadDate}
                       </div>
-                      <div>
-                        <span className="font-medium">Status:</span> 
-                        <Badge variant={material.status === 'active' ? 'default' : 'secondary'} className="ml-1">
-                          {material.status}
-                        </Badge>
-                      </div>
                     </div>
                   </div>
                   
@@ -488,7 +518,7 @@ const MaterialUpload = () => {
               <div className="text-center py-12">
                 <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                 <h3 className="text-xl font-medium mb-2">No materials uploaded yet</h3>
-                <p className="text-muted-foreground">Upload your first material to get started</p>
+                <p className="text-muted-foreground">Upload your first educational material to get started</p>
               </div>
             )}
           </div>

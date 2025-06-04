@@ -4,7 +4,9 @@ import { Hero } from '@/components/Hero';
 import { Features } from '@/components/Features';
 import { SampleQuestions } from '@/components/SampleQuestions';
 import { Button } from '@/components/ui/button';
-import { ArrowUp } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { ArrowUp, Calendar, Clock, User, ArrowRight } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -43,122 +45,146 @@ const Index = () => {
     toast.success(`Redirecting to ${type} purchase...`);
   };
 
+  // Featured blog posts
+  const featuredBlogPosts = [
+    {
+      id: 1,
+      title: 'How to Prepare for WAEC 2024: Complete Study Guide',
+      excerpt: 'A comprehensive guide to help students prepare effectively for the West African Examinations Council (WAEC) examinations.',
+      author: 'StudyQuest Team',
+      date: '2024-05-20',
+      readTime: '8 min read',
+      category: 'WAEC'
+    },
+    {
+      id: 2,
+      title: 'JAMB 2024 Registration: Everything You Need to Know',
+      excerpt: 'Latest updates and step-by-step guide for JAMB UTME registration process.',
+      author: 'Education Team',
+      date: '2024-05-18',
+      readTime: '6 min read',
+      category: 'JAMB'
+    },
+    {
+      id: 3,
+      title: 'Study Tips: How to Master Mathematics for Secondary School Exams',
+      excerpt: 'Proven strategies and techniques to excel in mathematics examinations.',
+      author: 'Mathematics Expert',
+      date: '2024-05-12',
+      readTime: '10 min read',
+      category: 'Study Tips'
+    }
+  ];
+
   return (
     <Layout>
       <Hero />
       <Features />
       <SampleQuestions />
       
-      {/* Quick Purchase Section */}
+      {/* Main Focus Areas */}
       <section className="py-20 bg-primary/5">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="heading-lg mb-4">Quick Purchases</h2>
+            <h2 className="heading-lg mb-4">Our Core Services</h2>
             <p className="text-lg text-muted-foreground">
-              Get what you need instantly - Airtime, Data, and Education PINs
+              Everything you need for academic success in one place
             </p>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-4xl mx-auto">
-            <div className="glass-panel rounded-xl p-6 card-hover text-center">
-              <h3 className="text-xl font-medium mb-4">Airtime & Data</h3>
-              <p className="text-muted-foreground mb-4">
-                Buy airtime and data for all Nigerian networks instantly
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            <div className="glass-panel rounded-xl p-8 card-hover text-center">
+              <h3 className="text-2xl font-bold mb-4">Past Questions</h3>
+              <p className="text-muted-foreground mb-6">
+                Comprehensive collection of past questions from WAEC, JAMB, NECO, and more with detailed solutions.
               </p>
               <Button 
                 className="w-full"
-                onClick={() => handleQuickPurchase('Airtime')}
+                onClick={handleExploreQuestions}
               >
-                Buy Now
+                Browse Past Questions
               </Button>
             </div>
             
-            <div className="glass-panel rounded-xl p-6 card-hover text-center">
-              <h3 className="text-xl font-medium mb-4">WAEC PIN</h3>
-              <p className="text-muted-foreground mb-4">
-                Purchase WAEC examination PIN cards quickly
+            <div className="glass-panel rounded-xl p-8 card-hover text-center">
+              <h3 className="text-2xl font-bold mb-4">Video Courses</h3>
+              <p className="text-muted-foreground mb-6">
+                High-quality video tutorials and courses from expert instructors covering all subjects.
               </p>
               <Button 
                 className="w-full"
-                onClick={() => handleQuickPurchase('WAEC')}
+                onClick={() => navigate('/dashboard#marketplace')}
               >
-                Buy WAEC PIN
+                Watch Video Courses
               </Button>
             </div>
             
-            <div className="glass-panel rounded-xl p-6 card-hover text-center">
-              <h3 className="text-xl font-medium mb-4">NECO PIN</h3>
-              <p className="text-muted-foreground mb-4">
-                Get your NECO examination PIN instantly
+            <div className="glass-panel rounded-xl p-8 card-hover text-center">
+              <h3 className="text-2xl font-bold mb-4">Study Blog</h3>
+              <p className="text-muted-foreground mb-6">
+                Latest education news, exam tips, and study guides to help you excel in your academic journey.
               </p>
               <Button 
                 className="w-full"
-                onClick={() => handleQuickPurchase('NECO')}
+                onClick={() => navigate('/blog')}
               >
-                Buy NECO PIN
-              </Button>
-            </div>
-            
-            <div className="glass-panel rounded-xl p-6 card-hover text-center">
-              <h3 className="text-xl font-medium mb-4">GCE PIN</h3>
-              <p className="text-muted-foreground mb-4">
-                Purchase GCE examination PIN cards
-              </p>
-              <Button 
-                className="w-full"
-                onClick={() => handleQuickPurchase('GCE')}
-              >
-                Buy GCE PIN
+                Read Study Tips
               </Button>
             </div>
           </div>
         </div>
       </section>
-      
-      {/* Marketplace Features Section */}
+
+      {/* Featured Blog Section */}
       <section className="py-20">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="heading-lg mb-4">Your Complete Study Marketplace</h2>
+            <h2 className="heading-lg mb-4">Latest from Our Blog</h2>
             <p className="text-lg text-muted-foreground">
-              Access thousands of past questions and study materials from trusted sources.
+              Stay updated with the latest education news, exam tips, and study guides
             </p>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              {
-                title: "Past Questions Library",
-                description: "Comprehensive collection of past questions from WAEC, JAMB, NECO, and more.",
-                action: "Browse Questions"
-              },
-              {
-                title: "Study Materials",
-                description: "High-quality textbooks, guides, and reference materials for all subjects.",
-                action: "View Materials"
-              },
-              {
-                title: "Instant Downloads",
-                description: "Get immediate access to your purchased materials with secure downloads.",
-                action: "Start Shopping"
-              }
-            ].map((feature, index) => (
-              <div 
-                key={index}
-                className="glass-panel rounded-xl p-6 card-hover text-center"
-              >
-                <h3 className="text-xl font-medium mb-4">{feature.title}</h3>
-                <p className="text-muted-foreground mb-4">
-                  {feature.description}
-                </p>
-                <Button 
-                  variant="outline"
-                  onClick={handleExploreQuestions}
-                >
-                  {feature.action}
-                </Button>
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            {featuredBlogPosts.map((post) => (
+              <Card key={post.id} className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate('/blog')}>
+                <CardHeader>
+                  <div className="flex items-center justify-between mb-2">
+                    <Badge variant="outline">{post.category}</Badge>
+                    <div className="flex items-center text-muted-foreground text-sm">
+                      <Clock className="h-4 w-4 mr-1" />
+                      {post.readTime}
+                    </div>
+                  </div>
+                  <CardTitle className="text-lg line-clamp-2">{post.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground mb-4 line-clamp-3">{post.excerpt}</p>
+                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                    <div className="flex items-center">
+                      <User className="h-4 w-4 mr-1" />
+                      {post.author}
+                    </div>
+                    <div className="flex items-center">
+                      <Calendar className="h-4 w-4 mr-1" />
+                      {new Date(post.date).toLocaleDateString()}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
+          </div>
+          
+          <div className="text-center">
+            <Button 
+              variant="outline" 
+              size="lg"
+              onClick={() => navigate('/blog')}
+              className="inline-flex items-center gap-2"
+            >
+              View All Articles
+              <ArrowRight className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </section>
@@ -169,7 +195,7 @@ const Index = () => {
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="heading-lg mb-6">Ready to ace your exams?</h2>
             <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Join thousands of students who are already preparing smarter with iRapid's comprehensive past question marketplace.
+              Join thousands of students who are already preparing smarter with iRapid's comprehensive educational resources.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
               <Button 
@@ -177,7 +203,7 @@ const Index = () => {
                 className="w-full sm:w-auto"
                 onClick={handleSignUpFree}
               >
-                Sign up for free
+                Get Started Free
               </Button>
               <Button 
                 size="lg" 
@@ -185,7 +211,7 @@ const Index = () => {
                 className="w-full sm:w-auto"
                 onClick={handleExploreQuestions}
               >
-                Explore questions
+                Explore Resources
               </Button>
             </div>
           </div>
