@@ -1,133 +1,68 @@
 
-import { useState } from 'react';
-import {
-  ShoppingBag,
-  Download,
-  Users,
-  Calendar,
-  HelpCircle,
-  MessageCircle,
-  UserPlus,
-  Bell,
-  Trophy,
-  CreditCard,
-  User,
-  Gift,
-  Brain,
-  Wallet,
-} from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useSearchParams } from 'react-router-dom';
-import MarketplaceTab from './MarketplaceTab';
-import DownloadsTab from './DownloadsTab';
-import BillPayments from './BillPayments';
-import RewardsTab from './RewardsTab';
-import AcademicAITab from './AcademicAITab';
-import StudyGroupsTab from './StudyGroupsTab';
-import StudySessionsTab from './StudySessionsTab';
-import { QuestionsTab } from './QuestionsTab';
-import ReferralsTab from './ReferralsTab';
-import { NotificationsTab } from './NotificationsTab';
-import LeaderboardTab from './LeaderboardTab';
-import PaymentMethods from './PaymentMethods';
-import ProfileTab from './ProfileTab';
-import WalletTab from './WalletTab';
-import WhatsAppSupport from './WhatsAppSupport';
-
-type Tab = {
-  id: string;
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-};
-
-const tabs: Tab[] = [
-  { id: 'marketplace', label: 'Marketplace', icon: ShoppingBag },
-  { id: 'downloads', label: 'Downloads', icon: Download },
-  { id: 'wallet', label: 'My Wallet', icon: Wallet },
-  { id: 'bills', label: 'Bill Payments', icon: CreditCard },
-  { id: 'rewards', label: 'Rewards', icon: Gift },
-  { id: 'ai', label: 'Academic AI', icon: Brain },
-  { id: 'groups', label: 'Study Groups', icon: Users },
-  { id: 'sessions', label: 'Study Sessions', icon: Calendar },
-  { id: 'questions', label: 'Questions', icon: HelpCircle },
-  { id: 'support', label: 'Support', icon: MessageCircle },
-  { id: 'referrals', label: 'Referrals', icon: UserPlus },
-  { id: 'notifications', label: 'Notifications', icon: Bell },
-  { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
-  { id: 'payment-methods', label: 'Payment Methods', icon: CreditCard },
-  { id: 'profile', label: 'Profile', icon: User },
-];
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { BookOpen, Video, FileText, User, Star, Download } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 const DashboardContent = () => {
-  const [searchParams] = useSearchParams();
-  const defaultTab = searchParams.get('tab') || 'marketplace';
-  const [activeTab, setActiveTab] = useState(defaultTab);
+  const { currentUser } = useAuth();
+
+  const stats = [
+    { title: 'Past Questions', value: '24', icon: FileText, color: 'text-blue-600' },
+    { title: 'Video Courses', value: '8', icon: Video, color: 'text-green-600' },
+    { title: 'E-Books', value: '12', icon: BookOpen, color: 'text-purple-600' },
+    { title: 'Downloads', value: '156', icon: Download, color: 'text-orange-600' },
+  ];
 
   return (
-    <div className="container mx-auto py-10">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Welcome back, {currentUser?.name}!</h1>
+          <p className="text-muted-foreground">Continue your learning journey</p>
+        </div>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {stats.map((stat, index) => (
+          <Card key={index}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
+              <stat.icon className={`h-4 w-4 ${stat.color}`} />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stat.value}</div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Recent Activity */}
       <Card>
         <CardHeader>
-          <CardTitle>iRapid Dashboard</CardTitle>
+          <CardTitle>Recent Activity</CardTitle>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue={activeTab} className="space-y-4">
-            <TabsList>
-              {tabs.map((tab) => (
-                <TabsTrigger key={tab.id} value={tab.id} onClick={() => setActiveTab(tab.id)}>
-                  {tab.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            
-            <TabsContent value="marketplace">
-              <MarketplaceTab />
-            </TabsContent>
-            <TabsContent value="downloads">
-              <DownloadsTab />
-            </TabsContent>
-
-            <TabsContent value="wallet">
-              <WalletTab />
-            </TabsContent>
-            <TabsContent value="support">
-              <WhatsAppSupport />
-            </TabsContent>
-            
-            <TabsContent value="bills">
-              <BillPayments />
-            </TabsContent>
-            <TabsContent value="rewards">
-              <RewardsTab />
-            </TabsContent>
-            <TabsContent value="ai">
-              <AcademicAITab />
-            </TabsContent>
-            <TabsContent value="groups">
-              <StudyGroupsTab />
-            </TabsContent>
-            <TabsContent value="sessions">
-              <StudySessionsTab />
-            </TabsContent>
-            <TabsContent value="questions">
-              <QuestionsTab />
-            </TabsContent>
-            <TabsContent value="referrals">
-              <ReferralsTab />
-            </TabsContent>
-            <TabsContent value="notifications">
-              <NotificationsTab />
-            </TabsContent>
-            <TabsContent value="leaderboard">
-              <LeaderboardTab />
-            </TabsContent>
-            <TabsContent value="payment-methods">
-              <PaymentMethods />
-            </TabsContent>
-            <TabsContent value="profile">
-              <ProfileTab />
-            </TabsContent>
-          </Tabs>
+          <div className="space-y-4">
+            {[
+              { title: 'WAEC Mathematics 2023', type: 'Past Question', date: '2 hours ago' },
+              { title: 'Physics Video Course', type: 'Video', date: '1 day ago' },
+              { title: 'Chemistry E-Book', type: 'E-Book', date: '3 days ago' },
+            ].map((item, index) => (
+              <div key={index} className="flex items-center space-x-4">
+                <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                  {item.type === 'Past Question' && <FileText className="h-5 w-5 text-primary" />}
+                  {item.type === 'Video' && <Video className="h-5 w-5 text-primary" />}
+                  {item.type === 'E-Book' && <BookOpen className="h-5 w-5 text-primary" />}
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium">{item.title}</p>
+                  <p className="text-sm text-muted-foreground">{item.type} • {item.date}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
     </div>

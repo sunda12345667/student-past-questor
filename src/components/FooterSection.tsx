@@ -3,15 +3,22 @@ import { useState } from 'react';
 import { Facebook, Instagram, Twitter, Youtube, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import AdminLogin from '@/components/AdminLogin';
 
 export function FooterSection() {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const [showAdminLogin, setShowAdminLogin] = useState(false);
 
   const handleAdminSuccess = () => {
     navigate('/admin');
   };
+
+  // Don't show footer if user is logged in
+  if (currentUser) {
+    return null;
+  }
 
   return (
     <>
@@ -23,7 +30,7 @@ export function FooterSection() {
                 <span className="text-primary">iRapid</span>
               </div>
               <p className="text-muted-foreground mb-4">
-                Empowering Nigerians with fast, secure bill payments, airtime top-ups, and quality educational resources.
+                Empowering students with quality educational resources, past questions, and video courses for exam success.
               </p>
               <div className="flex space-x-4">
                 <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
@@ -42,26 +49,26 @@ export function FooterSection() {
             </div>
             
             <div className="col-span-1">
-              <h3 className="font-medium text-lg mb-4">Services</h3>
+              <h3 className="font-medium text-lg mb-4">Educational Resources</h3>
               <ul className="space-y-3">
                 <li>
-                  <a href="/dashboard#bills" className="text-muted-foreground hover:text-primary transition-colors">
-                    Bill Payments
+                  <a href="/exams" className="text-muted-foreground hover:text-primary transition-colors">
+                    Past Questions
                   </a>
                 </li>
                 <li>
-                  <a href="/dashboard#bills" className="text-muted-foreground hover:text-primary transition-colors">
-                    Airtime & Data
+                  <a href="/exams" className="text-muted-foreground hover:text-primary transition-colors">
+                    Video Courses
                   </a>
                 </li>
                 <li>
-                  <a href="/dashboard#marketplace" className="text-muted-foreground hover:text-primary transition-colors">
-                    Study Materials
+                  <a href="/exams" className="text-muted-foreground hover:text-primary transition-colors">
+                    E-Books
                   </a>
                 </li>
                 <li>
-                  <a href="/dashboard#wallet" className="text-muted-foreground hover:text-primary transition-colors">
-                    Wallet Services
+                  <a href="/blog" className="text-muted-foreground hover:text-primary transition-colors">
+                    Study Blog
                   </a>
                 </li>
               </ul>
@@ -96,7 +103,7 @@ export function FooterSection() {
             <div className="col-span-1">
               <h3 className="font-medium text-lg mb-4">Stay Updated</h3>
               <p className="text-muted-foreground mb-4">
-                Subscribe to our newsletter for the latest updates and offers.
+                Subscribe to our newsletter for the latest updates and study tips.
               </p>
               <div className="flex flex-col sm:flex-row gap-2 mb-6">
                 <input 

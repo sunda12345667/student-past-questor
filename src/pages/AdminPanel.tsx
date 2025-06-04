@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
-import { Navigate } from 'react-router-dom';
 import { Upload, Users, BarChart3, Settings, FileText } from 'lucide-react';
 import MaterialUpload from '@/components/admin/MaterialUpload';
 import BlogManagement from '@/components/admin/BlogManagement';
@@ -15,7 +14,7 @@ const AdminPanel = () => {
 
   // Check if user has admin access
   if (!isAdmin() && !isAuthenticated) {
-    return <AdminLogin onLogin={() => setIsAuthenticated(true)} />;
+    return <AdminLogin onSuccess={() => setIsAuthenticated(true)} />;
   }
 
   return (
@@ -27,26 +26,18 @@ const AdminPanel = () => {
         </div>
 
         <Tabs defaultValue="materials" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="materials" className="flex items-center gap-2">
               <Upload className="h-4 w-4" />
-              Materials
+              Educational Materials
             </TabsTrigger>
             <TabsTrigger value="blog" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
-              Blog
-            </TabsTrigger>
-            <TabsTrigger value="users" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Users
+              Blog Management
             </TabsTrigger>
             <TabsTrigger value="analytics" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
               Analytics
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              Settings
             </TabsTrigger>
           </TabsList>
 
@@ -58,17 +49,6 @@ const AdminPanel = () => {
             <BlogManagement />
           </TabsContent>
 
-          <TabsContent value="users">
-            <Card>
-              <CardHeader>
-                <CardTitle>User Management</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">User management features coming soon...</p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
           <TabsContent value="analytics">
             <Card>
               <CardHeader>
@@ -76,17 +56,6 @@ const AdminPanel = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground">Analytics features coming soon...</p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="settings">
-            <Card>
-              <CardHeader>
-                <CardTitle>Platform Settings</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Settings panel coming soon...</p>
               </CardContent>
             </Card>
           </TabsContent>

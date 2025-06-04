@@ -80,7 +80,7 @@ const sampleMaterials: Material[] = [
 ];
 
 // Local storage key
-const MATERIALS_STORAGE_KEY = 'studyquest_materials';
+const MATERIALS_STORAGE_KEY = 'irapidbusiness_materials';
 
 // Initialize materials in localStorage if not exists
 const initializeMaterials = () => {
@@ -99,12 +99,12 @@ export const getAllMaterials = (): Material[] => {
 
 // Get materials by type
 export const getMaterialsByType = (type: 'past-question' | 'video' | 'ebook'): Material[] => {
-  return getAllMaterials().filter(material => material.type === type);
+  return getAllMaterials().filter(material => material.type === type && material.status === 'active');
 };
 
 // Get materials by exam type
 export const getMaterialsByExamType = (examType: string): Material[] => {
-  return getAllMaterials().filter(material => material.examType === examType);
+  return getAllMaterials().filter(material => material.examType === examType && material.status === 'active');
 };
 
 // Add new material
@@ -120,7 +120,7 @@ export const addMaterial = (material: Omit<Material, 'id' | 'downloads' | 'uploa
   materials.push(newMaterial);
   localStorage.setItem(MATERIALS_STORAGE_KEY, JSON.stringify(materials));
   
-  toast.success('Material uploaded successfully!');
+  toast.success('Educational material uploaded successfully!');
   return newMaterial;
 };
 
@@ -152,26 +152,26 @@ export const deleteMaterial = (id: string): boolean => {
 
 // Search materials
 export const searchMaterials = (query: string): Material[] => {
-  if (!query.trim()) return getAllMaterials();
+  if (!query.trim()) return getAllMaterials().filter(m => m.status === 'active');
   
   const lowerQuery = query.toLowerCase();
   return getAllMaterials().filter(material =>
-    material.title.toLowerCase().includes(lowerQuery) ||
-    material.description.toLowerCase().includes(lowerQuery) ||
-    material.subject.toLowerCase().includes(lowerQuery) ||
-    material.examType.toLowerCase().includes(lowerQuery)
+    material.status === 'active' && (
+      material.title.toLowerCase().includes(lowerQuery) ||
+      material.description.toLowerCase().includes(lowerQuery) ||
+      material.subject.toLowerCase().includes(lowerQuery) ||
+      material.examType.toLowerCase().includes(lowerQuery)
+    )
   );
 };
 
 // Purchase material (simulate)
 export const purchaseMaterial = async (materialId: string): Promise<boolean> => {
-  // Simulate API delay
   await new Promise(resolve => setTimeout(resolve, 1500));
   
   const material = getAllMaterials().find(m => m.id === materialId);
   if (!material) return false;
   
-  // Increment download count
   updateMaterial(materialId, { downloads: material.downloads + 1 });
   
   toast.success(`Successfully purchased ${material.title}!`);
@@ -180,7 +180,6 @@ export const purchaseMaterial = async (materialId: string): Promise<boolean> => 
 
 // Download material (simulate)
 export const downloadMaterial = async (materialId: string): Promise<boolean> => {
-  // Simulate download delay
   await new Promise(resolve => setTimeout(resolve, 2000));
   
   const material = getAllMaterials().find(m => m.id === materialId);

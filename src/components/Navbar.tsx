@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { BookOpen, GraduationCap } from 'lucide-react';
 
 export default function Navbar() {
   const { currentUser, logout } = useAuth();
@@ -27,21 +28,36 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-      <div className="container mx-auto px-4">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm">
+      <div className="container mx-auto px-6">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center space-x-8">
-            <Link to="/" className="text-2xl font-bold text-primary">
-              iRapid
+            <Link to="/" className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                <GraduationCap className="h-5 w-5 text-white" />
+              </div>
+              <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                iRapid
+              </span>
             </Link>
             <div className="hidden md:flex items-center space-x-6">
-              <Link to="/exams" className="text-sm font-medium hover:text-primary transition-colors">
+              <Link 
+                to="/exams" 
+                className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors duration-200 flex items-center gap-1"
+              >
+                <BookOpen className="h-4 w-4" />
                 Past Questions
               </Link>
-              <Link to="/blog" className="text-sm font-medium hover:text-primary transition-colors">
+              <Link 
+                to="/blog" 
+                className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors duration-200"
+              >
                 Blog
               </Link>
-              <Link to="/about" className="text-sm font-medium hover:text-primary transition-colors">
+              <Link 
+                to="/about" 
+                className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors duration-200"
+              >
                 About
               </Link>
             </div>
@@ -57,7 +73,7 @@ export default function Navbar() {
                         src="/placeholder.svg" 
                         alt={currentUser.email || "User"} 
                       />
-                      <AvatarFallback>
+                      <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white">
                         {currentUser.email?.[0]?.toUpperCase() || "U"}
                       </AvatarFallback>
                     </Avatar>
@@ -86,7 +102,9 @@ export default function Navbar() {
               </DropdownMenu>
             ) : (
               <Link to="/auth">
-                <Button>Get Started</Button>
+                <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white">
+                  Get Started
+                </Button>
               </Link>
             )}
           </div>
