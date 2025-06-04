@@ -14,7 +14,13 @@ const AdminPanel = () => {
 
   // Check if user has admin access
   if (!isAdmin() && !isAuthenticated) {
-    return <AdminLogin onSuccess={() => setIsAuthenticated(true)} />;
+    return (
+      <AdminLogin 
+        isOpen={true}
+        onClose={() => {}}
+        onSuccess={() => setIsAuthenticated(true)} 
+      />
+    );
   }
 
   return (

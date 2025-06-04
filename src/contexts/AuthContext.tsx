@@ -75,17 +75,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (email: string, password: string) => {
-    // Check if user is already logged in
-    if (currentUser) {
-      throw new Error('User is already logged in');
-    }
-
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error) {
+      console.error('Login error:', error);
       throw error;
     }
 
@@ -101,11 +97,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signup = async (name: string, email: string, password: string) => {
-    // Check if user is already logged in
-    if (currentUser) {
-      throw new Error('User is already logged in');
-    }
-
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -114,11 +105,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           name,
           role: 'user'
         },
-        emailRedirectTo: `${window.location.origin}/`
+        emailRedirectTo: `${window.location.origin}/dashboard`
       },
     });
 
     if (error) {
+      console.error('Signup error:', error);
       throw error;
     }
 
@@ -130,6 +122,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         role: 'user'
       };
       setCurrentUser(userData);
+      
+      // For testing purposes, immediately sign in the user after signup
+      if (data.session) {
+        setSession(data.session);
+      }
     }
   };
 
