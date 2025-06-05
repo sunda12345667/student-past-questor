@@ -46,11 +46,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession(session);
         
         if (session?.user) {
+          // Fetch user profile data
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+
           const userData: User = {
             id: session.user.id,
             email: session.user.email || '',
-            name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
-            role: session.user.user_metadata?.role || 'user'
+            name: profile?.name || session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+            role: profile?.role || session.user.user_metadata?.role || 'user'
           };
           setCurrentUser(userData);
         } else {
@@ -70,11 +77,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         
         if (session?.user && mounted) {
+          // Fetch user profile data
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+
           const userData: User = {
             id: session.user.id,
             email: session.user.email || '',
-            name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
-            role: session.user.user_metadata?.role || 'user'
+            name: profile?.name || session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+            role: profile?.role || session.user.user_metadata?.role || 'user'
           };
           setCurrentUser(userData);
           setSession(session);
@@ -108,16 +122,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw error;
       }
 
-      if (data.user && data.session) {
-        const userData: User = {
-          id: data.user.id,
-          email: data.user.email || '',
-          name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'User',
-          role: data.user.user_metadata?.role || 'user'
-        };
-        setCurrentUser(userData);
-        setSession(data.session);
-      }
+      console.log('Login successful:', data.user?.email);
     } catch (error) {
       console.error('Login failed:', error);
       throw error;
@@ -143,17 +148,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw error;
       }
 
-      // For immediate login after signup (if email confirmation is disabled)
-      if (data.user && data.session) {
-        const userData: User = {
-          id: data.user.id,
-          email: data.user.email || '',
-          name: name,
-          role: 'user'
-        };
-        setCurrentUser(userData);
-        setSession(data.session);
-      }
+      console.log('Signup successful:', data.user?.email);
     } catch (error) {
       console.error('Signup failed:', error);
       throw error;

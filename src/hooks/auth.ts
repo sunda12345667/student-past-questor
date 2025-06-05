@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 export const useAuth = useAuthContext;
 
 // Hook to handle authentication requirements with redirects
-export const useRequireAuth = (redirectTo: string = '/login') => {
+export const useRequireAuth = (redirectTo: string = '/auth') => {
   const { currentUser, isLoading } = useAuth();
   const navigate = useNavigate();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
@@ -62,17 +62,6 @@ export const signInWithEmail = async (email: string, password: string): Promise<
 // Sign up a new user
 export const signUpWithEmail = async (email: string, password: string, name: string): Promise<boolean> => {
   try {
-    // First check if user already exists
-    const { data: existingUserData } = await supabase.auth.signInWithPassword({
-      email,
-      password: password + "_check", // Use invalid password to avoid logging in
-    });
-    
-    if (existingUserData.user) {
-      toast.error('An account with this email already exists');
-      return false;
-    }
-    
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -80,6 +69,7 @@ export const signUpWithEmail = async (email: string, password: string, name: str
         data: {
           name,
         },
+        emailRedirectTo: `${window.location.origin}/dashboard`
       },
     });
     
@@ -89,23 +79,7 @@ export const signUpWithEmail = async (email: string, password: string, name: str
     }
     
     if (data.user) {
-      toast.success('Account created successfully! Please confirm your email if required.');
-      
-      // For development, let's create a profile immediately
-      try {
-        await supabase
-          .from('profiles')
-          .upsert({
-            id: data.user.id,
-            name: name,
-            email: email,
-            role: 'user'
-          });
-      } catch (profileError) {
-        console.error('Profile creation error:', profileError);
-        // Don't block signup on profile error
-      }
-      
+      toast.success('Account created successfully! You can now log in.');
       return true;
     }
     

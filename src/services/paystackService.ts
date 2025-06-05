@@ -1,252 +1,151 @@
 
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { supabase } from '@/integrations/supabase/client';
 
-// Your live Paystack API key
-const PAYSTACK_PUBLIC_KEY = 'pk_live_da9fcf3fb46bbacc6cb38973739d2f1c75a45a87';
-
-interface InitializePaymentParams {
+interface PaymentInitData {
   email: string;
   amount: number;
   metadata: {
     userId: string;
     materialId?: string;
-    packId?: string;
-    service: string;
+    service?: string;
   };
 }
 
-interface VerifyPaymentParams {
-  reference: string;
-}
-
-// Response type for initializePayment
 interface PaymentResponse {
   status: boolean;
   message: string;
-  data: {
+  data?: {
     authorization_url: string;
     access_code: string;
     reference: string;
   };
 }
 
-export const initializePayment = async ({
-  email,
-  amount,
-  metadata,
-}: InitializePaymentParams): Promise<PaymentResponse> => {
-  try {
-    console.log("Initializing payment with live Paystack key", { email, amount, metadata });
-    
-    const response = await fetch('https://api.paystack.co/transaction/initialize', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer sk_live_da9fcf3fb46bbacc6cb38973739d2f1c75a45a87`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        email,
-        amount: amount * 100, // Convert to kobo
-        metadata,
-        callback_url: `${window.location.origin}/payment-callback`
-      }),
-    });
+interface VerifyResponse {
+  status: string;
+  message: string;
+  data?: {
+    reference: string;
+    amount: number;
+    status: string;
+    metadata: any;
+  };
+}
 
-    if (!response.ok) {
-      throw new Error('Payment initialization failed');
-    }
+export const paystackService = {
+  async initializePayment(paymentData: PaymentInitData): Promise<PaymentResponse> {
+    try {
+      console.log('Initializing payment:', paymentData);
+      
+      const response = await fetch('/api/payment/initialize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(paymentData),
+      });
 
-    const data = await response.json();
-    
-    // Redirect immediately to Paystack
-    if (data.status && data.data.authorization_url) {
-      window.location.href = data.data.authorization_url;
-    }
-    
-    return data;
-  } catch (error) {
-    console.error('Payment initialization error:', error);
-    
-    // Fallback to mock response for development
-    toast.info("Using development mode payment");
-    console.log("Mocked payment initialization", { email, amount, metadata });
-    
-    return {
-      status: true,
-      message: "Payment initialized successfully (DEV MODE)",
-      data: {
-        authorization_url: `${window.location.origin}/payment-callback?reference=dev-${Date.now()}`,
-        access_code: "dev_access",
-        reference: `dev-ref-${Date.now()}`
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    };
-  }
-};
 
-export const verifyPayment = async ({ reference }: VerifyPaymentParams) => {
-  try {
-    // Call the server-side API to verify payment
-    const response = await fetch(`/api/payment/verify/${reference}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to verify payment');
+      const data = await response.json();
+      
+      if (data.status) {
+        return data;
+      } else {
+        throw new Error(data.message || 'Payment initialization failed');
+      }
+    } catch (error) {
+      console.error('Payment initialization error:', error);
+      throw new Error('Failed to initialize payment. Please try again.');
     }
+  },
 
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Payment verification error:', error);
-    
-    // Fallback to mock response for development
-    return {
-      status: "success",
-      message: "Payment verified successfully (DEV MODE)",
-      amount: 1000,
-      reference
-    };
-  }
-};
+  async verifyPayment(reference: string): Promise<VerifyResponse> {
+    try {
+      console.log('Verifying payment:', reference);
+      
+      const response = await fetch(`/api/payment/verify/${reference}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-export const checkPurchaseStatus = async (userId: string, materialId: string) => {
-  try {
-    const { data, error } = await supabase
-      .from("purchases")
-      .select("*")
-      .eq("user_id", userId)
-      .eq("material_id", materialId)
-      .maybeSingle();
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-    if (error && error.code !== "PGRST116") {
-      console.error("Error checking purchase status:", error);
-      return false;
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Payment verification error:', error);
+      throw new Error('Failed to verify payment. Please contact support.');
     }
+  },
 
-    return !!data;
-  } catch (error) {
-    console.error("Error checking purchase status:", error);
-    return false;
-  }
-};
+  async recordPurchase(userId: string, materialId: string, amount: number, reference: string) {
+    try {
+      const { data, error } = await supabase
+        .from('purchases')
+        .insert({
+          user_id: userId,
+          material_id: materialId,
+          amount,
+          transaction_ref: reference,
+        });
 
-export const recordPurchase = async (
-  userId: string,
-  materialId: string,
-  amount: number,
-  transactionRef: string
-) => {
-  try {
-    const { data, error } = await supabase.from("purchases").insert({
-      user_id: userId,
-      material_id: materialId,
-      amount,
-      transaction_ref: transactionRef,
-    });
+      if (error) {
+        console.error('Error recording purchase:', error);
+        throw error;
+      }
 
-    if (error) {
-      console.error("Error recording purchase:", error);
+      console.log('Purchase recorded successfully:', data);
+      return data;
+    } catch (error) {
+      console.error('Failed to record purchase:', error);
       throw error;
     }
+  },
 
-    return data;
-  } catch (error) {
-    console.error("Error recording purchase:", error);
-    throw error;
-  }
-};
+  async updateUserRewards(userId: string, amount: number) {
+    try {
+      // Check if user rewards record exists
+      const { data: existingRewards } = await supabase
+        .from('user_rewards')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
 
-export const processQuestionPackPurchase = async (
-  packId: string,
-  title: string,
-  amount: number,
-  user: { id: string, email: string } | null
-) => {
-  try {
-    if (!user || !user.email) {
-      if (user === null) {
-        toast.info("For a better experience, please log in before making a purchase");
-        
-        // Mock implementation for development/samples
-        toast.info(`Processing payment for ${title}`);
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        toast.success(`Successfully purchased ${title}`);
-        
-        return { 
-          success: true, 
-          reference: `mock-ref-${Date.now()}` 
-        };
+      if (existingRewards) {
+        // Update existing record
+        const { error } = await supabase
+          .from('user_rewards')
+          .update({
+            cash_balance: (existingRewards.cash_balance || 0) + Math.floor(amount * 0.1), // 10% cashback
+          })
+          .eq('user_id', userId);
+
+        if (error) throw error;
       } else {
-        toast.error("You need to be logged in to make a purchase");
-        return { success: false };
+        // Create new record
+        const { error } = await supabase
+          .from('user_rewards')
+          .insert({
+            user_id: userId,
+            cash_balance: Math.floor(amount * 0.1),
+            coins: 0,
+            study_streak: 0,
+          });
+
+        if (error) throw error;
       }
+
+      console.log('User rewards updated successfully');
+    } catch (error) {
+      console.error('Failed to update user rewards:', error);
+      throw error;
     }
-
-    const paymentResponse = await initializePayment({
-      email: user.email,
-      amount,
-      metadata: {
-        userId: user.id,
-        packId,
-        service: 'Question Pack'
-      }
-    });
-
-    if (!paymentResponse.status) {
-      throw new Error("Failed to initialize payment");
-    }
-
-    // Redirect to payment page
-    window.location.href = paymentResponse.data.authorization_url;
-    
-    return { 
-      success: true, 
-      reference: paymentResponse.data.reference
-    };
-  } catch (error) {
-    console.error("Error processing question pack purchase:", error);
-    
-    // Mock implementation for development
-    toast.info(`Processing payment for ${title}`);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    toast.success(`Successfully purchased ${title}`);
-    
-    return { 
-      success: true, 
-      reference: `mock-ref-${Date.now()}` 
-    };
-  }
-};
-
-// Fast recharge for saved cards/wallets
-export const processWalletPayment = async (
-  userId: string,
-  amount: number,
-  description: string
-) => {
-  try {
-    // Import wallet service functions
-    const { debitWallet } = await import('./walletService');
-    
-    // Try to pay from wallet first
-    const walletPayment = debitWallet(userId, amount, description);
-    
-    if (walletPayment) {
-      toast.success('Payment successful from wallet!');
-      return { success: true, source: 'wallet' };
-    }
-    
-    // If wallet payment fails, redirect to Paystack
-    toast.info('Insufficient wallet balance, redirecting to payment...');
-    return { success: false, source: 'insufficient_wallet' };
-    
-  } catch (error) {
-    console.error('Wallet payment error:', error);
-    return { success: false, source: 'error' };
-  }
+  },
 };

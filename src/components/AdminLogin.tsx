@@ -2,9 +2,11 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Shield, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
+import { X } from 'lucide-react';
 
 interface AdminLoginProps {
   isOpen: boolean;
@@ -13,135 +15,78 @@ interface AdminLoginProps {
 }
 
 const AdminLogin = ({ isOpen, onClose, onSuccess }: AdminLoginProps) => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [credentials, setCredentials] = useState({ username: '', password: '' });
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError('');
 
-    console.log('Admin login attempt:', { username, password });
-
-    // Check credentials
-    if (username === 'admin' && password === 'admin123') {
-      toast.success('Admin login successful!');
-      localStorage.setItem('adminAuthenticated', 'true');
-      onSuccess();
-      onClose();
-      setUsername('');
-      setPassword('');
-    } else {
-      setError('Invalid username or password');
-      toast.error('Invalid admin credentials');
+    try {
+      // Simple admin authentication
+      if (credentials.username === 'admin' && credentials.password === 'admin123') {
+        localStorage.setItem('adminAuthenticated', 'true');
+        toast.success('Admin login successful');
+        onSuccess();
+        onClose();
+      } else {
+        toast.error('Invalid admin credentials');
+      }
+    } catch (error) {
+      console.error('Admin login error:', error);
+      toast.error('Admin login failed');
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
-  };
-
-  const handleClose = () => {
-    setUsername('');
-    setPassword('');
-    setError('');
-    onClose();
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-center justify-center">
-            <Shield className="h-6 w-6 text-primary" />
-            Admin Access Required
-          </DialogTitle>
+        <DialogHeader className="flex flex-row items-center justify-between">
+          <DialogTitle>Admin Login</DialogTitle>
+          <Button variant="ghost" size="icon" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
         </DialogHeader>
         
-        <div className="text-center mb-6">
-          <p className="text-muted-foreground">
-            Please enter your admin credentials to access the material upload system
-          </p>
-        </div>
-        
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div>
-            <label htmlFor="username" className="text-sm font-medium block mb-2">
-              Username
-            </label>
-            <Input
-              id="username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter admin username"
-              required
-              className="w-full"
-            />
-          </div>
-          
-          <div>
-            <label htmlFor="password" className="text-sm font-medium block mb-2">
-              Password
-            </label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter admin password"
-                required
-                className="w-full pr-10"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? (
-                  <EyeOff className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <Eye className="h-4 w-4 text-muted-foreground" />
-                )}
+        <Card className="border-0 shadow-none">
+          <CardContent className="p-0">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="username">Username</Label>
+                <Input
+                  id="username"
+                  type="text"
+                  value={credentials.username}
+                  onChange={(e) => setCredentials({ ...credentials, username: e.target.value })}
+                  placeholder="Enter admin username"
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={credentials.password}
+                  onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
+                  placeholder="Enter admin password"
+                  required
+                />
+              </div>
+              
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? 'Logging in...' : 'Login as Admin'}
               </Button>
-            </div>
-          </div>
-
-          {error && (
-            <div className="flex items-center gap-2 text-destructive text-sm bg-destructive/10 p-3 rounded-md">
-              <AlertCircle className="h-4 w-4" />
-              {error}
-            </div>
-          )}
-
-          <div className="flex gap-2 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleClose}
-              className="flex-1"
-              disabled={isLoading}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={isLoading || !username || !password}
-              className="flex-1"
-            >
-              {isLoading ? 'Authenticating...' : 'Access Admin Panel'}
-            </Button>
-          </div>
-        </form>
-
-        <div className="text-xs text-muted-foreground text-center border-t pt-4">
-          <p className="mb-1">Demo Credentials:</p>
-          <p><strong>Username:</strong> admin</p>
-          <p><strong>Password:</strong> admin123</p>
-        </div>
+              
+              <div className="text-xs text-center text-muted-foreground bg-muted p-2 rounded">
+                Demo credentials: admin / admin123
+              </div>
+            </form>
+          </CardContent>
+        </Card>
       </DialogContent>
     </Dialog>
   );
