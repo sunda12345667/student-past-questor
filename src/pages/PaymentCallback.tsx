@@ -21,7 +21,7 @@ export default function PaymentCallback() {
       }
 
       try {
-        const response = await verifyPayment({ reference });
+        const response = await verifyPayment(reference);
         setPaymentDetails(response);
         
         if (response.status === "success") {
