@@ -19,9 +19,9 @@ export function Hero() {
   };
 
   return (
-    <section className="relative pt-32 pb-20 md:pt-44 md:pb-28 overflow-hidden">
+    <section className="relative pt-32 pb-20 md:pt-44 md:pb-28 overflow-hidden bg-gradient-to-br from-background via-background to-primary/5 dark:from-background dark:via-background dark:to-primary/10">
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute inset-0 bg-[radial-gradient(50%_50%_at_50%_50%,rgba(14,165,233,0.08)_0%,rgba(14,165,233,0)_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(50%_50%_at_50%_50%,rgba(14,165,233,0.08)_0%,rgba(14,165,233,0)_100%)] dark:bg-[radial-gradient(50%_50%_at_50%_50%,rgba(14,165,233,0.15)_0%,rgba(14,165,233,0)_100%)]" />
       </div>
       
       <div className="container mx-auto px-4 relative z-10">
@@ -34,7 +34,7 @@ export function Hero() {
             Master your exams with <span className="text-gradient">past questions</span>
           </h1>
           
-          <p className="text-lg md:text-xl text-foreground/70 dark:text-foreground/60 mb-8 max-w-2xl mx-auto animate-slide-in-bottom [animation-delay:0.2s]">
+          <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto animate-slide-in-bottom [animation-delay:0.2s]">
             Access thousands of past questions for secondary school and university exams. 
             Practice, learn, and succeed with our comprehensive question bank.
           </p>
@@ -67,7 +67,7 @@ export function Hero() {
               <Link
                 key={index}
                 to={`/exams/${org.toLowerCase()}`}
-                className="text-lg font-semibold text-foreground/50 dark:text-foreground/40 transition-opacity hover:text-foreground/80"
+                className="text-lg font-semibold text-muted-foreground transition-colors hover:text-foreground"
                 onClick={(e) => {
                   e.preventDefault();
                   toast.info(`${org} exams coming soon!`);

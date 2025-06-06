@@ -1,11 +1,11 @@
 
 import { Moon, Sun } from 'lucide-react';
-import { useTheme } from '@/components/ui/theme-provider';
+import { useTheme } from '@/contexts/ThemeContext';
 import { Button } from '@/components/ui/button';
 import { useEffect, useState } from 'react';
 
 export function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
+  const { theme, toggleTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   // Avoid hydration mismatch
@@ -19,7 +19,7 @@ export function ThemeToggle() {
     <Button
       variant="ghost"
       size="icon"
-      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+      onClick={toggleTheme}
       className="rounded-full w-9 h-9 transition-transform duration-300 hover:scale-110"
       aria-label="Toggle theme"
     >

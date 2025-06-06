@@ -80,7 +80,7 @@ const Index = () => {
       <SampleQuestions />
       
       {/* Main Focus Areas */}
-      <section className="py-12 sm:py-20 bg-primary/5">
+      <section className="py-12 sm:py-20 bg-secondary/30 dark:bg-secondary/10">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-12 sm:mb-16">
             <h2 className="heading-lg mb-4">Our Core Services</h2>
@@ -142,7 +142,7 @@ const Index = () => {
       </section>
 
       {/* Featured Blog Section */}
-      <section className="py-12 sm:py-20 bg-gray-50">
+      <section className="py-12 sm:py-20 bg-muted/30 dark:bg-muted/10">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-12 sm:mb-16">
             <h2 className="heading-lg mb-4">Latest from Our Blog</h2>
@@ -196,7 +196,7 @@ const Index = () => {
       </section>
       
       {/* CTA Section */}
-      <section className="py-12 sm:py-20 bg-primary/5">
+      <section className="py-12 sm:py-20 bg-secondary/30 dark:bg-secondary/10">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="heading-lg mb-6">Ready to ace your exams?</h2>
