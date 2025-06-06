@@ -82,11 +82,28 @@ export const checkUserPurchase = async (userId: string, materialId: string): Pro
   }
 };
 
-export const uploadMaterial = async (materialData: Partial<StudyMaterial>) => {
+export const uploadMaterial = async (materialData: {
+  title: string;
+  description: string;
+  subject: string;
+  type: string;
+  format?: string;
+  price: number;
+  seller_id: string;
+  status?: string;
+  featured?: boolean;
+  downloads?: number;
+}) => {
   try {
     const { data, error } = await supabase
       .from('study_materials')
-      .insert([materialData])
+      .insert([{
+        ...materialData,
+        format: materialData.format || 'PDF',
+        status: materialData.status || 'pending',
+        featured: materialData.featured || false,
+        downloads: materialData.downloads || 0
+      }])
       .select()
       .single();
 
@@ -104,11 +121,28 @@ export const uploadMaterial = async (materialData: Partial<StudyMaterial>) => {
 };
 
 // Add the missing functions that are imported in MaterialUpload.tsx
-export const addMaterial = async (materialData: Omit<StudyMaterial, 'id' | 'created_at'>) => {
+export const addMaterial = async (materialData: {
+  title: string;
+  description: string;
+  subject: string;
+  type: string;
+  format?: string;
+  price: number;
+  seller_id: string;
+  status?: string;
+  featured?: boolean;
+  downloads?: number;
+}) => {
   try {
     const { data, error } = await supabase
       .from('study_materials')
-      .insert([materialData])
+      .insert([{
+        ...materialData,
+        format: materialData.format || 'PDF',
+        status: materialData.status || 'pending',
+        featured: materialData.featured || false,
+        downloads: materialData.downloads || 0
+      }])
       .select()
       .single();
 

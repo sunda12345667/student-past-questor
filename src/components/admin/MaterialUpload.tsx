@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,9 +8,11 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Upload, FileText, Video, BookOpen } from 'lucide-react';
 import { toast } from 'sonner';
-import { addMaterial, updateMaterial, getAllMaterials, deleteMaterial } from '@/services/materialsService';
+import { addMaterial, updateMaterial, getAllMaterials, deleteMaterial, StudyMaterial } from '@/services/materialsService';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function MaterialUpload() {
+  const { currentUser } = useAuth();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [type, setType] = useState<'past-question' | 'video' | 'ebook'>('past-question');
@@ -23,13 +25,36 @@ export default function MaterialUpload() {
   const [status, setStatus] = useState<'active' | 'draft'>('active');
   const [isUploading, setIsUploading] = useState(false);
 
-  const [materials, setMaterials] = useState(getAllMaterials());
+  const [materials, setMaterials] = useState<StudyMaterial[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch materials on component mount
+  useEffect(() => {
+    const fetchMaterials = async () => {
+      try {
+        const materialsData = await getAllMaterials();
+        setMaterials(materialsData);
+      } catch (error) {
+        console.error('Failed to fetch materials:', error);
+        toast.error('Failed to load materials');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchMaterials();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !description || !type || !examType || !subject || price <= 0) {
       toast.error('Please fill in all required fields and set a valid price');
+      return;
+    }
+
+    if (!currentUser) {
+      toast.error('You must be logged in to upload materials');
       return;
     }
 
@@ -40,20 +65,22 @@ export default function MaterialUpload() {
         title,
         description,
         type,
-        examType,
-        subject,
-        year,
+        subject: `${subject} - ${examType}`, // Combine subject and exam type
         price,
-        instructor,
-        author,
-        status
+        seller_id: currentUser.id,
+        status: status === 'active' ? 'approved' : 'pending',
+        format: 'PDF',
+        featured: false,
+        downloads: 0
       };
 
       if (editingId) {
-        updateMaterial(editingId, materialData);
+        await updateMaterial(editingId, materialData);
+        toast.success('Material updated successfully');
         setEditingId(null);
       } else {
-        addMaterial(materialData);
+        await addMaterial(materialData);
+        toast.success('Material uploaded successfully');
       }
 
       // Reset form
@@ -69,32 +96,41 @@ export default function MaterialUpload() {
       setStatus('active');
       
       // Refresh materials list
-      setMaterials(getAllMaterials());
+      const materialsData = await getAllMaterials();
+      setMaterials(materialsData);
     } catch (error) {
+      console.error('Failed to upload material:', error);
       toast.error('Failed to upload material');
     } finally {
       setIsUploading(false);
     }
   };
 
-  const handleEdit = (material: any) => {
+  const handleEdit = (material: StudyMaterial) => {
     setTitle(material.title);
-    setDescription(material.description);
-    setType(material.type);
-    setExamType(material.examType);
+    setDescription(material.description || '');
+    setType(material.type as 'past-question' | 'video' | 'ebook');
+    setExamType(''); // Reset exam type as it's combined in subject
     setSubject(material.subject);
-    setYear(material.year || new Date().getFullYear());
+    setYear(year || new Date().getFullYear());
     setPrice(material.price);
-    setInstructor(material.instructor || '');
-    setAuthor(material.author || '');
-    setStatus(material.status);
+    setInstructor('');
+    setAuthor('');
+    setStatus(material.status === 'approved' ? 'active' : 'draft');
     setEditingId(material.id);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this material?')) {
-      deleteMaterial(id);
-      setMaterials(getAllMaterials());
+      try {
+        await deleteMaterial(id);
+        toast.success('Material deleted successfully');
+        const materialsData = await getAllMaterials();
+        setMaterials(materialsData);
+      } catch (error) {
+        console.error('Failed to delete material:', error);
+        toast.error('Failed to delete material');
+      }
     }
   };
 
@@ -258,37 +294,47 @@ export default function MaterialUpload() {
           <CardTitle>Uploaded Materials</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {materials.map((material) => (
-              <div key={material.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-center gap-3">
-                  {getTypeIcon(material.type)}
-                  <div>
-                    <h3 className="font-medium">{material.title}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {material.examType} • {material.subject} • ₦{material.price}
-                    </p>
+          {isLoading ? (
+            <div className="text-center py-4">Loading materials...</div>
+          ) : (
+            <div className="space-y-4">
+              {materials.length === 0 ? (
+                <div className="text-center py-4 text-muted-foreground">
+                  No materials uploaded yet.
+                </div>
+              ) : (
+                materials.map((material) => (
+                  <div key={material.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      {getTypeIcon(material.type)}
+                      <div>
+                        <h3 className="font-medium">{material.title}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {material.subject} • ₦{material.price}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(material)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDelete(material.id)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
                   </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEdit(material)}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDelete(material.id)}
-                  >
-                    Delete
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
+                ))
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
