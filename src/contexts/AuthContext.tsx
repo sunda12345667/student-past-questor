@@ -47,11 +47,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (session?.user) {
           // Fetch user profile data
-          const { data: profile } = await supabase
+          const { data: profile, error } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
-            .single();
+            .maybeSingle();
+
+          if (error) {
+            console.error('Error fetching profile:', error);
+          }
 
           const userData: User = {
             id: session.user.id,
@@ -78,11 +82,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (session?.user && mounted) {
           // Fetch user profile data
-          const { data: profile } = await supabase
+          const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
-            .single();
+            .maybeSingle();
+
+          if (profileError) {
+            console.error('Error fetching profile:', profileError);
+          }
 
           const userData: User = {
             id: session.user.id,

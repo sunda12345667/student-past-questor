@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { verifyPayment } from "@/services/paystackService";
@@ -5,6 +6,7 @@ import Layout from "@/components/Layout";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { toast } from "sonner";
 
 export default function PaymentCallback() {
   const [searchParams] = useSearchParams();
@@ -17,21 +19,26 @@ export default function PaymentCallback() {
     const verifyTransaction = async () => {
       if (!reference) {
         setStatus("error");
+        toast.error("No payment reference found");
         return;
       }
 
       try {
+        console.log("Verifying payment with reference:", reference);
         const response = await verifyPayment(reference);
         setPaymentDetails(response);
         
-        if (response.status === "success") {
+        if (response.status === "success" || (response.data && response.data.status === "success")) {
           setStatus("success");
+          toast.success("Payment verified successfully!");
         } else {
           setStatus("error");
+          toast.error("Payment verification failed");
         }
       } catch (error) {
         console.error("Error verifying payment:", error);
         setStatus("error");
+        toast.error("Failed to verify payment");
       }
     };
 
@@ -43,7 +50,9 @@ export default function PaymentCallback() {
       <div className="container mx-auto px-4 pt-28 pb-16 flex justify-center">
         <Card className="w-full max-w-md text-center">
           <CardHeader>
-            <CardTitle className="text-2xl">Payment {status === "loading" ? "Processing" : status === "success" ? "Successful" : "Failed"}</CardTitle>
+            <CardTitle className="text-2xl">
+              Payment {status === "loading" ? "Processing" : status === "success" ? "Successful" : "Failed"}
+            </CardTitle>
             <CardDescription>
               {status === "loading" ? "Please wait while we verify your payment..." : 
                status === "success" ? "Your transaction has been completed successfully" : 
@@ -63,8 +72,10 @@ export default function PaymentCallback() {
             {status !== "loading" && (
               <div className="mt-6 text-left w-full">
                 <div className="mb-1"><strong>Reference:</strong> {reference}</div>
-                {paymentDetails && paymentDetails.amount && (
-                  <div className="mb-1"><strong>Amount:</strong> ₦{(paymentDetails.amount / 100).toLocaleString()}</div>
+                {paymentDetails && paymentDetails.data && paymentDetails.data.amount && (
+                  <div className="mb-1">
+                    <strong>Amount:</strong> ₦{(paymentDetails.data.amount / 100).toLocaleString()}
+                  </div>
                 )}
                 {status === "success" ? (
                   <p className="mt-4 text-center text-green-600">

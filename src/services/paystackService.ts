@@ -36,25 +36,15 @@ export const initializePayment = async (paymentData: PaymentInitData): Promise<P
   try {
     console.log('Initializing payment:', paymentData);
     
-    const response = await fetch('/api/payment/initialize', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(paymentData),
+    const { data, error } = await supabase.functions.invoke('payment-initialize', {
+      body: paymentData,
     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    if (error) {
+      throw new Error(error.message || 'Payment initialization failed');
     }
 
-    const data = await response.json();
-    
-    if (data.status) {
-      return data;
-    } else {
-      throw new Error(data.message || 'Payment initialization failed');
-    }
+    return data;
   } catch (error) {
     console.error('Payment initialization error:', error);
     throw new Error('Failed to initialize payment. Please try again.');
@@ -65,18 +55,14 @@ export const verifyPayment = async (reference: string): Promise<VerifyResponse> 
   try {
     console.log('Verifying payment:', reference);
     
-    const response = await fetch(`/api/payment/verify/${reference}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+    const { data, error } = await supabase.functions.invoke('payment-verify', {
+      body: { reference },
     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    if (error) {
+      throw new Error(error.message || 'Payment verification failed');
     }
 
-    const data = await response.json();
     return data;
   } catch (error) {
     console.error('Payment verification error:', error);
