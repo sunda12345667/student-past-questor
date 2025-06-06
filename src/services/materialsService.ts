@@ -102,3 +102,83 @@ export const uploadMaterial = async (materialData: Partial<StudyMaterial>) => {
     throw error;
   }
 };
+
+// Add the missing functions that are imported in MaterialUpload.tsx
+export const addMaterial = async (materialData: Omit<StudyMaterial, 'id' | 'created_at'>) => {
+  try {
+    const { data, error } = await supabase
+      .from('study_materials')
+      .insert([materialData])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error adding material:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Failed to add material:', error);
+    throw error;
+  }
+};
+
+export const updateMaterial = async (id: string, updates: Partial<StudyMaterial>) => {
+  try {
+    const { data, error } = await supabase
+      .from('study_materials')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating material:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Failed to update material:', error);
+    throw error;
+  }
+};
+
+export const getAllMaterials = async (): Promise<StudyMaterial[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('study_materials')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching all materials:', error);
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Failed to fetch all materials:', error);
+    throw error;
+  }
+};
+
+export const deleteMaterial = async (id: string) => {
+  try {
+    const { error } = await supabase
+      .from('study_materials')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting material:', error);
+      throw error;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Failed to delete material:', error);
+    throw error;
+  }
+};
